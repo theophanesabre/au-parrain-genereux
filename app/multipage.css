@@ -249,7 +249,9 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .index-editorial__copy>p:not(:first-child){max-width:430px;margin:0 0 31px;font-family:var(--font-serif);font-size:16px;line-height:1.65;color:#514940}
 .index-editorial__copy a{display:inline-flex;align-items:center;justify-content:center;min-width:138px;height:50px;padding:0 24px;border:1px solid #111;font-size:9px;letter-spacing:.16em;text-transform:uppercase;transition:.25s ease}
 .index-editorial__copy a:hover{background:#111;color:#fff}
-@media(max-width:900px){.index-editorial{grid-template-columns:1fr;min-height:0;padding:50px 0 80px}.index-editorial__image{width:min(560px,84vw)}.index-editorial__copy{padding:70px 24px 0}}
+.focused-home>.index-editorial:nth-of-type(even) .index-editorial__image{grid-column:2;grid-row:1}
+.focused-home>.index-editorial:nth-of-type(even) .index-editorial__copy{grid-column:1;grid-row:1}
+@media(max-width:900px){.index-editorial{grid-template-columns:1fr;min-height:0;padding:50px 0 80px}.index-editorial__image{width:min(560px,84vw)}.index-editorial__copy{padding:70px 24px 0}.focused-home>.index-editorial:nth-of-type(even) .index-editorial__image,.focused-home>.index-editorial:nth-of-type(even) .index-editorial__copy{grid-column:1;grid-row:auto}}
 @media(max-width:620px){.index-editorial{padding-top:35px}.index-editorial__image{width:84vw}.index-editorial__copy h1{font-size:34px}}
 
 /* Apparition douce au premier affichage de chaque page. */
