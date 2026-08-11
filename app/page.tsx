@@ -7,7 +7,7 @@ export default function Home() {
     <SiteHeader />
 
     <section className="index-editorial">
-      <Link className="index-editorial__image" href="/savoir-faire" aria-label="Découvrir notre savoir-faire"><Image src="/images/illustration-cabosse-fleur-v2.png" alt="Cabosse et fleur de cacaoyer" fill priority quality={95} sizes="(max-width: 900px) 84vw, 560px" /></Link>
+      <Link className="index-editorial__image" href="/savoir-faire" aria-label="Découvrir notre savoir-faire"><Image src="/images/illustration-cabosse-fleur-v2.jpg" alt="Cabosse et fleur de cacaoyer" fill priority quality={95} sizes="(max-width: 900px) 84vw, 560px" /></Link>
       <div className="index-editorial__copy"><p>Chocolatier confiseur · Le Havre</p><h1>Le goût du beau</h1><div className="index-editorial__rule"/><p>Depuis 1890, la Maison façonne des chocolats et confiseries où le geste artisanal rencontre l’élégance.</p><Link href="/savoir-faire">Découvrir</Link></div>
     </section>
 

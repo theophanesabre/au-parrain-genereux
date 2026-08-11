@@ -63,11 +63,8 @@
 .bonbon-collection{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1380px;gap:58px 28px}
 .bonbon-collection figure{border:0;background:#fff}
 .bonbon-card__visual{position:relative;aspect-ratio:1/1;overflow:hidden;background:#df4a18}
-.bonbon-card__visual>img:first-child{display:block;width:100%;height:100%!important;aspect-ratio:1/1!important;object-fit:cover!important;object-position:center bottom;transform:scale(1.22);transform-origin:center bottom}
-.bonbon-card__visual:after{content:"";position:absolute;inset:-5%;pointer-events:none;opacity:.92;background:radial-gradient(ellipse 34% 22% at 12% 17%,rgba(255,199,58,.72),transparent 70%),radial-gradient(ellipse 26% 18% at 24% 27%,rgba(245,88,139,.62),transparent 69%),radial-gradient(ellipse 33% 20% at 89% 83%,rgba(80,197,190,.68),transparent 72%);filter:blur(7px);mix-blend-mode:screen}
-.bonbon-collection figure:nth-child(4n+2) .bonbon-card__visual:after{background:radial-gradient(ellipse 34% 21% at 87% 16%,rgba(255,210,72,.73),transparent 70%),radial-gradient(ellipse 27% 18% at 76% 28%,rgba(113,201,224,.66),transparent 69%),radial-gradient(ellipse 34% 21% at 12% 84%,rgba(239,99,159,.66),transparent 72%)}
-.bonbon-collection figure:nth-child(4n+3) .bonbon-card__visual:after{background:radial-gradient(ellipse 35% 22% at 11% 82%,rgba(255,188,47,.73),transparent 71%),radial-gradient(ellipse 27% 18% at 23% 70%,rgba(119,205,169,.67),transparent 69%),radial-gradient(ellipse 33% 20% at 87% 15%,rgba(220,107,191,.65),transparent 72%)}
-.bonbon-collection figure:nth-child(4n) .bonbon-card__visual:after{background:radial-gradient(ellipse 34% 21% at 88% 80%,rgba(255,198,55,.73),transparent 70%),radial-gradient(ellipse 27% 18% at 76% 69%,rgba(239,102,151,.65),transparent 69%),radial-gradient(ellipse 34% 21% at 11% 15%,rgba(93,199,211,.68),transparent 72%)}
+.bonbon-card__visual>img:first-child{display:block;width:100%;height:100%!important;aspect-ratio:1/1!important;object-fit:cover!important;object-position:center bottom;transform:scale(1.48);transform-origin:center bottom}
+.bonbon-card__visual:after{content:none}
 .bonbon-collection figcaption{display:grid;grid-template-columns:34px 1fr;align-items:start;min-height:0;padding:22px 0 0;border:0!important;background:#fff!important;color:#111}
 .bonbon-collection figcaption>span{padding-top:4px;font-size:9px;letter-spacing:.14em;color:#88786a}
 .bonbon-collection figcaption strong{display:block;font-family:var(--font-serif);font-size:24px;font-weight:500;line-height:1.08}
