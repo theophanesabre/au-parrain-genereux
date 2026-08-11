@@ -251,6 +251,16 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .index-editorial__copy a:hover{background:#111;color:#fff}
 @media(max-width:900px){.index-editorial{grid-template-columns:1fr;min-height:0;padding:50px 0 80px}.index-editorial__image{width:min(560px,84vw)}.index-editorial__copy{padding:70px 24px 0}}
 @media(max-width:620px){.index-editorial{padding-top:35px}.index-editorial__image{width:84vw}.index-editorial__copy h1{font-size:34px}}
+
+/* Apparition douce au premier affichage de chaque page. */
+@keyframes apg-image-reveal{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes apg-text-reveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.index-editorial__image,.bonbon-card__visual,.page-intro h1,.page-intro>div,.page-intro>.section-index{animation:apg-image-reveal .75s cubic-bezier(.22,.61,.36,1) both}
+.index-editorial__copy>* ,.bonbon-collection figcaption,.site-footer>*{animation:apg-text-reveal .65s cubic-bezier(.22,.61,.36,1) both}
+.index-editorial__copy>*:nth-child(2),.page-intro h1{animation-delay:.08s}
+.index-editorial__copy>*:nth-child(3),.page-intro>div{animation-delay:.14s}
+.index-editorial__copy>*:nth-child(n+4),.bonbon-collection figcaption{animation-delay:.2s}
+@media(prefers-reduced-motion:reduce){.index-editorial__image,.bonbon-card__visual,.page-intro h1,.page-intro>div,.page-intro>.section-index,.index-editorial__copy>*,.bonbon-collection figcaption,.site-footer>*{animation:none}}
 .index-editorial--chapter{min-height:0;padding-top:110px;padding-bottom:110px;border-top:1px solid #e7e2da}
 @media(max-width:900px){.index-editorial--chapter{padding-top:80px;padding-bottom:90px}}
 @media(max-width:620px){.index-editorial__copy h2{font-size:34px}.index-editorial--chapter{padding-top:60px;padding-bottom:75px}}
