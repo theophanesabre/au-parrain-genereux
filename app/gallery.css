@@ -63,22 +63,7 @@
 .bonbon-collection{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1380px;gap:58px 28px}
 .bonbon-collection figure{border:0;background:#fff}
 .bonbon-card__visual{position:relative;overflow:hidden;background:#df4a18}
-.bonbon-card__visual>img:first-child{display:block;width:100%;height:auto}
-.bonbon-card__visual:after{content:"";position:absolute;z-index:2;width:38%;height:18%;left:14%;top:56%;pointer-events:none;background:#efb2a6;clip-path:polygon(3% 18%,88% 0,100% 71%,18% 100%)}
-.bonbon-collection figure:nth-child(2) .bonbon-card__visual:after{left:12%;top:58%;width:34%;height:17%;background:#842b4d;clip-path:polygon(0 5%,100% 22%,82% 100%,9% 77%)}
-.bonbon-collection figure:nth-child(3) .bonbon-card__visual:after{left:auto;right:10%;top:57%;width:36%;height:19%;background:#f2c9bb;clip-path:polygon(16% 0,100% 13%,83% 93%,0 100%)}
-.bonbon-collection figure:nth-child(4) .bonbon-card__visual:after{left:28%;top:57%;width:40%;height:17%;background:#bc365f;clip-path:polygon(0 25%,92% 0,100% 76%,12% 100%)}
-.bonbon-collection figure:nth-child(5) .bonbon-card__visual:after{left:auto;right:8%;top:29%;width:34%;height:18%;background:#ffd782;clip-path:polygon(8% 0,100% 17%,80% 100%,0 72%)}
-.bonbon-collection figure:nth-child(6) .bonbon-card__visual:after{left:11%;top:56%;width:37%;height:18%;background:#78273f;clip-path:polygon(0 20%,88% 0,100% 82%,16% 100%)}
-.bonbon-collection figure:nth-child(7) .bonbon-card__visual:after{left:auto;right:14%;top:30%;width:32%;height:18%;background:#efc7bd;clip-path:polygon(12% 0,100% 28%,79% 100%,0 75%)}
-.bonbon-collection figure:nth-child(8) .bonbon-card__visual:after{left:34%;top:60%;width:35%;height:17%;background:#a82f58;clip-path:polygon(0 4%,100% 19%,86% 100%,8% 79%)}
-.bonbon-collection figure:nth-child(9) .bonbon-card__visual:after{left:auto;right:7%;top:61%;width:35%;height:18%;background:#f1b9a9;clip-path:polygon(13% 0,100% 11%,77% 100%,0 87%)}
-.bonbon-collection figure:nth-child(10) .bonbon-card__visual:after{left:12%;top:54%;width:37%;height:18%;background:#713448;clip-path:polygon(0 17%,90% 0,100% 74%,15% 100%)}
-.bonbon-collection figure:nth-child(11) .bonbon-card__visual:after{left:8%;top:52%;width:35%;height:19%;background:#f4c6b9;clip-path:polygon(9% 0,100% 16%,84% 100%,0 79%)}
-.bonbon-collection figure:nth-child(12) .bonbon-card__visual:after{left:17%;top:30%;width:34%;height:18%;background:#b63d62;clip-path:polygon(0 23%,92% 0,100% 81%,14% 100%)}
-.bonbon-collection figure:nth-child(13) .bonbon-card__visual:after{left:auto;right:11%;top:23%;width:34%;height:18%;background:#f5c56f;clip-path:polygon(12% 0,100% 25%,78% 100%,0 76%)}
-.bonbon-collection figure:nth-child(14) .bonbon-card__visual:after{left:auto;right:12%;top:61%;width:35%;height:18%;background:#8d284b;clip-path:polygon(0 12%,100% 0,87% 91%,11% 100%)}
-.bonbon-collection figure:nth-child(15) .bonbon-card__visual:after{left:7%;top:57%;width:36%;height:18%;background:#efb8aa;clip-path:polygon(10% 0,100% 21%,82% 100%,0 72%)}
+.bonbon-card__visual>img:first-child{display:block;width:100%;height:auto!important;aspect-ratio:auto!important;object-fit:contain!important}
 .bonbon-collection figcaption{display:grid;grid-template-columns:34px 1fr;align-items:start;min-height:0;padding:22px 0 0;border:0!important;background:#fff!important;color:#111}
 .bonbon-collection figcaption>span{padding-top:4px;font-size:9px;letter-spacing:.14em;color:#88786a}
 .bonbon-collection figcaption strong{display:block;font-family:var(--font-serif);font-size:24px;font-weight:500;line-height:1.08}
