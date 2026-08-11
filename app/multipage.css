@@ -300,3 +300,6 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 
 .maison-page .page-intro>div{font-size:17px;line-height:1.65}.maison-signature{padding:90px 6vw 110px;background:#faf9f7}.maison-signature img{display:block;width:min(1200px,100%);height:auto;margin:0 auto}.maison-signature{animation:apg-image-reveal .75s cubic-bezier(.22,.61,.36,1) both}
 @media(max-width:620px){.maison-signature{padding:55px 22px 70px}}
+
+/* Boutique: accueil typographique sobre */
+.boutique-page .script{color:#7a2d20;font-family:var(--font-serif);font-size:24px;font-style:italic;letter-spacing:.04em}
