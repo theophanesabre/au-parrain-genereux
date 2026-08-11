@@ -207,7 +207,7 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .focused-hero>div>p,.focused-house__copy>p:first-child,.focused-bonbons header>p:first-child{font-size:9px;letter-spacing:.2em;text-transform:uppercase}
 .focused-hero h1{margin:20px 0 35px;font-family:var(--font-serif);font-size:clamp(42px,5vw,68px);font-weight:500;line-height:1;white-space:nowrap}
 .focused-hero a,.focused-house__copy a,.focused-bonbons__link{display:inline-block;padding-bottom:8px;border-bottom:1px solid;font-size:9px;letter-spacing:.15em;text-transform:uppercase}
-.focused-house{display:grid;grid-template-columns:1fr 1fr;min-height:680px;background:#f7f4ed}
+.focused-house{display:grid;grid-template-columns:1fr 1fr;min-height:680px;background:#fff}
 .focused-house__copy{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 8vw;text-align:center}
 .focused-house__copy h2,.focused-bonbons h2{margin:18px 0 0;font-family:var(--font-serif);font-size:clamp(32px,3.5vw,46px);font-weight:500;line-height:1}
 .focused-house__copy>p:not(:first-child),.focused-bonbons header>p:not(:first-child){max-width:470px;margin:0 auto 30px;font-family:var(--font-serif);font-size:17px;line-height:1.65;color:#5c5147}
