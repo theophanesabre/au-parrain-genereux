@@ -154,3 +154,16 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .house-history__copy,.vever-inspired .univers-card__copy{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:430px}
 @media(max-width:980px){.house-history,.vever-inspired .univers-card{grid-template-columns:minmax(0,380px) minmax(0,380px);gap:40px}.house-history__copy,.vever-inspired .univers-card__copy{min-height:0}}
 @media(max-width:760px){.house-history,.vever-inspired .univers-card{display:flex;flex-direction:column;gap:36px}.house-history__copy,.vever-inspired .univers-card:nth-child(n) .univers-card__copy{order:0}.house-history__image,.vever-inspired .univers-card:nth-child(n)>div{order:1}}
+
+/* Même présentation que le premier bloc, disposée en quinconce. */
+.house-history{grid-template-columns:430px minmax(0,430px)}
+.house-history__image{grid-column:1;grid-row:1}
+.house-history__copy{grid-column:2;grid-row:1}
+.vever-inspired .univers-card:nth-child(odd)>div{grid-column:2;grid-row:1}
+.vever-inspired .univers-card:nth-child(odd) .univers-card__copy{grid-column:1;grid-row:1}
+.vever-inspired .univers-card:nth-child(even)>div{grid-column:1;grid-row:1}
+.vever-inspired .univers-card:nth-child(even) .univers-card__copy{grid-column:2;grid-row:1}
+.house-history,.vever-inspired .univers-card{min-height:580px}
+.house-history__copy,.vever-inspired .univers-card__copy{width:430px;min-height:430px}
+@media(max-width:980px){.house-history{grid-template-columns:minmax(0,380px) minmax(0,380px)}.house-history__copy,.vever-inspired .univers-card__copy{width:100%}}
+@media(max-width:760px){.house-history,.vever-inspired .univers-card{min-height:0}.house-history__copy,.vever-inspired .univers-card:nth-child(n) .univers-card__copy{width:min(430px,100%);min-height:0;order:0}.house-history__image,.vever-inspired .univers-card:nth-child(n)>div{order:1}}
