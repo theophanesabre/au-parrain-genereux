@@ -1,0 +1,1 @@
+export const bonbons=["Buchette","Baiser d’Ange","Italimo","Rocher","Violette et mimosa","François Ier et salamandre","Praliné à l’ancienne","Pailleté","Feuilletine","Spéculoos","Fleur massepain","Godet or","Orangette et citronnette","Nougat","Praliné amande"];
