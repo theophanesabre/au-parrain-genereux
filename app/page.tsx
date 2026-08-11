@@ -6,9 +6,9 @@ export default function Home() {
   return <main className="white-site vever-home focused-home">
     <SiteHeader />
 
-    <section className="focused-hero">
-      <Image src="/images/hero-chocolats.png" alt="Assortiment de chocolats artisanaux Au Parrain Généreux" fill priority quality={95} sizes="100vw" />
-      <div><p>Chocolatier confiseur · Le Havre</p><h1>Le goût du beau.</h1><Link href="/bonbons">Découvrir nos chocolats</Link></div>
+    <section className="index-editorial">
+      <Link className="index-editorial__image" href="/savoir-faire" aria-label="Découvrir notre savoir-faire"><Image src="/images/illustration-cabosse-fleur-v2.png" alt="Cabosse et fleur de cacaoyer" fill priority quality={95} sizes="(max-width: 900px) 84vw, 560px" /></Link>
+      <div className="index-editorial__copy"><p>Chocolatier confiseur · Le Havre</p><h1>Le goût du beau</h1><div className="index-editorial__rule"/><p>Depuis 1890, la Maison façonne des chocolats et confiseries où le geste artisanal rencontre l’élégance.</p><Link href="/savoir-faire">Découvrir</Link></div>
     </section>
 
     <section className="focused-house">
