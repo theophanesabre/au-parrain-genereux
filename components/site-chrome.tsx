@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function SiteHeader() {
   return <header className="site-header">
-    <Link className="brand" href="/"><span>Au Parrain</span><strong>Généreux</strong></Link>
+    <Link className="brand brand-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src="/logo-au-parrain-genereux.png" alt="Au Parrain Généreux, chocolatier confiseur au Havre" /></Link>
     <nav aria-label="Navigation principale"><Link href="/bonbons">Chocolats</Link><Link href="/maison">La maison</Link><Link href="/savoir-faire">Savoir-faire</Link><Link href="/creations">Créations</Link></nav>
     <Link className="location" href="/boutique">Boutique · Le Havre</Link>
   </header>;
