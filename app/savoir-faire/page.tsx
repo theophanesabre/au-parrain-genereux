@@ -1,26 +1,32 @@
-import Image from "next/image";
 import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
+const gestes = [
+  ["01", "Sélectionner", "Nous choisissons des matières premières de qualité : chocolats Cacao Barry, noisettes du Piémont, amandes et fruits soigneusement sélectionnés."],
+  ["02", "Tempérer", "Le chocolat est chauffé, refroidi puis ramené à sa température de travail afin d’obtenir une texture nette, une belle cassure et un brillant naturel."],
+  ["03", "Mouler", "Nous coulons le chocolat dans les moules, formons des coques fines et régulières, puis laissons chaque pièce cristalliser avec patience."],
+  ["04", "Garnir", "Pralinés, ganaches, caramels et pâtes d’amande sont préparés dans l’atelier avant de venir garnir chaque chocolat."],
+  ["05", "Enrober", "Les intérieurs sont recouverts d’une fine couche de chocolat pour préserver leur fondant et créer un équilibre précis entre la coque et le cœur."],
+  ["06", "Finir", "Décors, assemblage et mise en coffret sont réalisés à la main. Chaque pièce est vérifiée avant de rejoindre la boutique."],
+];
+
 export default function SavoirFaire() {
-  return <main className="inner-page focused-home savoir-faire-editorial">
+  return <main className="inner-page craft-page">
     <SiteHeader />
-
-    <section className="index-editorial">
-      <div className="index-editorial__image"><Image src="/images/illustration-cabosse-fleur-v2.png" alt="Cabosse de cacao orange" fill priority quality={95} sizes="(max-width: 900px) 84vw, 560px" /></div>
-      <div className="index-editorial__copy"><p>Le savoir-faire</p><h1>Le goût commence par le choix</h1><div className="index-editorial__rule"/><p>Nous sélectionnons des matières premières de qualité pour leur goût juste et leur fraîcheur : noisettes du Piémont, amandes soigneusement choisies et fruits travaillés au rythme des saisons.</p></div>
+    <section className="craft-intro">
+      <p className="section-index">02 — Le savoir-faire</p>
+      <h1>Tout est fabriqué dans notre atelier.</h1>
+      <div><p>De la sélection des ingrédients à la dernière finition, nous réalisons chaque étape nous-mêmes. Nous tempérons, moulons, garnissons et enrobons nos chocolats avec le même soin, en petites séries.</p><p>Cette maîtrise de toute la fabrication nous permet de préserver les textures, la fraîcheur et le caractère de chaque recette.</p></div>
     </section>
 
-    <section className="index-editorial index-editorial--chapter">
-      <div className="index-editorial__image index-editorial__image--product"><Image src="/images/bonbons-nettoyes/3.png" alt="Bonbon de chocolat maison" fill quality={95} sizes="(max-width: 900px) 84vw, 560px" /></div>
-      <div className="index-editorial__copy"><p>La matière</p><h2>Les chocolats Cacao Barry</h2><div className="index-editorial__rule"/><p>Nous travaillons les couvertures Cacao Barry pour leur richesse aromatique et leur régularité. Tempérage, enrobage et repos sont conduits avec précision afin d’obtenir une coque fine, un brillant naturel et une fonte délicate.</p><Link href="/bonbons">Découvrir les bonbons</Link></div>
+    <section className="craft-process" aria-labelledby="gestes-title">
+      <header><p>Les gestes</p><h2 id="gestes-title">De la matière au bonbon</h2></header>
+      <div>{gestes.map(([numero, titre, texte]) => <article key={numero}><span>{numero}</span><h3>{titre}</h3><p>{texte}</p></article>)}</div>
     </section>
 
-    <section className="index-editorial index-editorial--chapter">
-      <div className="index-editorial__image index-editorial__image--product"><Image src="/images/bonbons-nettoyes/13.png" alt="Confiseries aux fruits réalisées dans notre atelier" fill quality={95} sizes="(max-width: 900px) 84vw, 560px" /></div>
-      <div className="index-editorial__copy"><p>Dans notre atelier</p><h2>Les gourmandises maison</h2><div className="index-editorial__rule"/><p>Pâtes de fruits, pâtes à tartiner et caramels sont préparés dans notre atelier. Nous cuisons doucement les fruits, torréfions les fruits secs et surveillons chaque texture pour préserver des saveurs franches et généreuses.</p><Link href="/boutique">Découvrir la boutique</Link></div>
+    <section className="craft-made">
+      <p>Au-delà du chocolat</p><div><h2>Nos gourmandises sont également maison.</h2><p>Nous préparons aussi nos pâtes de fruits, pâtes à tartiner et caramels. Les fruits sont cuits doucement, les fruits secs torréfiés, les pralinés broyés et les caramels surveillés jusqu’à obtenir la texture juste.</p><Link href="/boutique">Venir découvrir la boutique</Link></div>
     </section>
-
     <SiteFooter />
   </main>;
 }
