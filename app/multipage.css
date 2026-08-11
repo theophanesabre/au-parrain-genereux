@@ -108,3 +108,30 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .story-grid p,.steps-page p,.creation-list p,.boutique-page p{text-align:center;margin-left:auto;margin-right:auto}
 @media(max-width:900px){.vever-inspired .univers-grid{grid-template-columns:repeat(2,minmax(0,430px))}}
 @media(max-width:620px){.vever-inspired .editorial-hero__visual,.house-history__image{width:min(100%,430px)}.vever-inspired .univers-grid{grid-template-columns:1fr}.vever-inspired .univers-card{max-width:430px;margin:0 auto}.vever-inspired .editorial-hero h1{font-size:40px}.house-history__copy h2,.vever-inspired .univers-section header h2,.vever-inspired .simple-visit h2{font-size:30px}.inner-page .page-intro h1{font-size:36px}.story-grid h2,.steps-page h2,.creation-list h2,.boutique-page h2{font-size:27px}}
+
+/* Alternance éditoriale : texte et image se répondent. */
+.vever-inspired .editorial-hero h1,
+.house-history__copy h2,
+.vever-inspired .univers-section header h2,
+.vever-inspired .simple-visit h2,
+.inner-page .page-intro h1{white-space:nowrap}
+.house-history{display:grid;grid-template-columns:430px minmax(0,430px);justify-content:center;align-items:center;gap:80px;padding:95px 5vw}
+.house-history__image,.house-history__copy{width:430px;max-width:100%}
+.house-history__copy{padding:0}
+.vever-inspired .univers-section>header{margin-bottom:80px}
+.vever-inspired .univers-grid{display:block;max-width:1100px;margin:0 auto}
+.vever-inspired .univers-card{display:grid;grid-template-columns:430px minmax(0,430px);justify-content:center;align-items:center;gap:80px;max-width:none;margin:0;padding:55px 0;border-top:1px solid #d8d1c4;text-align:center}
+.vever-inspired .univers-card:last-child{border-bottom:1px solid #d8d1c4}
+.vever-inspired .univers-card>div{width:430px;max-width:100%;grid-row:1}
+.vever-inspired .univers-card__copy{width:430px;max-width:100%;grid-row:1}
+.vever-inspired .univers-card:nth-child(odd)>div{grid-column:2}
+.vever-inspired .univers-card:nth-child(odd) .univers-card__copy{grid-column:1}
+.vever-inspired .univers-card:nth-child(even)>div{grid-column:1}
+.vever-inspired .univers-card:nth-child(even) .univers-card__copy{grid-column:2}
+.vever-inspired .univers-card__copy span{font-size:8px;letter-spacing:.14em;text-transform:uppercase}
+.vever-inspired .univers-card__copy h3{margin:14px 0 0;font-size:25px;white-space:nowrap}
+.vever-inspired .univers-card__copy h3:after{content:"";display:block;width:48px;height:1px;margin:18px auto 20px;background:#a99b88}
+.vever-inspired .univers-card__copy p{max-width:360px;margin:0 auto 25px;font-family:var(--font-serif);font-size:16px;line-height:1.55;color:#554b40}
+.vever-inspired .univers-card__copy b{display:inline-block;width:auto;min-width:150px}
+@media(max-width:980px){.house-history,.vever-inspired .univers-card{grid-template-columns:minmax(0,380px) minmax(0,380px);gap:40px}.house-history__image,.house-history__copy,.vever-inspired .univers-card>div,.vever-inspired .univers-card__copy{width:100%}}
+@media(max-width:760px){.vever-inspired .editorial-hero h1,.house-history__copy h2,.vever-inspired .univers-section header h2,.vever-inspired .simple-visit h2,.inner-page .page-intro h1{white-space:normal}.house-history,.vever-inspired .univers-card{display:flex;flex-direction:column;gap:36px}.house-history__image{order:0}.house-history__copy{order:1}.vever-inspired .univers-card:nth-child(even)>div{order:0}.vever-inspired .univers-card:nth-child(even) .univers-card__copy{order:1}.vever-inspired .univers-card:nth-child(odd) .univers-card__copy{order:0}.vever-inspired .univers-card:nth-child(odd)>div{order:1}.vever-inspired .univers-card>div,.vever-inspired .univers-card__copy{width:min(430px,100%)}}

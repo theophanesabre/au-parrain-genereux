@@ -3,9 +3,9 @@ import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
 const univers = [
-  { href: "/bonbons", image: "/images/bonbons/4.png", label: "Collection", title: "Les pralinés" },
-  { href: "/creations", image: "/images/bonbons/5.png", label: "Maison", title: "Les créations" },
-  { href: "/savoir-faire", image: "/images/bonbons/13.png", label: "Héritage", title: "Les confiseries" },
+  { href: "/bonbons", image: "/images/bonbons/4.png", label: "Collection", title: "Les pralinés", text: "Des intérieurs fondants, des fruits secs torréfiés et un chocolat au caractère franc." },
+  { href: "/creations", image: "/images/bonbons/5.png", label: "Maison", title: "Les créations", text: "Les recettes emblématiques de la Maison, façonnées en petites séries au Havre." },
+  { href: "/savoir-faire", image: "/images/bonbons/13.png", label: "Héritage", title: "Les confiseries", text: "Orangettes, nougats et spécialités perpétuent un savoir-faire généreux." },
 ];
 
 export default function Home() {
@@ -14,7 +14,7 @@ export default function Home() {
     <section className="editorial-hero">
       <div className="editorial-hero__copy">
         <p className="eyebrow">Maison de chocolat · Le Havre</p>
-        <h1>Le goût<br />du beau.</h1>
+        <h1>Le goût du beau.</h1>
         <p className="hero-lead">Des chocolats maison façonnés avec patience, élégance et générosité.</p>
         <Link className="discover-link" href="/bonbons">Découvrir nos bonbons <span>→</span></Link>
       </div>
@@ -30,11 +30,11 @@ export default function Home() {
     </Link>
 
     <section className="univers-section">
-      <header><p>Nos signatures</p><h2>Les créations<br />de la Maison.</h2></header>
+      <header><p>Nos signatures</p><h2>Les créations de la Maison.</h2></header>
       <div className="univers-grid">{univers.map((item, index) =>
         <Link href={item.href} className="univers-card" key={item.title}>
           <div><Image src={item.image} alt="" fill quality={95} sizes="(max-width: 760px) 100vw, 33vw" /></div>
-          <span>0{index + 1} — {item.label}</span><h3>{item.title}</h3><b>Explorer →</b>
+          <section className="univers-card__copy"><span>0{index + 1} — {item.label}</span><h3>{item.title}</h3><p>{item.text}</p><b>Explorer →</b></section>
         </Link>
       )}</div>
     </section>
