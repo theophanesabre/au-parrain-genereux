@@ -58,3 +58,17 @@
   .bonbon-grid figcaption { min-height: 58px; padding: 11px 8px 13px; }
   .bonbon-grid figcaption strong { font-size: 14px; }
 }
+
+/* Collection éditoriale : photographie, note botanique dessinée et texte lisible. */
+.bonbon-collection{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1380px;gap:58px 28px}
+.bonbon-collection figure{border:0;background:#fff}
+.bonbon-card__visual{position:relative;overflow:hidden;background:#df4a18}
+.bonbon-card__visual>img:first-child{display:block;width:100%;height:auto}
+.bonbon-card__flower{position:absolute;right:14px;bottom:14px;width:76px!important;height:76px!important;object-fit:cover;transform:rotate(4deg);box-shadow:0 5px 14px rgba(76,39,19,.16)}
+.bonbon-collection figure:nth-child(3n+2) .bonbon-card__flower{right:auto;left:14px;transform:rotate(-5deg)}
+.bonbon-collection figcaption{display:grid;grid-template-columns:34px 1fr;align-items:start;min-height:0;padding:22px 0 0;border:0!important;background:#fff!important;color:#111}
+.bonbon-collection figcaption>span{padding-top:4px;font-size:9px;letter-spacing:.14em;color:#88786a}
+.bonbon-collection figcaption strong{display:block;font-family:var(--font-serif);font-size:24px;font-weight:500;line-height:1.08}
+.bonbon-collection figcaption p{max-width:330px;margin:13px 0 0;font-family:var(--font-serif);font-size:15px;line-height:1.5;color:#665a50}
+@media(max-width:980px){.bonbon-collection{grid-template-columns:repeat(2,minmax(0,1fr));gap:48px 22px}}
+@media(max-width:620px){.bonbon-collection{grid-template-columns:1fr;gap:52px;padding-left:22px!important;padding-right:22px!important}.bonbon-collection figure{max-width:430px;margin:0 auto}.bonbon-card__flower{width:66px!important;height:66px!important}.bonbon-collection figcaption strong{font-size:22px}}
