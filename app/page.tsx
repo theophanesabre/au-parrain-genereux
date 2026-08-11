@@ -24,14 +24,8 @@ export default function Home() {
       </Link>
     </section>
 
-    <section className="statement">
-      <p>La maison</p>
-      <h2>Le chocolat comme<br />matière d’émotion.</h2>
-      <div><p>Des recettes lisibles. Des textures franches. Une fabrication en petites séries, au cœur du Havre.</p><Link href="/maison">Notre histoire →</Link></div>
-    </section>
-
     <section className="univers-section">
-      <header><p>Les sens de la création</p><h2>Trois façons<br />de succomber.</h2></header>
+      <header><p>Nos spécialités</p><h2>Les créations<br />de la maison.</h2></header>
       <div className="univers-grid">{univers.map((item, index) =>
         <Link href={item.href} className="univers-card" key={item.title}>
           <div><Image src={item.image} alt="" fill sizes="(max-width: 760px) 100vw, 33vw" /></div>
@@ -40,7 +34,7 @@ export default function Home() {
       )}</div>
     </section>
 
-    <section className="experience-panel"><div><p>Boutique</p><h2>Une expérience<br />au Havre.</h2><Link href="/boutique">Pousser la porte →</Link></div><div className="experience-mark">APG</div></section>
+    <section className="simple-visit"><div><p className="eyebrow">La boutique</p><h2>Retrouvez-nous au Havre.</h2><p>Découvrez nos chocolats et composez votre coffret en boutique.</p></div><Link href="/boutique">Informations pratiques →</Link></section>
     <SiteFooter />
   </main>;
 }
