@@ -303,3 +303,7 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 
 /* Boutique: accueil typographique sobre */
 .boutique-page .script{color:#7a2d20;font-family:var(--font-serif);font-size:24px;font-style:italic;letter-spacing:.04em}
+
+/* Navigation mobile */
+.mobile-menu{display:none}
+@media(max-width:900px){.site-header>nav,.site-header>.location{display:none}.mobile-menu{position:relative;display:block;justify-self:end}.mobile-menu summary{display:flex;width:44px;height:44px;align-items:center;justify-content:center;flex-direction:column;gap:5px;cursor:pointer;list-style:none}.mobile-menu summary::-webkit-details-marker{display:none}.mobile-menu summary span{display:block;width:22px;height:1px;background:#111;transition:transform .25s ease,opacity .2s ease}.mobile-menu[open] summary span:first-child{transform:translateY(6px) rotate(45deg)}.mobile-menu[open] summary span:nth-child(2){opacity:0}.mobile-menu[open] summary span:last-child{transform:translateY(-6px) rotate(-45deg)}.mobile-menu nav{position:fixed;inset:82px 0 auto;display:flex!important;align-items:center;flex-direction:column;gap:0;padding:28px 22px 34px;border-bottom:1px solid #ddd;background:#fff;box-shadow:0 14px 28px rgba(0,0,0,.07)}.mobile-menu nav a{width:100%;max-width:430px;padding:16px 0;border-bottom:1px solid #e5e1dc;text-align:center;font-size:12px}}
