@@ -79,3 +79,15 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .creation-shape{height:auto;aspect-ratio:1/1}
 @media(max-width:800px){.house-history__image{min-height:0;aspect-ratio:1/1}}
 @media(max-width:620px){.house-history__image{min-height:0;aspect-ratio:1/1}}
+
+/* Visuels carrés plus généreux. */
+.vever-inspired .editorial-hero__visual{max-width:500px}
+.vever-inspired .univers-section{padding-left:4vw;padding-right:4vw}
+.vever-inspired .univers-grid{gap:24px}
+.house-history{display:flex;flex-direction:column;align-items:center;padding:95px 5vw;background:#fff}
+.house-history__image{width:min(780px,88vw);min-height:0;aspect-ratio:1/1;flex:none}
+.house-history__image img{object-position:left center}
+.house-history__copy{width:min(680px,88vw);padding:55px 0 10px}
+.bonbon-grid.standalone{max-width:1500px;margin:0 auto;padding-left:3vw;padding-right:3vw}
+@media(max-width:800px){.house-history{padding:65px 5vw}.house-history__image{width:min(680px,90vw)}.house-history__copy{width:min(620px,90vw)}}
+@media(max-width:620px){.vever-inspired .editorial-hero__visual{max-width:390px}.vever-inspired .univers-section{padding-left:14px;padding-right:14px}.house-history{padding:45px 14px}.house-history__image{width:100%}.house-history__copy{width:100%;padding:42px 8px 8px}.bonbon-grid.standalone{padding-left:10px;padding-right:10px}}
