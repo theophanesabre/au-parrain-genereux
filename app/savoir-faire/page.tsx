@@ -16,7 +16,7 @@ export default function SavoirFaire() {
     <section className="craft-intro">
       <p className="section-index">02 — Le savoir-faire</p>
       <h1>Tout est fabriqué dans notre atelier.</h1>
-      <div><p>De la sélection des ingrédients à la dernière finition, nous réalisons chaque étape nous-mêmes. Nous tempérons, moulons, garnissons et enrobons nos chocolats avec le même soin, en petites séries.</p><p>Cette maîtrise de toute la fabrication nous permet de préserver les textures, la fraîcheur et le caractère de chaque recette.</p></div>
+      <div><p>De la sélection des ingrédients à la dernière finition, nous réalisons chaque étape nous-mêmes. Nous tempérons, moulons, garnissons et enrobons nos chocolats en petites séries afin de préserver leurs textures, leur fraîcheur et le caractère de chaque recette.</p></div>
     </section>
 
     <section className="craft-process" aria-labelledby="gestes-title">
