@@ -5,6 +5,10 @@ export function SiteHeader() {
     <Link className="brand brand-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src="/logo-au-parrain-genereux.png" alt="Au Parrain Généreux, chocolatier confiseur au Havre" /><small>Depuis 1890</small></Link>
     <nav aria-label="Navigation principale"><Link href="/bonbons">Chocolats</Link><Link href="/maison">La maison</Link><Link href="/savoir-faire">Savoir-faire</Link></nav>
     <Link className="location" href="/boutique">Boutique · Le Havre</Link>
+    <details className="mobile-menu">
+      <summary aria-label="Ouvrir le menu"><span/><span/><span/></summary>
+      <nav aria-label="Navigation mobile"><Link href="/bonbons">Chocolats</Link><Link href="/maison">La maison</Link><Link href="/savoir-faire">Savoir-faire</Link><Link href="/boutique">Boutique · Le Havre</Link></nav>
+    </details>
   </header>;
 }
 
