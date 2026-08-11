@@ -13,7 +13,7 @@ export function SiteFooter() {
     <div className="site-footer__history"><p>Depuis 1890</p><h2>Une maison havraise</h2><p>Au Parrain Généreux perpétue au Havre une tradition de chocolaterie et de confiserie artisanales, guidée par la simplicité, le goût et le partage.</p></div>
     <div className="site-footer__useful">
       <nav aria-label="Liens de bas de page"><h3>Liens utiles</h3><Link href="/bonbons">Les chocolats</Link><Link href="/maison">La maison</Link><Link href="/savoir-faire">Le savoir-faire</Link><Link href="/boutique">La boutique</Link></nav>
-      <address><h3>Contact</h3><span>Le Havre, Normandie</span><a href="mailto:bonjour@auparraingenereux.fr">bonjour@auparraingenereux.fr</a><Link href="/boutique">Horaires et accès</Link></address>
+      <address><h3>Contact</h3><span>123 rue Maréchal Joffre<br/>76600 Le Havre</span><a href="tel:+33235423275">02 35 42 32 75</a><a href="mailto:genereuxparrain@gmail.com">genereuxparrain@gmail.com</a><Link href="/boutique">Horaires et accès</Link></address>
     </div>
     <p className="site-footer__legal">© 2026 Au Parrain Généreux</p>
   </footer>;
