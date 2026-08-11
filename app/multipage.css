@@ -142,3 +142,15 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .brand-logo small{display:block;font-family:var(--font-sans);font-size:7px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;white-space:nowrap;color:#5f5143}
 .vever-inspired .brand-logo{width:max-content;height:auto}
 @media(max-width:620px){.brand-logo{gap:5px}.brand-logo small{font-size:6px;letter-spacing:.18em}}
+
+/* Toutes les sections reprennent le premier modèle : texte puis image. */
+.house-history{grid-template-columns:minmax(0,430px) 430px;gap:7vw;max-width:1200px;margin:0 auto;padding:75px 5vw}
+.house-history__copy{grid-column:1;grid-row:1}
+.house-history__image{grid-column:2;grid-row:1}
+.vever-inspired .univers-grid{max-width:1200px}
+.vever-inspired .univers-card{grid-template-columns:minmax(0,430px) 430px;gap:7vw;padding:75px 5vw}
+.vever-inspired .univers-card:nth-child(n)>div{grid-column:2;grid-row:1}
+.vever-inspired .univers-card:nth-child(n) .univers-card__copy{grid-column:1;grid-row:1}
+.house-history__copy,.vever-inspired .univers-card__copy{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:430px}
+@media(max-width:980px){.house-history,.vever-inspired .univers-card{grid-template-columns:minmax(0,380px) minmax(0,380px);gap:40px}.house-history__copy,.vever-inspired .univers-card__copy{min-height:0}}
+@media(max-width:760px){.house-history,.vever-inspired .univers-card{display:flex;flex-direction:column;gap:36px}.house-history__copy,.vever-inspired .univers-card:nth-child(n) .univers-card__copy{order:0}.house-history__image,.vever-inspired .univers-card:nth-child(n)>div{order:1}}
