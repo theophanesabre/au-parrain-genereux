@@ -39,3 +39,29 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .vever-inspired .site-footer{background:#29231e}
 @media(max-width:800px){.house-history{grid-template-columns:1fr}.house-history__image{min-height:58vw}.house-history__copy{padding:58px 7vw 65px}}
 @media(max-width:620px){.vever-inspired .brand-logo,.vever-inspired .brand-logo img{width:58px;height:58px}.vever-inspired .editorial-hero{padding-top:36px}.vever-inspired .editorial-hero h1{font-size:48px}.vever-inspired .editorial-hero__visual{max-width:330px}.vever-inspired .univers-section{padding-top:68px}.vever-inspired .univers-card h3{font-size:26px}.house-history__image{min-height:68vw}.house-history__copy{padding:48px 22px 56px}.house-history__copy h2{font-size:38px}}
+
+/* Titres mesurés et blocs de lecture centrés. */
+.vever-inspired .editorial-hero__copy{text-align:center}
+.vever-inspired .editorial-hero h1{font-size:clamp(45px,5vw,70px);margin-left:auto;margin-right:auto}
+.vever-inspired .editorial-hero h1:after{content:"";display:block;width:54px;height:1px;margin:27px auto 0;background:#a99b88}
+.vever-inspired .hero-lead{max-width:430px;margin-left:auto;margin-right:auto}
+.vever-inspired .discover-link{margin-left:auto;margin-right:auto}
+.house-history__copy{text-align:center;align-items:center}
+.house-history__copy h2{font-size:clamp(34px,3.5vw,50px)}
+.house-history__copy h2:after{content:"";display:block;width:52px;height:1px;margin:23px auto 0;background:#a99b88}
+.house-history__copy>p:not(.eyebrow){margin-left:auto;margin-right:auto}
+.vever-inspired .univers-section header{display:block;text-align:center}
+.vever-inspired .univers-section header>p{margin-bottom:20px}
+.vever-inspired .univers-section header h2{font-size:clamp(36px,4vw,54px)}
+.vever-inspired .univers-section header h2:after{content:"";display:block;width:52px;height:1px;margin:25px auto 0;background:#a99b88}
+.vever-inspired .univers-card{text-align:center}
+.vever-inspired .univers-card b{margin-left:auto;margin-right:auto}
+.vever-inspired .simple-visit{flex-direction:column;text-align:center;justify-content:center}
+.vever-inspired .simple-visit h2{font-size:clamp(32px,3vw,44px)}
+.vever-inspired .simple-visit h2:after{content:"";display:block;width:52px;height:1px;margin:22px auto 0;background:#a99b88}
+.inner-page .page-intro{display:flex;flex-direction:column;align-items:center;text-align:center;gap:24px;padding-top:90px;padding-bottom:90px}
+.inner-page .page-intro h1{max-width:900px;font-size:clamp(42px,5.5vw,72px);line-height:.95}
+.inner-page .page-intro h1:after{content:"";display:block;width:52px;height:1px;margin:27px auto 0;background:#a99b88}
+.inner-page .page-intro>div{max-width:600px;font-size:17px}
+.story-grid h2,.steps-page h2,.creation-list h2,.boutique-page h2{font-size:34px}
+@media(max-width:620px){.vever-inspired .editorial-hero h1{font-size:43px}.house-history__copy h2{font-size:34px}.vever-inspired .univers-section header h2{font-size:36px}.inner-page .page-intro h1{font-size:42px}.story-grid h2,.steps-page h2,.creation-list h2,.boutique-page h2{font-size:30px}}
