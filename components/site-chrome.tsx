@@ -20,5 +20,5 @@ export function SiteFooter() {
 }
 
 export function PageIntro({ index, kicker, title, children }: { index: string; kicker: string; title: string; children: React.ReactNode }) {
-  return <header className="page-intro"><p className="section-index">{index} — {kicker}</p><h1>{title}</h1><div>{children}</div></header>;
+  return <header className="page-intro"><p className="section-index">{kicker}</p><h1>{title}</h1><div>{children}</div></header>;
 }
