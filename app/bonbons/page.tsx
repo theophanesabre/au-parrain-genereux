@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { bonbons } from "@/data/bonbons";
 import { PageIntro, SiteFooter, SiteHeader } from "@/components/site-chrome";
 
@@ -24,7 +25,7 @@ export default function Bonbons() {
   return <main className="inner-page">
     <SiteHeader />
     <PageIntro index="04" kicker="La collection maison" title="Les bonbons de chocolat.">
-      <p>Pralinés, pâtes d’amande, gianduja et confiseries : quinze recettes emblématiques de la maison.</p>
+      <p>Découvrez ici quelques recettes emblématiques de la Maison. Pour goûter le reste de notre collection, rendez-vous en boutique et <Link className="inline-text-link" href="/boutique">consultez nos informations pratiques</Link>.</p>
     </PageIntro>
     <section className="bonbon-grid standalone bonbon-collection">
       {bonbons.map((name, index) => <figure key={name}>

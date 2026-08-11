@@ -278,6 +278,7 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .savoir-faire-editorial .index-editorial__image--product{background:#df4212}
 .savoir-faire-editorial .index-editorial__image--product img{object-fit:cover}
 @media(max-width:900px){.savoir-faire-editorial .index-editorial{min-height:0}}
+.inline-text-link{padding-bottom:2px;border-bottom:1px solid currentColor}
 .index-editorial--chapter{min-height:0;padding-top:110px;padding-bottom:110px;border-top:1px solid #e7e2da}
 @media(max-width:900px){.index-editorial--chapter{padding-top:80px;padding-bottom:90px}}
 @media(max-width:620px){.index-editorial__copy h2{font-size:34px}.index-editorial--chapter{padding-top:60px;padding-bottom:75px}}
