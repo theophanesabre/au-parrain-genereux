@@ -30,7 +30,6 @@ export default function Bonbons() {
       {bonbons.map((name, index) => <figure key={name}>
         <div className="bonbon-card__visual">
           <Image src={`/images/bonbons-collection/${index + 1}.png`} alt={`${name}, bonbon de chocolat maison`} width={1086} height={1448} quality={95} sizes="(max-width: 620px) 90vw, (max-width: 980px) 45vw, 30vw" />
-          <Image className="bonbon-card__flower" src="/images/fleur-cacaoyer-dessinee.png" alt="" width={170} height={170} aria-hidden="true" />
         </div>
         <figcaption><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{name}</strong><p>{descriptions[index]}</p></div></figcaption>
       </figure>)}
