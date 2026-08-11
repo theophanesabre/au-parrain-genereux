@@ -31,6 +31,7 @@ export default function Bonbons() {
         <div className="bonbon-card__visual">
           <Image src={`/images/bonbons-nettoyes/${index + 1}.png`} alt={`${name}, bonbon de chocolat maison`} width={1055} height={1055} quality={95} sizes="(max-width: 620px) 90vw, (max-width: 980px) 45vw, 30vw" />
         </div>
+        <figcaption><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{name}</strong><p>{descriptions[index]}</p></div></figcaption>
       </figure>)}
     </section>
     <SiteFooter />

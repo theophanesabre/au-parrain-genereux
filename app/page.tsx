@@ -12,7 +12,7 @@ export default function Home() {
     </section>
 
     <section className="index-editorial index-editorial--chapter">
-      <Link className="index-editorial__image" href="/maison" aria-label="Découvrir la Maison"><Image src="/images/boutique-historique.jpeg" alt="La boutique historique Au Parrain Généreux, rue de Paris au Havre" fill quality={95} sizes="(max-width: 900px) 84vw, 560px" /></Link>
+      <Link className="index-editorial__image index-editorial__image--boutique" href="/maison" aria-label="Découvrir la Maison"><Image src="/images/boutique-historique.jpeg" alt="La boutique historique Au Parrain Généreux, rue de Paris au Havre" fill quality={95} sizes="(max-width: 900px) 84vw, 560px" /></Link>
       <div className="index-editorial__copy"><p>Depuis 1890</p><h2>La Maison</h2><div className="index-editorial__rule"/><p>Au cœur du Havre, Au Parrain Généreux cultive depuis plusieurs générations le goût des confiseries et des chocolats faits maison.</p><Link href="/maison">Découvrir notre histoire</Link></div>
     </section>
 
