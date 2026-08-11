@@ -223,13 +223,13 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 @media(max-width:620px){.focused-hero{min-height:68vh}.focused-hero>div{left:24px}.focused-hero h1{font-size:39px;white-space:normal}.focused-house__copy{min-height:0;padding:80px 24px}.focused-house__image{min-height:100vw}.focused-bonbons{padding:85px 14px 95px}.focused-bonbons header{margin-bottom:50px}.focused-bonbons__grid{grid-template-columns:1fr;gap:35px}.focused-bonbons__grid a{max-width:430px;width:100%;margin:0 auto}}
 
 /* Photo historique carrée et compacte, entourée d'espace. */
-.focused-house__image{width:min(430px,82%);min-height:0;aspect-ratio:1/1;align-self:center;justify-self:center}
+.focused-house__image{width:min(520px,88%);min-height:0;aspect-ratio:1/1;align-self:center;justify-self:center}
 @media(max-width:900px){.focused-house__image{width:min(430px,84vw);min-height:0;margin:0 auto 80px}}
 @media(max-width:620px){.focused-house__image{width:min(360px,84vw);min-height:0;margin-bottom:60px}}
 
 /* Les bonbons reprennent la présentation de la Maison, en quinconce. */
 .focused-bonbons--feature{display:grid;grid-template-columns:1fr 1fr;align-items:center;min-height:680px;padding:0;background:#fff}
-.focused-bonbons__image{position:relative;width:min(430px,82%);aspect-ratio:1/1;justify-self:center;overflow:hidden;background:#df3f0d}
+.focused-bonbons__image{position:relative;width:min(520px,88%);aspect-ratio:1/1;justify-self:center;overflow:hidden;background:#df3f0d}
 .focused-bonbons__image img{object-fit:contain;width:100%;height:100%}
 .focused-bonbons__copy{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 8vw;text-align:center}
 .focused-bonbons__copy>p:first-child{font-size:9px;letter-spacing:.2em;text-transform:uppercase}
