@@ -65,3 +65,17 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .inner-page .page-intro>div{max-width:600px;font-size:17px}
 .story-grid h2,.steps-page h2,.creation-list h2,.boutique-page h2{font-size:34px}
 @media(max-width:620px){.vever-inspired .editorial-hero h1{font-size:43px}.house-history__copy h2{font-size:34px}.vever-inspired .univers-section header h2{font-size:36px}.inner-page .page-intro h1{font-size:42px}.story-grid h2,.steps-page h2,.creation-list h2,.boutique-page h2{font-size:30px}}
+
+/* Format d’image uniforme sur tout le site. */
+.editorial-hero__visual,
+.vever-inspired .editorial-hero__visual,
+.univers-card>div,
+.vever-inspired .univers-card>div,
+.house-history__image{aspect-ratio:1/1;min-height:0}
+.editorial-hero__visual img,
+.univers-card img,
+.house-history__image img,
+.bonbon-grid img{width:100%;height:100%;aspect-ratio:1/1;object-fit:cover;object-position:center}
+.creation-shape{height:auto;aspect-ratio:1/1}
+@media(max-width:800px){.house-history__image{min-height:0;aspect-ratio:1/1}}
+@media(max-width:620px){.house-history__image{min-height:0;aspect-ratio:1/1}}
