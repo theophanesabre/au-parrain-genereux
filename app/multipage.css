@@ -170,7 +170,7 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 
 /* Accueil inspiré du rythme éditorial de Vever, avec l’identité APG. */
 .vever-home{background:#fff;color:#2d2722}
-.vever-home .site-header{grid-template-columns:1fr auto 1fr;grid-template-areas:"brand blank location" "nav nav nav";row-gap:12px;padding:14px 3.5vw 18px;background:#fff}
+.vever-home .site-header{grid-template-columns:1fr auto 1fr;grid-template-areas:"brand nav location";padding:14px 3.5vw;background:#fff}
 .vever-home .brand-logo{grid-area:brand;justify-self:start}
 .vever-home .site-header nav{grid-area:nav;justify-self:center}
 .vever-home .site-header .location{grid-area:location;align-self:center}
