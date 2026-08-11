@@ -63,7 +63,7 @@
 .bonbon-collection{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1380px;gap:58px 28px}
 .bonbon-collection figure{border:0;background:#fff}
 .bonbon-card__visual{position:relative;aspect-ratio:1/1;overflow:hidden;background:#df4a18}
-.bonbon-card__visual>img:first-child{display:block;width:100%;height:100%!important;aspect-ratio:1/1!important;object-fit:cover!important;object-position:center bottom;transform:scale(1.48);transform-origin:center bottom}
+.bonbon-card__visual>img:first-child{display:block;width:100%;height:100%!important;aspect-ratio:1/1!important;object-fit:cover!important;object-position:center}
 .bonbon-card__visual:after{content:none}
 .bonbon-collection figcaption{display:grid;grid-template-columns:34px 1fr;align-items:start;min-height:0;padding:22px 0 0;border:0!important;background:#fff!important;color:#111}
 .bonbon-collection figcaption>span{padding-top:4px;font-size:9px;letter-spacing:.14em;color:#88786a}
