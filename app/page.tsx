@@ -3,19 +3,19 @@ import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
 const univers = [
-  { href: "/bonbons", image: "/images/bonbons/4.png", label: "Pralinés", title: "Brut" },
-  { href: "/creations", image: "/images/bonbons/5.png", label: "Créations", title: "Singulier" },
-  { href: "/savoir-faire", image: "/images/bonbons/13.png", label: "Confiseries", title: "Vivant" },
+  { href: "/bonbons", image: "/images/bonbons/4.png", label: "Collection", title: "Les pralinés" },
+  { href: "/creations", image: "/images/bonbons/5.png", label: "Maison", title: "Les créations" },
+  { href: "/savoir-faire", image: "/images/bonbons/13.png", label: "Héritage", title: "Les confiseries" },
 ];
 
 export default function Home() {
-  return <main className="white-site">
+  return <main className="white-site vever-inspired">
     <SiteHeader />
     <section className="editorial-hero">
       <div className="editorial-hero__copy">
-        <p className="eyebrow">Chocolatier au Havre · Depuis 1985</p>
-        <h1>L’instinct<br />généreux.</h1>
-        <p className="hero-lead">Une maison artisanale où le chocolat se travaille avec franchise, patience et gourmandise.</p>
+        <p className="eyebrow">Maison de chocolat · Le Havre</p>
+        <h1>Le goût<br />du beau.</h1>
+        <p className="hero-lead">Des chocolats maison façonnés avec patience, élégance et générosité.</p>
         <Link className="discover-link" href="/bonbons">Découvrir nos bonbons <span>→</span></Link>
       </div>
       <Link className="editorial-hero__visual" href="/bonbons" aria-label="Découvrir les bonbons de chocolat">
@@ -25,7 +25,7 @@ export default function Home() {
     </section>
 
     <section className="univers-section">
-      <header><p>Nos spécialités</p><h2>Les créations<br />de la maison.</h2></header>
+      <header><p>Nos signatures</p><h2>Les créations<br />de la Maison.</h2></header>
       <div className="univers-grid">{univers.map((item, index) =>
         <Link href={item.href} className="univers-card" key={item.title}>
           <div><Image src={item.image} alt="" fill sizes="(max-width: 760px) 100vw, 33vw" /></div>
