@@ -91,3 +91,20 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .bonbon-grid.standalone{max-width:1500px;margin:0 auto;padding-left:3vw;padding-right:3vw}
 @media(max-width:800px){.house-history{padding:65px 5vw}.house-history__image{width:min(680px,90vw)}.house-history__copy{width:min(620px,90vw)}}
 @media(max-width:620px){.vever-inspired .editorial-hero__visual{max-width:390px}.vever-inspired .univers-section{padding-left:14px;padding-right:14px}.house-history{padding:45px 14px}.house-history__image{width:100%}.house-history__copy{width:100%;padding:42px 8px 8px}.bonbon-grid.standalone{padding-left:10px;padding-right:10px}}
+
+/* Dimensions et hiérarchie strictement uniformisées. */
+.vever-inspired .editorial-hero__visual,
+.house-history__image{width:min(430px,88vw);max-width:430px}
+.vever-inspired .univers-grid{grid-template-columns:repeat(3,minmax(0,430px));justify-content:center}
+.vever-inspired .univers-card>div{width:100%;max-width:430px}
+.vever-inspired .editorial-hero h1{font-size:clamp(40px,4.3vw,58px)}
+.house-history__copy h2,
+.vever-inspired .univers-section header h2,
+.vever-inspired .simple-visit h2{font-size:clamp(30px,3vw,40px)}
+.vever-inspired .univers-card h3{font-size:23px}
+.inner-page .page-intro h1{font-size:clamp(36px,4.6vw,58px)}
+.story-grid h2,.steps-page h2,.creation-list h2,.boutique-page h2{font-size:29px;text-align:center}
+.story-grid h2:after,.steps-page h2:after,.creation-list h2:after,.boutique-page h2:after{content:"";display:block;width:48px;height:1px;margin:18px auto 22px;background:#a99b88}
+.story-grid p,.steps-page p,.creation-list p,.boutique-page p{text-align:center;margin-left:auto;margin-right:auto}
+@media(max-width:900px){.vever-inspired .univers-grid{grid-template-columns:repeat(2,minmax(0,430px))}}
+@media(max-width:620px){.vever-inspired .editorial-hero__visual,.house-history__image{width:min(100%,430px)}.vever-inspired .univers-grid{grid-template-columns:1fr}.vever-inspired .univers-card{max-width:430px;margin:0 auto}.vever-inspired .editorial-hero h1{font-size:40px}.house-history__copy h2,.vever-inspired .univers-section header h2,.vever-inspired .simple-visit h2{font-size:30px}.inner-page .page-intro h1{font-size:36px}.story-grid h2,.steps-page h2,.creation-list h2,.boutique-page h2{font-size:27px}}
