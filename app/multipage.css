@@ -221,3 +221,9 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .focused-bonbons__grid span{display:block;margin-top:16px;font-family:var(--font-serif);font-size:21px}
 @media(max-width:900px){.focused-hero{min-height:72vh}.focused-house{grid-template-columns:1fr}.focused-house__copy{min-height:520px}.focused-house__image{min-height:100vw}.focused-bonbons__grid{grid-template-columns:repeat(2,minmax(0,430px))}}
 @media(max-width:620px){.focused-hero{min-height:68vh}.focused-hero>div{left:24px}.focused-hero h1{font-size:39px;white-space:normal}.focused-house__copy{min-height:0;padding:80px 24px}.focused-house__image{min-height:100vw}.focused-bonbons{padding:85px 14px 95px}.focused-bonbons header{margin-bottom:50px}.focused-bonbons__grid{grid-template-columns:1fr;gap:35px}.focused-bonbons__grid a{max-width:430px;width:100%;margin:0 auto}}
+
+/* Carrés de présentation compacts, entourés d’espace blanc. */
+.focused-bonbons__grid{grid-template-columns:repeat(3,280px);gap:46px;max-width:930px}
+.focused-bonbons__grid a>div{width:280px;height:280px}
+@media(max-width:900px){.focused-bonbons__grid{grid-template-columns:repeat(2,280px);max-width:606px}}
+@media(max-width:620px){.focused-bonbons__grid{grid-template-columns:260px;justify-content:center;gap:42px}.focused-bonbons__grid a{width:260px}.focused-bonbons__grid a>div{width:260px;height:260px}}
