@@ -2,38 +2,31 @@ import Image from "next/image";
 import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
-const signatures = [
-  { href: "/bonbons", image: "/images/bonbons/4.png", kicker: "Collection maison", title: "Les pralinés", text: "Des intérieurs fondants, des fruits secs torréfiés et un chocolat au caractère franc." },
-  { href: "/creations", image: "/images/bonbons/5.png", kicker: "Créations", title: "Les incontournables", text: "Les recettes emblématiques de la Maison, façonnées en petites séries au Havre." },
-  { href: "/savoir-faire", image: "/images/bonbons/13.png", kicker: "Héritage", title: "Le savoir-faire", text: "Orangettes, nougats et confiseries perpétuent des gestes précis et généreux." },
+const bonbons = [
+  { image: "/images/bonbons/2.png", name: "Baiser d’Ange" },
+  { image: "/images/bonbons/4.png", name: "Rocher" },
+  { image: "/images/bonbons/9.png", name: "Feuilletine" },
 ];
 
 export default function Home() {
-  return <main className="white-site vever-home">
+  return <main className="white-site vever-home focused-home">
     <SiteHeader />
 
-    <Link className="vever-hero" href="/maison" aria-label="Découvrir l’histoire de la Maison">
-      <Image src="/images/boutique-historique.jpeg" alt="La boutique historique Au Parrain Généreux, rue de Paris au Havre" fill priority quality={95} sizes="100vw" />
-      <div><p>Le Havre · Depuis 1890</p><h1>Une maison de goût.</h1><span>Découvrir notre histoire</span></div>
-    </Link>
-
-    <section className="vever-intro">
-      <p>Chocolatier confiseur</p>
-      <h2>Chocolats d’art et de générosité depuis 1890</h2>
-      <div className="vever-rule" />
-      <p className="vever-intro__text">Au Parrain Généreux imagine au Havre des chocolats sincères, travaillés avec patience et conçus pour être partagés.</p>
+    <section className="focused-hero">
+      <Image src="/images/hero-chocolats.png" alt="Assortiment de chocolats artisanaux Au Parrain Généreux" fill priority quality={95} sizes="100vw" />
+      <div><p>Chocolatier confiseur · Le Havre</p><h1>Le goût du beau.</h1><Link href="/bonbons">Découvrir nos chocolats</Link></div>
     </section>
 
-    <section className="vever-features">{signatures.map((item, index) =>
-      <Link className="vever-feature" href={item.href} key={item.title}>
-        <div className="vever-feature__image"><Image src={item.image} alt="" fill quality={95} sizes="(max-width: 760px) 100vw, 50vw" /></div>
-        <div className="vever-feature__copy"><p>{item.kicker}</p><h2>{item.title}</h2><div className="vever-rule"/><p className="vever-feature__text">{item.text}</p><span>Découvrir</span></div>
-      </Link>
-    )}</section>
+    <section className="focused-house">
+      <div className="focused-house__copy"><p>Depuis 1890</p><h2>La Maison</h2><div className="vever-rule"/><p>Au cœur du Havre, Au Parrain Généreux cultive depuis plusieurs générations le goût des confiseries et des chocolats faits maison.</p><Link href="/maison">Découvrir notre histoire</Link></div>
+      <Link className="focused-house__image" href="/maison" aria-label="Découvrir la Maison"><Image src="/images/boutique-historique.jpeg" alt="La boutique historique Au Parrain Généreux au Havre" fill quality={95} sizes="(max-width: 800px) 100vw, 50vw" /></Link>
+    </section>
 
-    <section className="vever-story"><p>La Maison</p><h2>Au cœur du Havre</h2><div className="vever-rule"/><p>Une chocolaterie patrimoniale attachée aux belles matières, aux recettes lisibles et au plaisir d’offrir.</p><Link href="/maison">Plongez dans notre histoire</Link></section>
-
-    <section className="simple-visit"><div><p className="eyebrow">La boutique</p><h2>Retrouvez-nous au Havre.</h2><p>Découvrez nos chocolats et composez votre coffret en boutique.</p></div><Link href="/boutique">Informations pratiques →</Link></section>
+    <section className="focused-bonbons">
+      <header><p>La collection maison</p><h2>Les bonbons</h2><div className="vever-rule"/><p>Pralinés, pâtes d’amande, gianduja et confiseries composent une collection généreuse, façonnée dans notre atelier.</p></header>
+      <div className="focused-bonbons__grid">{bonbons.map((item) => <Link href="/bonbons" key={item.name}><div><Image src={item.image} alt={item.name} fill quality={95} sizes="(max-width: 650px) 100vw, 33vw" /></div><span>{item.name}</span></Link>)}</div>
+      <Link className="focused-bonbons__link" href="/bonbons">Voir toute la collection</Link>
+    </section>
     <SiteFooter />
   </main>;
 }
