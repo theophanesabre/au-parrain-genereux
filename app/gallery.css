@@ -62,12 +62,12 @@
 /* Collection éditoriale : photographie, note botanique dessinée et texte lisible. */
 .bonbon-collection{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1380px;gap:58px 28px}
 .bonbon-collection figure{border:0;background:#fff}
-.bonbon-card__visual{position:relative;overflow:hidden;background:#df4a18}
-.bonbon-card__visual>img:first-child{display:block;width:100%;height:auto!important;aspect-ratio:auto!important;object-fit:contain!important}
-.bonbon-card__visual:after{content:"";position:absolute;inset:-3%;pointer-events:none;background:linear-gradient(135deg,rgba(112,26,64,.42) 0 6%,rgba(184,61,94,.2) 11%,transparent 25%),linear-gradient(315deg,rgba(255,222,198,.34) 0 7%,rgba(242,169,157,.15) 13%,transparent 27%);filter:blur(7px);mix-blend-mode:multiply;opacity:.62}
-.bonbon-collection figure:nth-child(4n+2) .bonbon-card__visual:after{background:linear-gradient(45deg,rgba(244,188,177,.35) 0 8%,rgba(255,225,204,.17) 15%,transparent 29%),linear-gradient(225deg,rgba(126,28,62,.38) 0 6%,rgba(196,62,92,.16) 12%,transparent 25%)}
-.bonbon-collection figure:nth-child(4n+3) .bonbon-card__visual:after{background:linear-gradient(160deg,rgba(255,215,174,.32) 0 7%,rgba(236,150,135,.16) 14%,transparent 28%),linear-gradient(340deg,rgba(150,37,72,.4) 0 7%,rgba(102,25,55,.14) 13%,transparent 26%)}
-.bonbon-collection figure:nth-child(4n) .bonbon-card__visual:after{background:linear-gradient(20deg,rgba(123,31,68,.4) 0 7%,rgba(205,75,104,.17) 14%,transparent 27%),linear-gradient(200deg,rgba(251,211,198,.35) 0 8%,rgba(255,234,214,.13) 15%,transparent 29%)}
+.bonbon-card__visual{position:relative;aspect-ratio:1/1;overflow:hidden;background:#df4a18}
+.bonbon-card__visual>img:first-child{display:block;width:100%;height:100%!important;aspect-ratio:1/1!important;object-fit:cover!important;object-position:center bottom}
+.bonbon-card__visual:after{content:"";position:absolute;inset:-7%;pointer-events:none;background:linear-gradient(135deg,rgba(105,21,58,.82) 0 13%,rgba(190,48,91,.55) 21%,transparent 38%),linear-gradient(315deg,rgba(255,226,197,.78) 0 14%,rgba(241,159,154,.42) 23%,transparent 40%);filter:blur(11px);opacity:.82}
+.bonbon-collection figure:nth-child(4n+2) .bonbon-card__visual:after{background:linear-gradient(45deg,rgba(244,182,174,.78) 0 15%,rgba(255,224,199,.48) 24%,transparent 41%),linear-gradient(225deg,rgba(117,22,59,.82) 0 13%,rgba(194,51,91,.5) 22%,transparent 39%)}
+.bonbon-collection figure:nth-child(4n+3) .bonbon-card__visual:after{background:linear-gradient(160deg,rgba(255,211,164,.76) 0 14%,rgba(230,133,128,.46) 23%,transparent 40%),linear-gradient(340deg,rgba(139,28,68,.84) 0 14%,rgba(91,19,50,.44) 23%,transparent 39%)}
+.bonbon-collection figure:nth-child(4n) .bonbon-card__visual:after{background:linear-gradient(20deg,rgba(111,24,64,.82) 0 14%,rgba(208,64,103,.48) 23%,transparent 40%),linear-gradient(200deg,rgba(250,207,191,.8) 0 15%,rgba(255,232,209,.42) 24%,transparent 41%)}
 .bonbon-collection figcaption{display:grid;grid-template-columns:34px 1fr;align-items:start;min-height:0;padding:22px 0 0;border:0!important;background:#fff!important;color:#111}
 .bonbon-collection figcaption>span{padding-top:4px;font-size:9px;letter-spacing:.14em;color:#88786a}
 .bonbon-collection figcaption strong{display:block;font-family:var(--font-serif);font-size:24px;font-weight:500;line-height:1.08}
