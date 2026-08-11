@@ -270,6 +270,14 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .site-footer__useful{display:grid;grid-template-columns:1fr 1.25fr;gap:5vw}.site-footer__useful nav,.site-footer__useful address{display:flex;flex-direction:column;align-items:flex-start;gap:13px;font-size:11px;font-style:normal;line-height:1.5}.site-footer__useful h3{margin-bottom:8px}.site-footer__useful a{padding-bottom:3px;border-bottom:1px solid transparent}.site-footer__useful a:hover{border-color:#111}.site-footer__legal{grid-column:1/-1;margin:55px 0 0;padding-top:22px;border-top:1px solid #dedbd6;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#746c65}
 @media(max-width:760px){.site-footer{grid-template-columns:1fr;gap:55px;padding:65px 24px 28px}.site-footer__useful{gap:34px}.site-footer__legal{margin-top:10px}}
 @media(max-width:460px){.site-footer__useful{grid-template-columns:1fr}.site-footer__history h2{font-size:28px}}
+
+/* Savoir-faire : même rythme éditorial que l'accueil, avec une présence plus légère. */
+.savoir-faire-editorial .index-editorial{min-height:680px}
+.savoir-faire-editorial .index-editorial__copy h1,.savoir-faire-editorial .index-editorial__copy h2{max-width:520px;font-size:clamp(32px,3vw,44px)}
+.savoir-faire-editorial .index-editorial__copy>p:not(:first-child){max-width:500px}
+.savoir-faire-editorial .index-editorial__image--product{background:#df4212}
+.savoir-faire-editorial .index-editorial__image--product img{object-fit:cover}
+@media(max-width:900px){.savoir-faire-editorial .index-editorial{min-height:0}}
 .index-editorial--chapter{min-height:0;padding-top:110px;padding-bottom:110px;border-top:1px solid #e7e2da}
 @media(max-width:900px){.index-editorial--chapter{padding-top:80px;padding-bottom:90px}}
 @media(max-width:620px){.index-editorial__copy h2{font-size:34px}.index-editorial--chapter{padding-top:60px;padding-bottom:75px}}
