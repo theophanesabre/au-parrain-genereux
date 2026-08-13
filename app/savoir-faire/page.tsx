@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
 const gestes = [
-  ["Sélectionner", "Nous choisissons des matières premières de qualité : chocolats Cacao Barry, noisettes du Piémont, amandes et fruits soigneusement sélectionnés."],
+  ["Choisir", "Nous travaillons avec de bons ingrédients : chocolats Cacao Barry, noisettes du Piémont, amandes et fruits choisis avec soin."],
   ["Tempérer", "Le chocolat est chauffé, refroidi puis ramené à sa température de travail afin d’obtenir une texture nette, une belle cassure et un brillant naturel."],
   ["Mouler", "Nous coulons le chocolat dans les moules, formons des coques fines et régulières, puis laissons chaque pièce cristalliser avec patience."],
   ["Garnir", "Pralinés, ganaches, caramels et pâtes d’amande sont préparés dans l’atelier avant de venir garnir chaque chocolat."],
@@ -15,8 +15,8 @@ export default function SavoirFaire() {
     <SiteHeader />
     <section className="craft-intro">
       <p className="section-index">Le savoir-faire</p>
-      <h1>Tout est fabriqué dans notre atelier.</h1>
-      <div><p>De la sélection des ingrédients à la dernière finition, nous réalisons chaque étape nous-mêmes. Nous tempérons, moulons, garnissons et enrobons nos chocolats en petites séries afin de préserver leurs textures, leur fraîcheur et le caractère de chaque recette.</p></div>
+      <h1>Chaque chocolat passe par notre atelier.</h1>
+      <div><p>Nous réalisons chaque étape nous-mêmes : tempérer, mouler, garnir et enrober. Le travail en petites séries nous permet de suivre chaque fabrication avec attention, de préserver la fraîcheur et de respecter l’équilibre de nos recettes.</p></div>
     </section>
 
     <section className="craft-process" aria-labelledby="gestes-title">
@@ -25,7 +25,7 @@ export default function SavoirFaire() {
     </section>
 
     <section className="craft-made">
-      <p>Au-delà du chocolat</p><div><h2>Nos gourmandises sont également maison.</h2><p>Nous préparons aussi nos pâtes de fruits, pâtes à tartiner et caramels. Les fruits sont cuits doucement, les fruits secs torréfiés, les pralinés broyés et les caramels surveillés jusqu’à obtenir la texture juste.</p><Link href="/boutique">Venir découvrir la boutique</Link></div>
+      <p>Dans notre atelier</p><div><h2>Le savoir-faire se prolonge au-delà du chocolat.</h2><p>Nous préparons également nos pâtes de fruits, pâtes à tartiner et caramels. Les fruits cuisent doucement, les fruits secs sont torréfiés et les pralinés sont broyés sur place pour obtenir les textures et les goûts que nous recherchons.</p><Link href="/#nous-trouver">Venir nous rencontrer</Link></div>
     </section>
     <SiteFooter />
   </main>;

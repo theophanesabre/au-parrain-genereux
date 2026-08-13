@@ -1,24 +1,49 @@
 import Image from "next/image";
 import Link from "next/link";
-import { SiteFooter, SiteHeader } from "@/components/site-chrome";
+import { SiteFooter } from "@/components/site-chrome";
+
+const chapters = [
+  ["La collection", "Nos chocolats et confiseries maison", "/bonbons"],
+  ["La Maison", "Une chocolaterie havraise depuis 1890", "/maison"],
+  ["Le savoir-faire", "Notre manière de travailler", "/savoir-faire"],
+  ["Nous trouver", "123 rue Maréchal Joffre · Le Havre", "/#nous-trouver"],
+] as const;
 
 export default function Home() {
-  return <main className="white-site vever-home focused-home">
-    <SiteHeader />
+  return <main className="heritage-home">
+    <header className="heritage-header">
+      <nav aria-label="Navigation principale">
+        <Link href="/maison">La Maison</Link><Link href="/savoir-faire">Savoir-faire</Link>
+        <Link className="heritage-header__logo" href="/" aria-label="Au Parrain Généreux — Accueil"><Image src="/images/logo-boutique-le-havre-v4-transparent.png" alt="Au Parrain Généreux, Le Havre" width={280} height={280} priority /></Link>
+        <Link href="/bonbons">Les chocolats</Link><Link href="#nous-trouver">Nous trouver</Link>
+      </nav>
+    </header>
 
-    <section className="index-editorial">
-      <Link className="index-editorial__image" href="/savoir-faire" aria-label="Découvrir notre savoir-faire"><Image src="/images/illustration-cabosse-fleur-v2.png" alt="Cabosse de cacao orange" fill priority quality={95} sizes="(max-width: 900px) 84vw, 560px" /></Link>
-      <div className="index-editorial__copy"><p>Chocolatier confiseur · Le Havre</p><h1>Le goût du beau</h1><div className="index-editorial__rule"/><p>Depuis 1890, la Maison façonne des chocolats et confiseries où le geste artisanal rencontre l’élégance.</p><Link href="/savoir-faire">Découvrir</Link></div>
+    <section className="heritage-map heritage-map--top" id="nous-trouver">
+      <div><p>La boutique au Havre</p><h2>Venez nous rencontrer</h2><span/><p>Nous vous accueillons en boutique pour vous faire découvrir nos chocolats, nos confiseries et les recettes de la maison.</p><address>123 rue Maréchal Joffre · 76600 Le Havre<br/>Du mardi au samedi · 9h–12h et 14h–19h<br/><a href="tel:+33235423275">02 35 42 32 75</a><br/><a href="mailto:genereuxparrain@gmail.com">genereuxparrain@gmail.com</a></address></div>
+      <figure><Image src="/images/plan-boutique-le-havre-v4-transparent.png" alt="Plan simplifié dessiné à la main indiquant la boutique Au Parrain Généreux, 123 rue Maréchal Joffre au Havre" fill priority sizes="(max-width: 760px) 92vw, 520px" /></figure>
     </section>
 
-    <section className="index-editorial index-editorial--chapter">
-      <Link className="index-editorial__image index-editorial__image--boutique" href="/maison" aria-label="Découvrir la Maison"><Image src="/images/boutique-historique.jpeg" alt="La boutique historique Au Parrain Généreux, rue de Paris au Havre" fill quality={95} sizes="(max-width: 900px) 84vw, 560px" /></Link>
-      <div className="index-editorial__copy"><p>Depuis 1890</p><h2>La Maison</h2><div className="index-editorial__rule"/><p>Au cœur du Havre, Au Parrain Généreux cultive depuis plusieurs générations le goût des confiseries et des chocolats faits maison.</p><Link href="/maison">Découvrir notre histoire</Link></div>
+    <section className="heritage-intro">
+      <p>Chocolatier · Confiseur</p>
+      <h1>Le chocolat artisanal,<br/>au cœur du Havre.</h1>
+      <div className="heritage-intro__story">
+        <figure><Image src="/images/boutique-historique.jpeg" alt="La boutique historique Au Parrain Généreux" fill priority sizes="(max-width: 760px) 82vw, 390px" /></figure>
+        <div><p>Depuis 1890</p><h2>Fidèles à notre manière de faire</h2><span/>
+          <p>Nous choisissons de bons produits et accordons la même attention à chaque étape. Nos chocolats et nos confiseries sont préparés avec soin, dans le respect des recettes et de l’identité de la maison.</p>
+          <Link href="/maison">Découvrir notre histoire</Link>
+        </div>
+      </div>
     </section>
 
-    <section className="index-editorial index-editorial--chapter">
-      <Link className="index-editorial__image" href="/bonbons" aria-label="Découvrir les bonbons maison"><Image src="/images/bonbons-editorial.png" alt="Sélection de bonbons de chocolat maison" fill quality={95} sizes="(max-width: 900px) 84vw, 560px" /></Link>
-      <div className="index-editorial__copy"><p>La collection maison</p><h2>Les bonbons</h2><div className="index-editorial__rule"/><p>Pralinés, pâtes d’amande, gianduja et confiseries composent une collection généreuse, façonnée dans notre atelier.</p><Link href="/bonbons">Voir la collection</Link></div>
+    <section className="heritage-chapters" aria-labelledby="chapters-title">
+      <p>Découvrir la maison</p><h2 id="chapters-title">Ce que nous faisons</h2>
+      <div>{chapters.map(([title, subtitle, href]) => <Link href={href} key={href}><h3>{title}</h3><p>{subtitle}</p><span>Découvrir →</span></Link>)}</div>
+    </section>
+
+    <section className="heritage-feature">
+      <div><p>La collection maison</p><h2>Des recettes qui nous ressemblent</h2><span/><p>Pralinés, gianduja, pâtes d’amande et confiseries sont préparés dans notre atelier. Découvrez ici une partie de la collection, et retrouvez l’ensemble de nos créations en boutique.</p><Link href="/bonbons">Voir les bonbons</Link></div>
+      <figure><Image src="/images/bonbons-editorial-transparent.png" alt="Bonbons de chocolat de la Maison" fill sizes="(max-width: 760px) 82vw, 430px" /></figure>
     </section>
     <SiteFooter />
   </main>;
