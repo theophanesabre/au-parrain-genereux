@@ -370,3 +370,40 @@ body{background:#fff}.white-site,.inner-page{min-height:100vh;background:#fff;co
 .inner-page .boutique-page{max-width:1050px;margin:0 auto}.inner-page .boutique-page .script{color:var(--heritage-red)}
 .inner-page .site-footer{background:rgba(255,253,249,.9)!important;border-color:rgba(43,39,31,.18)}
 @media(max-width:620px){.inner-page .site-header{min-height:92px}.inner-page .brand-logo,.inner-page .brand-logo img{width:76px;height:76px}.inner-page .bonbon-grid img{padding:2%}.inner-page .bonbon-grid.standalone figcaption{min-height:165px;padding:20px 8px 30px}.inner-page .bonbon-grid figcaption strong{font-size:22px}.inner-page .bonbon-grid figcaption p{font-size:14px}}
+/* Sécurise les images Next/Image en fill sur l'accueil */
+.heritage-map figure,
+.heritage-intro__story figure,
+.heritage-feature figure {
+  position: relative;
+  overflow: hidden;
+}
+
+.heritage-map figure {
+  width: min(100%, 520px);
+  aspect-ratio: 1 / 1;
+}
+
+.heritage-intro__story figure {
+  width: min(100%, 390px);
+  aspect-ratio: 4 / 5;
+}
+
+.heritage-feature figure {
+  width: min(100%, 430px);
+  aspect-ratio: 1 / 1;
+}
+
+.heritage-map figure img,
+.heritage-intro__story figure img,
+.heritage-feature figure img {
+  object-fit: contain;
+}
+
+@media (max-width: 760px) {
+  .heritage-map figure,
+  .heritage-intro__story figure,
+  .heritage-feature figure {
+    width: 100%;
+    max-width: 100%;
+  }
+}
