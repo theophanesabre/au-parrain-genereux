@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
 const gestes = [
@@ -25,7 +24,7 @@ export default function SavoirFaire() {
     </section>
 
     <section className="craft-made">
-      <p>Dans notre atelier</p><div><h2>Le savoir-faire se prolonge au-delà du chocolat.</h2><p>Nous préparons également nos pâtes de fruits, pâtes à tartiner et caramels. Les fruits cuisent doucement, les fruits secs sont torréfiés et les pralinés sont broyés sur place pour obtenir les textures et les goûts que nous recherchons.</p><Link href="/#nous-trouver">Venir nous rencontrer</Link></div>
+      <p>Dans notre atelier</p><div><h2>Le savoir-faire se prolonge au-delà du chocolat.</h2><p>Nous préparons également nos pâtes de fruits, pâtes à tartiner et caramels. Les fruits cuisent doucement, les fruits secs sont torréfiés et les pralinés sont broyés sur place pour obtenir les textures et les goûts que nous recherchons.</p><a href="/#nous-trouver">Venir nous rencontrer</a></div>
     </section>
     <SiteFooter />
   </main>;
