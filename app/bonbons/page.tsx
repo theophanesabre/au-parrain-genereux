@@ -1,3 +1,7 @@
+import { env } from "cloudflare:workers";
+import { getDb } from "@/db";
+import { products } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import Image from "next/image";
 import { bonbons } from "@/data/bonbons";
 import { PageIntro, SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -20,18 +24,20 @@ const descriptions = [
   "Praliné lisse de noix de pécan, enrobé de chocolat au lait ou noir.",
 ];
 
-export default function Bonbons() {
+export const dynamic = "force-dynamic";
+export default async function Bonbons() {
+  const collection = env.DB ? await getDb().select().from(products).where(eq(products.published, 1)) : bonbons.map((name, index) => ({id: String(index), name, description: descriptions[index], image: `/images/bonbons-ia-basse-def/${index + 1}.png`}));
   return <main className="inner-page">
     <SiteHeader />
     <PageIntro index="04" kicker="La collection maison" title="Les bonbons de chocolat.">
       <p>Cette sélection présente quelques recettes de la maison. Notre collection évolue au fil des saisons et de nos fabrications ; retrouvez les autres chocolats en boutique. <a className="inline-text-link" href="/#nous-trouver">Consulter nos informations pratiques</a>.</p>
     </PageIntro>
     <section className="bonbon-grid standalone bonbon-collection">
-      {bonbons.map((name, index) => <figure key={name}>
+      {collection.map((product) => <figure key={product.id}>
         <div className="bonbon-card__visual">
-          <Image src={`/images/bonbons-ia-basse-def/${index + 1}.png`} alt={`${name}, bonbon de chocolat maison`} width={768} height={768} quality={84} sizes="(max-width: 620px) 90vw, (max-width: 980px) 45vw, 30vw" />
+          <Image src={product.image || "/logo-au-parrain-genereux.png"} alt={`${product.name}, bonbon de chocolat maison`} width={768} height={768} quality={84} sizes="(max-width: 620px) 90vw, (max-width: 980px) 45vw, 30vw" />
         </div>
-        <figcaption><strong>{name}</strong><p>{descriptions[index]}</p></figcaption>
+        <figcaption><strong>{product.name}</strong><p>{product.description}</p></figcaption>
       </figure>)}
     </section>
     <SiteFooter />

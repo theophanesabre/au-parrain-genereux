@@ -1,3 +1,4 @@
+import { getManagedPage, ManagedPage } from "@/components/managed-page";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
 const gestes = [
@@ -9,7 +10,10 @@ const gestes = [
   ["Finir", "Décors, assemblage et mise en coffret sont réalisés à la main. Chaque pièce est vérifiée avant de rejoindre la boutique."],
 ];
 
-export default function SavoirFaire() {
+export const dynamic = "force-dynamic";
+export default async function SavoirFaire() {
+  const managed = await getManagedPage("savoir-faire");
+  if (managed) return <ManagedPage page={managed}/>;
   return <main className="inner-page craft-page">
     <SiteHeader />
     <section className="craft-intro">
