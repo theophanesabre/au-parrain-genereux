@@ -1,3 +1,4 @@
+import { claimAdmin, setupHTML } from './setup.mjs';
 import { authorize, checkOrigin, text, integer, slug, imagePath, transition, imageType, HttpError } from './core.mjs';
 import { adminHTML } from './ui.mjs';
 const headers = {'Cache-Control':'private, no-store', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'same-origin', 'X-Frame-Options':'DENY'};
@@ -20,8 +21,21 @@ export async function handleAdmin(request, env) {
       const object=await env.BUCKET?.get(id); if(!object) return new Response(null,{status:404});
       return new Response(object.body,{headers:{'Content-Type':object.httpMetadata.contentType,'X-Content-Type-Options':'nosniff','Cache-Control':'public,max-age=86400','Content-Security-Policy':"default-src 'none'"}});
     }
+    if(path==='/admin/setup' && request.method==='GET') {
+      const nonce=crypto.randomUUID();return new Response(setupHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
+    }
+    if(path==='/admin/api/claim') {
+      if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');
+      return json(await claimAdmin(request,env));
+    }
     let actor;
-    try {actor=authorize(request,env);} catch(error) {
+    try {
+      try {actor=authorize(request,env);} catch(error) {
+        const user=request.headers.get('oai-authenticated-user-id');
+        const grant=user && env.DB ? await env.DB.prepare('SELECT user_id FROM admin_access WHERE slot=1 AND user_id=?').bind(user).first() : null;
+        if(!grant)throw error;actor=user;
+      }
+    } catch(error) {
       if(error.status===401 && path==='/admin' && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to=%2Fadmin'}});
       throw error;
     }
@@ -87,7 +101,7 @@ export async function handleAdmin(request, env) {
       if(!Array.isArray(b.items)||!b.items.length||b.items.length>50) throw new HttpError(400,'Articles requis (50 maximum)');
       const seen=new Set(),items=[];let total=0;
       for(const line of b.items){const productId=slug(line.id),qty=integer(line.quantity,1000);if(!qty||seen.has(productId))throw new HttpError(400,'Quantité ou doublon invalide');seen.add(productId);
-        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p)throw new HttpError(400,'Produit inconnu');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty});total+=p.price_cents*qty;}
+        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p)throw new HttpError(400,'Produit inconnu');if(p.price_cents<=0)throw new HttpError(400,'Renseignez le prix du produit avant de créer une commande');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty});total+=p.price_cents*qty;}
       integer(total);const key=crypto.randomUUID();
       await db.batch([db.prepare('INSERT INTO orders (id,customer,contact,items,total_cents,status,created_at) VALUES (?,?,?,?,?,?,?)').bind(key,text(b.customer),text(b.contact),JSON.stringify(items),total,'draft',new Date().toISOString()),log()]);
       return json({id:key},201);

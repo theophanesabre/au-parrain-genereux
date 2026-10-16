@@ -26,7 +26,9 @@ const descriptions = [
 
 export const dynamic = "force-dynamic";
 export default async function Bonbons() {
-  const collection = env.DB ? await getDb().select().from(products).where(eq(products.published, 1)) : bonbons.map((name, index) => ({id: String(index), name, description: descriptions[index], image: `/images/bonbons-ia-basse-def/${index + 1}.png`}));
+  const stored = env.DB ? await getDb().select().from(products).where(eq(products.published, 1)) : null;
+  const initialized = env.DB ? await env.DB.prepare("SELECT slot FROM admin_access WHERE slot=1").first() : null;
+  const collection = stored && (stored.length > 0 || initialized) ? stored : bonbons.map((name, index) => ({id: String(index), name, description: descriptions[index], image: `/images/bonbons-ia-basse-def/${index + 1}.png`}));
   return <main className="inner-page">
     <SiteHeader />
     <PageIntro index="04" kicker="La collection maison" title="Les bonbons de chocolat.">

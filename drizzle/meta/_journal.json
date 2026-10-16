@@ -15,6 +15,13 @@
       "when": 1792193174507,
       "tag": "0001_order_stock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792194309537,
+      "tag": "0002_thick_iron_patriot",
+      "breakpoints": true
     }
   ]
 }

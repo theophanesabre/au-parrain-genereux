@@ -22,3 +22,7 @@ export const audit = sqliteTable('audit', {
   id: text('id').primaryKey(), actor: text('actor').notNull(), action: text('action').notNull(),
   target: text('target').notNull(), createdAt: text('created_at').notNull(),
 });
+
+export const adminAccess = sqliteTable('admin_access', {
+  slot: integer('slot').primaryKey(), userId: text('user_id').notNull(), createdAt: text('created_at').notNull(),
+});

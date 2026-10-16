@@ -5,6 +5,8 @@ import handler from "vinext/server/app-router-entry";
 
 interface Env {
   ADMIN_USER_IDS?: string;
+  ADMIN_SETUP_TOKEN_HASH?: string;
+  ADMIN_SETUP_EXPIRES_AT?: string;
   BUCKET: R2Bucket;
   ASSETS: Fetcher;
   DB: D1Database;

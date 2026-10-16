@@ -31,7 +31,7 @@ test('HTTP boundary protects all admin routes, preserves public routes, returns 
  const response=await handleAdmin(req('/admin',{headers:{'oai-authenticated-user-id':'owner'}}),env);
  assert.equal(response.status,200);assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'none'/);assert.match(response.headers.get('cache-control'),/no-store/);
 });
-function database(){const db=new DatabaseSync(':memory:');for(const p of ['0000_flippant_saracen.sql','0001_order_stock.sql'])db.exec(readFileSync(new URL('../drizzle/'+p,import.meta.url),'utf8'));return db;}
+function database(){const db=new DatabaseSync(':memory:');for(const p of ['0000_flippant_saracen.sql','0001_order_stock.sql','0002_thick_iron_patriot.sql'])db.exec(readFileSync(new URL('../drizzle/'+p,import.meta.url),'utf8'));return db;}
 test('migrations reserve, prevent overselling, roll back failed confirmation, and release stock once',()=>{
  const db=database();db.exec("INSERT INTO products (id,name,description,price_cents,stock) VALUES ('p','Praliné','Maison',100,3)");
  const insert=db.prepare('INSERT INTO orders (id,customer,contact,items,total_cents,created_at) VALUES (?,?,?,?,?,?)');
@@ -85,4 +85,27 @@ test('uploads enforce format and image deletion protects referenced products',as
  assert.equal((await call(env,'products/p','DELETE',{version:1})).status,200);
  assert.equal((await call(env,'images/'+image.id,'DELETE')).status,200);
  assert.equal((await handleAdmin(req(image.url),env)).status,404);env.sqlite.close();
+});
+
+test('one-time activation requires both signed-in identity and private expiring token, imports existing catalogue',async()=>{
+ const env=bindings();delete env.ADMIN_USER_IDS;
+ const token=crypto.randomUUID()+crypto.randomUUID();
+ env.ADMIN_SETUP_TOKEN_HASH=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))).toString('hex');
+ env.ADMIN_SETUP_EXPIRES_AT=new Date(Date.now()+60000).toISOString();
+ const claim=(user,key=token,from=origin)=>handleAdmin(req('/admin/api/claim',{method:'POST',headers:{...(user?{'oai-authenticated-user-id':user}:{}),origin:from,'X-Admin-Setup-Token':key}}),env);
+ assert.equal((await claim(null)).status,401);
+ assert.equal((await claim('owner','wrong')).status,403);
+ assert.equal((await claim('owner',token,'https://evil.example')).status,403);
+ env.ADMIN_SETUP_EXPIRES_AT='2000-01-01';assert.equal((await claim('owner')).status,403);
+ env.ADMIN_SETUP_EXPIRES_AT=new Date(Date.now()+60000).toISOString();
+ assert.equal((await claim('owner')).status,200);
+ assert.equal((await claim('intruder')).status,409);
+ assert.equal((await claim('owner')).status,200);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products').get().n,15);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products WHERE published=1').get().n,15);
+ assert.equal((await call(env,'products')).status,200);
+ assert.equal((await handleAdmin(req('/admin/api/products',{headers:{'oai-authenticated-user-id':'intruder'}}),env)).status,403);
+ const rows=await (await call(env,'products')).json();assert.equal(rows.length,15);
+ assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'test',items:[{id:'bonbon-1',quantity:1}]})).status,400);
+ env.sqlite.close();
 });
