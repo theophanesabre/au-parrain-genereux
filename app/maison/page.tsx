@@ -1,7 +1,11 @@
+import { getManagedPage, ManagedPage } from "@/components/managed-page";
 import Image from "next/image";
 import { PageIntro, SiteFooter, SiteHeader } from "@/components/site-chrome";
 
-export default function Maison() {
+export const dynamic = "force-dynamic";
+export default async function Maison() {
+  const managed = await getManagedPage("maison");
+  if (managed) return <ManagedPage page={managed}/>;
   return <main className="inner-page maison-page">
     <SiteHeader />
     <PageIntro index="01" kicker="La maison" title="Une chocolaterie havraise.">

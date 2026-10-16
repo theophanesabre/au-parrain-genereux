@@ -1,5 +1,27 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1792193148524,
+      "tag": "0000_flippant_saracen",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792193174507,
+      "tag": "0001_order_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792194309537,
+      "tag": "0002_thick_iron_patriot",
+      "breakpoints": true
+    }
+  ]
 }

@@ -98,3 +98,7 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)
 - [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+
+## Administration Au Parrain Généreux
+
+Voir [le guide d’administration](docs/ADMINISTRATION.md) pour les fonctionnalités, la configuration de `ADMIN_USER_IDS`, D1/R2, les migrations et la préparation du catalogue avant validation et déploiement. `npm test` compile le Worker et exécute les tests de l’administration.

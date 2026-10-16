@@ -1,3 +1,4 @@
+import { getManagedPage, ManagedPage } from "@/components/managed-page";
 import Image from "next/image";
 import { SiteFooter } from "@/components/site-chrome";
 
@@ -8,7 +9,10 @@ const chapters = [
   ["Nous trouver", "123 rue Maréchal Joffre · Le Havre", "/#nous-trouver"],
 ] as const;
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+export default async function Home() {
+  const managed = await getManagedPage("accueil");
+  if (managed) return <ManagedPage page={managed}/>;
   return <main className="heritage-home">
     <header className="heritage-header">
       <nav className="heritage-header__desktop-nav" aria-label="Navigation principale">
