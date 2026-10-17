@@ -4,7 +4,7 @@ import {handlePrelaunch} from '../site/prelaunch.mjs';
 const req=(path,headers={},method='GET')=>new Request('https://maison.example'+path,{headers,method});
 test('prelaunch shows the logo and message while unfinished pages temporarily redirect',async()=>{
  const response=await handlePrelaunch(req('/'),{});assert.equal(response.status,200);const html=await response.text();assert.match(html,/Notre boutique en ligne<br>arrive bientôt/);assert.match(html,/logo-boutique-neon.webp/);assert.match(html,/#FF6A00/);assert.match(response.headers.get('cache-control'),/no-store/);assert.match(response.headers.get('content-security-policy'),/default-src 'none'/);
- for(const path of ['/boutique','/maison','/savoir-faire','/bonbons','/panier','/contenu/livraison']){const result=await handlePrelaunch(req(path),{});assert.equal(result.status,302);assert.equal(result.headers.get('location'),'/');}
+ for(const path of ['/boutique','/boutique/','/maison','/savoir-faire','/bonbons','/panier','/contenu/livraison']){const result=await handlePrelaunch(req(path),{});assert.equal(result.status,302);assert.equal(result.headers.get('location'),'/');}
  assert.equal(await(await handlePrelaunch(req('/',{},'HEAD'),{})).text(),'');
  for(const path of ['/admin','/admin/puck','/admin/api/products','/images/logo-boutique-neon.webp','/signin-with-chatgpt','/media/123','/api/panier'])assert.equal(await handlePrelaunch(req(path),{}),null);
 });
