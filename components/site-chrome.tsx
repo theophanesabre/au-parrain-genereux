@@ -1,12 +1,14 @@
+import { CartLink } from "./cart";
 import { getPageContent, getImageSources, getImageDescriptions } from "./site-data";
 export async function SiteHeader() {
   const [imageSources,imageAlts]=await Promise.all([getImageSources(),getImageDescriptions()]);
   return <header className="site-header">
     <a className="brand brand-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"} alt={imageAlts["/images/logo-boutique-neon.webp"] || "Enseigne Au Parrain Généreux sur la façade de la boutique"} /></a>
-    <nav aria-label="Navigation principale"><a href="/bonbons">Chocolats</a><a href="/maison">La maison</a><a href="/savoir-faire">Savoir-faire</a><a href="/#nous-trouver">Nous trouver</a></nav>
+    <nav aria-label="Navigation principale"><a href="/bonbons">Chocolats</a><a href="/boutique">Boutique</a><a href="/maison">La maison</a><a href="/savoir-faire">Savoir-faire</a><a href="/#nous-trouver">Nous trouver</a></nav>
+    <CartLink />
     <details className="mobile-menu">
       <summary aria-label="Ouvrir le menu"><span/><span/><span/></summary>
-      <nav aria-label="Navigation mobile"><a href="/bonbons">Chocolats</a><a href="/maison">La maison</a><a href="/savoir-faire">Savoir-faire</a><a href="/#nous-trouver">Nous trouver</a><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a></nav>
+      <nav aria-label="Navigation mobile"><a href="/bonbons">Chocolats</a><a href="/boutique">Boutique</a><a href="/maison">La maison</a><a href="/savoir-faire">Savoir-faire</a><a href="/#nous-trouver">Nous trouver</a><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a></nav>
     </details>
   </header>;
 }

@@ -1,8 +1,10 @@
+import { CartProvider } from "@/components/cart";
 import type { Metadata } from "next";
 import "./globals.css";
 import "./gallery.css";
 import "./multipage.css";
 import "./highlights.css";
+import "./cart.css";
 
 export const metadata: Metadata = {
   title: "Au Parrain Généreux | Chocolaterie artisanale au Havre",
@@ -28,7 +30,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body><CartProvider>{children}</CartProvider></body>
     </html>
   );
 }

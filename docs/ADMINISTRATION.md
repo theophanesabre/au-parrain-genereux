@@ -77,3 +77,19 @@ Le bandeau avance toutes les sept secondes, avec commandes précédent/suivant, 
 La migration `0004_typical_lady_deathstrike.sql` crée uniquement la table `highlights`. Elle doit être appliquée avant la publication du Worker. Les écritures conservent les contrôles d’identité, d’origine et de version de l’administration. Les liens sont limités au site et les textes sont échappés.
 
 Vérification : 17 tests passent, dont la gestion des nouveautés, les destinations interdites, les images référencées, l’interface d’administration et le rendu serveur des carrousels. Le rendu serveur ne vérifie pas les gestes ni l’apparence dans un navigateur ; un contrôle visuel mobile reste à faire avant publication.
+
+## Boutique et panier
+
+`/boutique` présente uniquement les produits de vente publiés dont le prix est positif. Les recettes `bonbon-*` restent des découvertes sur `/bonbons`, avec un lien vers l’assortiment. Pour proposer l’assortiment, enregistrer et publier l’article **Bonbon** dans Produits et stocks et renseigner son stock en grammes. Un stock nul affiche une indisponibilité ; une base sans produit publié affiche un état d’attente.
+
+Le visiteur ajoute un poids entier en grammes pour Bonbon (raccourcis 100, 250, 500 et 1 000 g) ou une quantité entière pour les autres produits. `/panier` permet de modifier les quantités, retirer un article ou vider la sélection. Les identifiants et quantités seuls sont conservés dans le navigateur sous `apg-panier-v1` ; les prix ne sont jamais repris du stockage local. Le panier se synchronise entre onglets, sans données personnelles ni création de compte. Un stockage indisponible est signalé.
+
+`POST /api/panier` recalcule les montants à partir de D1 et contrôle publication et stock. Une sélection devenue indisponible reste visible pour être corrigée. Les réponses ne sont pas mises en cache et les requêtes d’une autre origine sont refusées. Cette route ne réserve pas de stock et ne crée aucune commande.
+
+Retrait et expédition peuvent être choisis dans le récapitulatif. Le paiement reste explicitement indisponible jusqu’au raccordement du prestataire et à la configuration des frais/destinations. Aucun frais d’expédition fictif, aucune commande payée et aucun webhook ne sont créés par ce panier. La future étape de paiement devra revérifier prix et stocks et ne faire apparaître la commande dans l’administration qu’après confirmation vérifiée et idempotente du paiement.
+
+Validation : quatre tests supplémentaires (`npm run test:cart`) couvrent la restauration, les quantités, les calculs au poids, les changements de prix/stock, la lecture SQLite et les erreurs HTTP. Les 17 tests de l’administration, TypeScript et la compilation passent. Aucun navigateur disponible pour tester visuellement les gestes et la persistance réelle. Aucune nouvelle migration.
+
+## Présentation de l’administration
+
+L’interface reprend les fonds crème, les tons chocolat et les accents orange `#FF6A00` du site. La navigation est latérale sur ordinateur et défile horizontalement sur mobile. Les contenus s’affichent en cartes, la bibliothèque en grille et les commandes en liste large. Les formulaires utilisent une fenêtre adaptée au mobile avec actions visibles en bas. Les styles sont intégrés à la page d’administration sous son nonce CSP, sans bibliothèque ni ressource externe supplémentaire. Les contrôles d’accès et les API conservent leur fonctionnement.

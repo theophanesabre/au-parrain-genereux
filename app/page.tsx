@@ -1,3 +1,4 @@
+import { CartLink } from "@/components/cart";
 import { SpotlightCarousel, NewsRail } from "@/components/home-highlights";
 import { getPageContent, getImageSources, getImageDescriptions, getHighlights } from "@/components/site-data";
 import { getManagedPage, ManagedPage } from "@/components/managed-page";
@@ -23,12 +24,14 @@ export default async function Home() {
         <a className="heritage-header__logo" href="/" aria-label="Au Parrain Généreux — Accueil"><Image src={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"} alt={imageAlts["/images/logo-boutique-neon.webp"] || "Enseigne Au Parrain Généreux sur la façade de la boutique"} width={1536} height={1024} priority /></a>
         <a href="/bonbons">Les chocolats</a><a href="#nous-trouver">Nous trouver</a>
       </nav>
+      <CartLink />
       <details className="heritage-mobile-menu">
         <summary aria-label="Ouvrir le menu" title="Menu"><span /><span /><span /></summary>
         <nav className="heritage-mobile-menu__nav" aria-label="Navigation mobile">
           <a href="/maison">La Maison</a>
           <a href="/savoir-faire">Savoir-faire</a>
           <a href="/bonbons">Les chocolats</a>
+          <a href="/boutique">Boutique</a>
           <a href="#nous-trouver">Nous trouver</a>
           <a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a>
         </nav>
