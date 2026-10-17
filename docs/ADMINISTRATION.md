@@ -97,3 +97,15 @@ L’interface reprend les fonds crème, les tons chocolat et les accents orange 
 ## Alertes de stock
 
 Une bannière visible dans tous les onglets de l’administration signale Bonbon à **500 g ou moins** et les autres articles à **5 pièces ou moins**. Les stocks nuls portent la mention « rupture de stock ». Les recettes de découverte sont exclues. L’alerte se recalcule après les opérations, à la réouverture de l’onglet et toutes les 30 secondes pendant que l’administration est visible ; elle disparaît après réapprovisionnement. Le bouton « Gérer les stocks » ouvre les produits. Aucun courriel ou notification externe n’est envoyé.
+
+## Éditeur d’apparence
+
+Depuis **Admin → Apparence du site**, choisir le fond crème ou blanc, les espacements, le style et les angles des boutons, le côté de l’image du bandeau et le nombre de colonnes de la boutique sur ordinateur. Les textes et destinations des boutons Histoire et Collection sont modifiables ; ceux des diapositives restent dans Nouveautés. Les choix de colonnes s’adaptent automatiquement aux petits écrans.
+
+Les six sections de l’accueil peuvent être réordonnées avec Monter/Descendre ou masquées sans supprimer leur contenu. Au moins une section doit rester visible. L’en-tête et le pied de page restent accessibles. Les pages historiques libres en texte brut gardent leur propre contenu : les convertir aux champs structurés de Pages pour bénéficier des sections de l’accueil.
+
+L’aperçu ordinateur/téléphone reçoit les réglages uniquement dans son iframe de même origine ; aucun changement n’est enregistré avant le bouton « Enregistrer sur le site ». Une restauration remet les valeurs d’origine dans l’aperçu, puis demande le même enregistrement. Les changements non enregistrés déclenchent un avertissement à la fermeture. Les réglages enregistrés s’appliquent immédiatement, sans nouveau déploiement.
+
+La migration `0005_pretty_thena.sql` ajoute `site_settings`. Les écritures de l’API `/admin/api/appearance` sont authentifiées, vérifient l’origine et la version et sont consignées dans l’historique. Les valeurs sont limitées aux options prévues et les destinations aux pages publiques internes. Aucun HTML, JavaScript ou CSS arbitraire n’est accepté. L’aperçu utilise les réglages uniquement dans la page affichée : il ne modifie pas les stocks, produits ou commandes.
+
+Vérification : les tests couvrent l’autorisation, l’origine, les valeurs invalides, les conflits de version et la restauration. L’aperçu et les déplacements n’ont pas pu être essayés visuellement dans un navigateur.

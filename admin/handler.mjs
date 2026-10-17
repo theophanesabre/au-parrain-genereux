@@ -1,3 +1,5 @@
+import { defaultAppearance, appearanceValues, validateAppearance } from './appearance.mjs';
+import { appearanceHTML } from './appearance-ui.mjs';
 import { defaultHighlights, isDefaultHighlight, mergeHighlights, validateHighlight } from './highlights.mjs';
 import { builtinPages } from '../data/site-content.mjs';
 import { builtinImages } from '../data/site-assets.mjs';
@@ -44,6 +46,9 @@ export async function handleAdmin(request, env) {
       if(error.status===401 && path==='/admin' && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to=%2Fadmin'}});
       throw error;
     }
+    if(path==='/admin/apparence' && request.method==='GET') {
+      const nonce=crypto.randomUUID();return new Response(appearanceHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; frame-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
+    }
     if(path==='/admin' && request.method==='GET') {
       const nonce=crypto.randomUUID();
       return new Response(adminHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
@@ -51,6 +56,14 @@ export async function handleAdmin(request, env) {
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
     const db=env.DB;
+    if(path==='/admin/api/appearance'){
+      if(request.method==='GET'){const row=await db.prepare("SELECT body,version FROM site_settings WHERE id='appearance'").first();return json({settings:row?appearanceValues(row.body):defaultAppearance,defaults:defaultAppearance,version:row?.version??0});}
+      if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const data=await body(request),settings=validateAppearance(data.settings),version=integer(data.version);
+      const change=version===0?db.prepare("INSERT OR IGNORE INTO site_settings (id,body) VALUES ('appearance',?)").bind(JSON.stringify(settings)):db.prepare("UPDATE site_settings SET body=?,version=version+1 WHERE id='appearance' AND version=?").bind(JSON.stringify(settings),version);
+      const [result]=await db.batch([change,db.prepare('INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),actor,'UPDATE_APPEARANCE','appearance',new Date().toISOString())]);
+      if(result.meta.changes!==1)throw new HttpError(409,'Les réglages ont changé dans une autre session. Rechargez la page avant de modifier à nouveau.');
+      return json({settings,version:version+1});
+    }
     const resetImage=path.match(/^\/admin\/api\/image-replacements\/(asset-[a-z0-9-]+)$/);
     if(resetImage){
       if(request.method!=='DELETE')throw new HttpError(405,'Méthode refusée');checkOrigin(request);

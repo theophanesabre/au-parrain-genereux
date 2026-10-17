@@ -38,3 +38,7 @@ export const highlights = sqliteTable('highlights', {
   buttonLabel: text('button_label').notNull(), href: text('href').notNull(), position: integer('position').notNull().default(0),
   published: integer('published').notNull().default(0), version: integer('version').notNull().default(1),
 });
+
+export const siteSettings = sqliteTable('site_settings', {
+  id: text('id').primaryKey(), body: text('body').notNull(), version: integer('version').notNull().default(1),
+});

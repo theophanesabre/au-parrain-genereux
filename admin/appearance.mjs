@@ -1,0 +1,16 @@
+import { highlightHref } from './highlights.mjs';
+import { text, HttpError } from './core.mjs';
+export const homeSections=[['spotlight','Bandeau principal'],['news','Nouveautés'],['visit','Nous trouver'],['history','Histoire de la maison'],['chapters','Découvrir la maison'],['collection','Collection de chocolats']];
+export const defaultAppearance={background:'cream',spacing:'airy',buttons:'filled',corners:'soft',hero:'image-left',columns:'3',historyLabel:'Découvrir notre histoire',historyHref:'/maison',collectionLabel:'Voir les bonbons',collectionHref:'/bonbons',sections:homeSections.map(([id])=>({id,visible:true}))};
+export function validateAppearance(value){
+ if(!value||typeof value!=='object')throw new HttpError(400,'Réglages invalides');
+ const choices={background:['cream','white'],spacing:['airy','compact'],buttons:['filled','outline'],corners:['square','soft','round'],hero:['image-left','image-right'],columns:['2','3','4']};
+ const result={...defaultAppearance};for(const [key,allowed] of Object.entries(choices)){if(!allowed.includes(value[key]))throw new HttpError(400,'Réglage invalide : '+key);result[key]=value[key];}
+ for(const prefix of ['history','collection']){result[prefix+'Label']=text(value[prefix+'Label'],80);result[prefix+'Href']=highlightHref(value[prefix+'Href']);}
+ if(!Array.isArray(value.sections)||value.sections.length!==homeSections.length)throw new HttpError(400,'Sections invalides');
+ const ids=new Set(homeSections.map(([id])=>id)),seen=new Set();
+ result.sections=value.sections.map(section=>{if(!section||!ids.has(section.id)||seen.has(section.id)||typeof section.visible!=='boolean')throw new HttpError(400,'Section invalide');seen.add(section.id);return {id:section.id,visible:section.visible};});
+ if(!result.sections.some(section=>section.visible))throw new HttpError(400,'Conservez au moins une section visible');
+ return result;
+}
+export function appearanceValues(body){try{return validateAppearance(JSON.parse(body));}catch{return defaultAppearance;}}
