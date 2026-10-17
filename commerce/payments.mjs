@@ -1,3 +1,4 @@
+import { buildCheckoutParams } from './stripe-params.ts';
 import { normalizeCart,quoteCart } from './cart.mjs';
 import { authorize,HttpError } from '../admin/core.mjs';
 import { prelaunchEnabled } from '../site/prelaunch.mjs';
@@ -6,11 +7,7 @@ const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control
 export async function isStoreAdmin(request,env){try{authorize(request,env);return true;}catch{const user=request.headers.get('oai-authenticated-user-id');return !!(user&&env.DB&&await env.DB.prepare('SELECT user_id FROM admin_access WHERE slot=1 AND user_id=?').bind(user).first());}}
 async function rawBody(request,max=16000){if(Number(request.headers.get('content-length'))>max)throw new HttpError(413,'Requête trop volumineuse');const reader=request.body?.getReader();if(!reader)throw new HttpError(400,'Corps requis');const parts=[];let size=0;for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>max){await reader.cancel();throw new HttpError(413,'Requête trop volumineuse');}parts.push(value);}return new TextDecoder().decode(await new Blob(parts).arrayBuffer());}
 async function requesterHash(request,env){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.PAYMENT_CONFIG_ENCRYPTION_KEY),{name:'HMAC',hash:'SHA-256'},false,['sign']);const bytes=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(request.headers.get('CF-Connecting-IP')||'unknown'));return Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');}
-export function checkoutParams(attempt,items,countries){
- const parameters={mode:'payment',payment_method_types:['card'],locale:'fr',client_reference_id:attempt.id,metadata:{apg_attempt:attempt.id},payment_intent_data:{metadata:{apg_attempt:attempt.id}},expires_at:attempt.expires_at,success_url:storeOrigin+'/paiement?session_id={CHECKOUT_SESSION_ID}'+(prelaunchEnabled?'&apercu=1':''),cancel_url:storeOrigin+'/panier?paiement=annule'+(prelaunchEnabled?'&apercu=1':''),billing_address_collection:'required',phone_number_collection:{enabled:true},line_items:items.map(item=>({price_data:{currency:'eur',unit_amount:item.price_cents,product_data:{name:item.name}},quantity:item.quantity}))};
- if(attempt.delivery==='shipping'){parameters.shipping_address_collection={allowed_countries:countries};parameters.shipping_options=[{shipping_rate_data:{type:'fixed_amount',fixed_amount:{amount:attempt.shipping_cents,currency:'eur'},display_name:'Expédition'}}];}
- return parameters;
-}
+export function checkoutParams(attempt,items,countries){return buildCheckoutParams(attempt,items,countries,storeOrigin,prelaunchEnabled);}
 async function sessionFor(attempt,stripe){if(attempt.session_id)return stripe.checkout.sessions.retrieve(attempt.session_id,{expand:['payment_intent.latest_charge']});return stripe.checkout.sessions.create(JSON.parse(attempt.params),{idempotencyKey:'apg-checkout-'+attempt.id});}
 function intentId(session){return typeof session.payment_intent==='string'?session.payment_intent:session.payment_intent?.id||null;}
 export async function fulfillSession(session,env){
@@ -97,7 +94,7 @@ export async function handlePayments(request,env,makeClient=stripeClient){
    const rows=(await env.DB.prepare(`SELECT id,name,price_cents,stock,published FROM products WHERE id IN (${lines.map(()=>'?').join(',')})`).bind(...lines.map(line=>line.id)).all()).results;const quote=quoteCart(lines,rows);
    if(!quote.valid||quote.total_cents>99999999)throw new HttpError(409,'Les prix ou stocks ont changé. Actualisez le panier.');
    const items=quote.items.map(item=>({id:item.id,name:item.name,quantity:item.quantity,price_cents:item.price_cents,line_total_cents:item.line_cents,unit:'piece'}));
-   const createdAt=Math.floor(Date.now()/1000),expiresAt=createdAt+1800;attempt={id:body.key,session_id:null,delivery:body.delivery,shipping_cents:body.delivery==='shipping'?config.shipping_cents:0,total_cents:quote.total_cents,expires_at:expiresAt,status:'creating'};
+   const createdAt=Math.floor(Date.now()/1000),expiresAt=createdAt+2100;attempt={id:body.key,session_id:null,delivery:body.delivery,shipping_cents:body.delivery==='shipping'?config.shipping_cents:0,total_cents:quote.total_cents,expires_at:expiresAt,status:'creating'};
    attempt.params=JSON.stringify(checkoutParams(attempt,items,config.countries));
    const requester=await requesterHash(request,env);
    const active=await env.DB.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE requester=? AND status IN ('creating','open')").bind(requester).first();if(active.count>=5)throw new HttpError(429,'Plusieurs paiements sont déjà en cours. Patientez avant de recommencer.');
@@ -106,13 +103,13 @@ export async function handlePayments(request,env,makeClient=stripeClient){
    }
   }
   if(attempt.status==='paid'&&attempt.session_id)return json({state:'paid',session_id:attempt.session_id});
-  if(!['creating','open'].includes(attempt.status))throw new HttpError(409,'Ce paiement est terminé. Actualisez le panier.');
+  if(!['creating','open'].includes(attempt.status)){const error=new HttpError(409,'Cette tentative est terminée. Le paiement peut être recommencé.');error.retryCheckout=['failed','expired'].includes(attempt.status);throw error;}
   let session;
-  try{session=await sessionFor(attempt,stripe);}catch(error){if(error.type==='StripeInvalidRequestError'&&!attempt.session_id)await env.DB.batch([env.DB.prepare("UPDATE checkout_attempts SET status='failed' WHERE id=? AND status='creating' AND session_id IS NULL").bind(attempt.id)]);throw new HttpError(503,'Stripe n’a pas pu ouvrir le paiement. Réessayez avec le même panier.');}
+  try{session=await sessionFor(attempt,stripe);}catch(error){const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_\[\].-]{1,120}$/.test(value)?value:undefined;console.error('stripe_checkout_failed',{attempt:attempt.id,type:safe(error.type),code:safe(error.code),param:safe(error.param),requestId:safe(error.requestId)});if(error.type==='StripeInvalidRequestError'&&!attempt.session_id)await env.DB.batch([env.DB.prepare("UPDATE checkout_attempts SET status='failed' WHERE id=? AND status='creating' AND session_id IS NULL").bind(attempt.id)]);const failure=new HttpError(503,'Stripe n’a pas pu ouvrir le paiement. Réessayez avec le même panier.');failure.retryCheckout=error.type==='StripeInvalidRequestError'&&!attempt.session_id;throw failure;}
   if(session.payment_status==='paid'){await settleSession(session,env);return json({state:'paid',session_id:session.id});}
   if(session.status!=='open'){await settleSession(session,env);throw new HttpError(409,'Ce paiement est terminé ou expiré. Actualisez le panier.');}
   const target=new URL(session.url);if(target.protocol!=='https:'||target.hostname!=='checkout.stripe.com')throw new HttpError(503,'Destination de paiement Stripe invalide');
   await env.DB.batch([env.DB.prepare("UPDATE checkout_attempts SET session_id=?,status='open' WHERE id=? AND status='creating'").bind(session.id,attempt.id)]);
   return json({url:session.url,mode:config.mode});
- }catch(error){if(error instanceof HttpError)return json({error:error.message},error.status);return json({error:'Le paiement est temporairement indisponible. Réessayez plus tard.'},503);}
+ }catch(error){if(error instanceof HttpError)return json({error:error.message,...(error.retryCheckout?{retry_checkout:true}:{})},error.status);return json({error:'Le paiement est temporairement indisponible. Réessayez plus tard.'},503);}
 }
