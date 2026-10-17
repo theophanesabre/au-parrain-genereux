@@ -15,3 +15,20 @@
 @media(max-width:760px){.apg-store-header,.apg-store-header[data-logo-position=center]{grid-template-columns:minmax(0,1fr) auto;gap:16px}.apg-store-header .apg-store-desktop{display:none}.apg-store-mobile{display:block}.apg-store-mobile>summary{cursor:pointer;list-style:none;font-size:25px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}.apg-store-mobile>summary::-webkit-details-marker{display:none}.apg-store-mobile>nav{position:absolute;left:0;right:0;top:100%;display:flex;flex-direction:column;gap:12px;padding:24px;background:var(--header-background,#fffdf9);border-bottom:1px solid #b7a58a50;max-height:70vh;overflow:auto;font-size:var(--menu-size)}.apg-store-mobile>nav>a{padding:10px 0;color:inherit}.apg-store-header[data-logo-position=center]>.apg-store-logo{grid-column:1;grid-row:1;justify-self:start}.apg-store-header[data-logo-position=center]>.apg-store-actions{grid-column:2;grid-row:1}.apg-store-header .apg-store-logo img{max-height:100px;max-width:30vw}.apg-store-footer__grid{grid-template-columns:1fr;gap:28px}.apg-store-actions{gap:8px}}
 
 #la-maison,#savoir-faire,#nos-recettes{scroll-margin-top:180px}
+
+/* One visible paper background under all public page containers. */
+.apg-site[data-striped-everywhere=true]{min-height:100vh;background-color:var(--apg-site-surface);background-image:var(--apg-site-pattern)}
+.apg-site[data-striped-everywhere=true] .puck-site-page,.apg-site[data-striped-everywhere=true]>main{background-color:var(--apg-site-surface)!important;background-image:var(--apg-site-pattern)!important}
+.apg-site[data-striped-everywhere=true] :is(.apg-catalog,.apg-shop,.apg-cart-content,.apg-discovery-shop,.apg-custom-buttons){background-color:transparent!important}
+.apg-site[data-striped-everywhere=true] .apg-news{background-color:var(--puck-block-background,transparent)!important}
+.apg-site .apg-catalog[data-layout]{width:100%;max-width:var(--shop-max-width);margin:0 auto;box-sizing:border-box}
+.apg-site .apg-catalog[data-layout] .apg-catalog-grid{grid-template-columns:repeat(var(--shop-columns),minmax(0,1fr));gap:var(--shop-gap)}
+.apg-site .apg-catalog[data-layout] .apg-purchase{border-radius:var(--shop-radius);background:var(--shop-card-background);text-align:var(--shop-align)}
+.apg-site .apg-catalog[data-layout] .apg-purchase>img{height:var(--shop-image-height);max-height:none;aspect-ratio:auto;object-fit:var(--shop-image-fit);background:var(--shop-card-background)}
+.apg-site .apg-catalog[data-layout] .apg-purchase>div{padding:var(--shop-padding);box-sizing:border-box;min-width:0}
+.apg-site .apg-catalog[data-layout] .apg-purchase h2{font-size:var(--shop-title-size)!important}
+.apg-site .apg-catalog[data-layout] .apg-purchase p{font-size:var(--shop-text-size)}
+.apg-site .apg-catalog[data-layout=list] .apg-catalog-grid{grid-template-columns:1fr}
+.apg-site .apg-catalog[data-layout=list] .apg-purchase{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);align-items:center}
+@media(max-width:1100px){.apg-site .apg-catalog[data-layout=grid] .apg-catalog-grid{grid-template-columns:repeat(var(--shop-tablet-columns),minmax(0,1fr))}}
+@media(max-width:620px){.apg-site .apg-catalog[data-layout=grid] .apg-catalog-grid{grid-template-columns:repeat(var(--shop-mobile-columns),minmax(0,1fr))}.apg-site .apg-catalog[data-layout=list] .apg-purchase{grid-template-columns:1fr}.apg-site .apg-catalog[data-layout] .apg-purchase :is(input,.apg-shop-primary){max-width:100%;box-sizing:border-box;white-space:normal}.apg-catalog-toolbar>label:first-child{min-width:0}}
