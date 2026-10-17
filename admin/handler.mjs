@@ -1,3 +1,6 @@
+import { paymentConfig, safeConfig, configurePayments } from '../commerce/stripe.mjs';
+import { reconcilePayments } from '../commerce/payments.mjs';
+import { paymentsHTML } from './payments-ui.mjs';
 import { puckPaths, validatePuckData, puckImages } from './puck-model.mjs';
 import { puckContext, defaultPuckData } from './puck-defaults.mjs';
 import { visualHTML } from './visual-ui.mjs';
@@ -46,9 +49,10 @@ export async function handleAdmin(request, env) {
         if(!grant)throw error;actor=user;
       }
     } catch(error) {
-      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
+      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck','/admin/paiements'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
       throw error;
     }
+    if(path==='/admin/paiements'&&request.method==='GET'){const nonce=crypto.randomUUID();return new Response(paymentsHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});}
     if(path==='/admin/puck'&&request.method==='GET')return null;
     if(path==='/admin/editeur'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck'}});
     if((path==='/admin/apparence'||path==='/admin/editeur') && request.method==='GET') {
@@ -61,6 +65,9 @@ export async function handleAdmin(request, env) {
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
     const db=env.DB;
+    if(path==='/admin/api/stripe'){if(request.method==='GET'){const row=await db.prepare("SELECT * FROM payment_settings WHERE id='stripe'").first();const pending=await db.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE status IN ('creating','open')").first();return json({...safeConfig(row),pending:pending.count});}if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await configurePayments(await body(request),env,actor));}
+    if(path==='/admin/api/stripe/reconcile'){if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const config=await paymentConfig(env);if(!config)throw new HttpError(409,'Configurez Stripe avant de vérifier les paiements');return json(await reconcilePayments(env,config));}
+
     if(path==='/admin/api/puck'){
       const page=url.searchParams.get('path')||'/';if(!puckPaths.includes(page))throw new HttpError(400,'Page inconnue');
       if(request.method==='GET'){const [row,context]=await Promise.all([db.prepare('SELECT published,draft,version FROM puck_pages WHERE path=?').bind(page).first(),puckContext(db,page)]);const initial=validatePuckData(defaultPuckData(page,context));return json({data:row?.draft?JSON.parse(row.draft):row?.published?JSON.parse(row.published):initial,defaultData:initial,version:row?.version??0,published:Boolean(row?.published),storefront:context.storefront});}
@@ -211,6 +218,7 @@ export async function handleAdmin(request, env) {
     }
     if(resource==='orders' && request.method==='PUT' && id) {
       const current=await db.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();if(!current)throw new HttpError(404,'Commande introuvable');transition(current.status,b.status);
+      if(current.payment_status==='paid'&&b.status==='cancelled')throw new HttpError(409,'Remboursez d’abord le paiement dans Stripe. Une annulation de préparation ne rembourse pas le client.');
       if(b.status==='confirmed' && JSON.parse(current.items).some(line=>!isSale(line.id)))throw new HttpError(409,'Recréez cette commande avec les articles maison actuels');
       const result=await db.batch([db.prepare('UPDATE orders SET status=?,version=version+1 WHERE id=? AND version=?').bind(b.status,id,integer(b.version)),log()]);
       if(!result[0].meta.changes)throw new HttpError(409,'Commande modifiée ailleurs : rechargez');return json({ok:true});
