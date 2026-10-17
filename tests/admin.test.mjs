@@ -196,12 +196,12 @@ test('admin interface exposes edit controls for the four existing pages and repl
   close(){this.open=false;}
  }
  const env=bindings();const tabs=['products','recipes','highlights','pages','images','orders','audit'].map(tab=>{const b=new Element('button');b.dataset.tab=tab;return b;});
- const nodes=new Map(['title','help','stats','add','reload','search','message','list','dialog','form','form-title','fields','form-error','save','close'].map(id=>['#'+id,new Element(id)]));
+ const nodes=new Map(['stock-alerts','title','help','stats','add','reload','search','message','list','dialog','form','form-title','fields','form-error','save','close'].map(id=>['#'+id,new Element(id)]));
  const document={createElement:tag=>new Element(tag),querySelector:selector=>selector==='[data-tab]'?tabs[0]:nodes.get(selector),querySelectorAll:()=>tabs};
  const context=createContext({document,FormData,confirm:()=>false,fetch:async(path,options={})=>handleAdmin(req(path,{...options,headers:{...options.headers,'oai-authenticated-user-id':'owner',...(options.method&&options.method!=='GET'?{origin}:{})}}),env)});
  new Script(adminHTML('test').match(/<script[^>]*>([\s\S]*)<\/script>/)[1]).runInContext(context);
  const settle=async()=>{for(let i=0;i<5;i++)await new Promise(resolve=>setImmediate(resolve));};
- await settle();tabs.find(b=>b.dataset.tab==='pages').onclick();await settle();
+ await settle();assert.equal(nodes.get('#stock-alerts').hidden,false);assert.ok(nodes.get('#stock-alerts').children.some(node=>node.textContent.includes('rupture de stock')));tabs.find(b=>b.dataset.tab==='pages').onclick();await settle();
  let cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,4);
  for(const card of cards)assert.ok(card.children.some(node=>node.tag==='button'&&node.textContent==='Modifier'));
  await cards[0].children.find(node=>node.tag==='button'&&node.textContent==='Modifier').onclick();assert.equal(nodes.get('#dialog').open,true);
@@ -266,3 +266,5 @@ test('carousel server rendering keeps accessible controls, inert hidden slides a
  assert.match(rail,/apg-news__rail/);assert.match(rail,/\/bonbons#bonbon-1/);assert.match(rail,/Faire défiler les nouveautés vers la droite/);
  const escaped=renderToStaticMarkup(createElement(SpotlightCarousel,{items:[{...heroes[0],title:'<script>alert(1)</script>'}]}));assert.ok(!escaped.includes('<script>'));assert.match(escaped,/&lt;script&gt;/);
 });
+
+test('stock alerts include threshold and empty stock, exclude recipes and clear after replenishment',async()=>{const {stockAlerts}=await import('../admin/stock.mjs');assert.deepEqual(stockAlerts([{id:'bonbon',name:'Bonbon',stock:500},{id:'box',name:'Coffret',stock:5},{id:'bonbon-1',stock:0},{id:'full',stock:6}]).map(p=>p.id),['bonbon','box']);assert.equal(stockAlerts([{id:'bonbon',stock:0}])[0].empty,true);assert.equal(stockAlerts([{id:'bonbon',stock:501}]).length,0);});

@@ -93,3 +93,7 @@ Validation : quatre tests supplémentaires (`npm run test:cart`) couvrent la res
 ## Présentation de l’administration
 
 L’interface reprend les fonds crème, les tons chocolat et les accents orange `#FF6A00` du site. La navigation est latérale sur ordinateur et défile horizontalement sur mobile. Les contenus s’affichent en cartes, la bibliothèque en grille et les commandes en liste large. Les formulaires utilisent une fenêtre adaptée au mobile avec actions visibles en bas. Les styles sont intégrés à la page d’administration sous son nonce CSP, sans bibliothèque ni ressource externe supplémentaire. Les contrôles d’accès et les API conservent leur fonctionnement.
+
+## Alertes de stock
+
+Une bannière visible dans tous les onglets de l’administration signale Bonbon à **500 g ou moins** et les autres articles à **5 pièces ou moins**. Les stocks nuls portent la mention « rupture de stock ». Les recettes de découverte sont exclues. L’alerte se recalcule après les opérations, à la réouverture de l’onglet et toutes les 30 secondes pendant que l’administration est visible ; elle disparaît après réapprovisionnement. Le bouton « Gérer les stocks » ouvre les produits. Aucun courriel ou notification externe n’est envoyé.
