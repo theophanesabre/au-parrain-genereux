@@ -7,7 +7,7 @@ export const visualPages={
  '/boutique':[['intro','Présentation'],['catalog','Articles']],
  '/panier':[['intro','Présentation'],['cart','Panier']],
 };
-export const defaultVisual={accent:'#FF6A00',surface:'#f7f4ed',ink:'#30271f',font:'classic',scale:100,icons:false,layouts:Object.fromEntries(Object.entries(visualPages).filter(([page])=>page!=='/').map(([page,sections])=>[page,sections.map(([id])=>({id,visible:true}))])),blocks:[],overrides:[]};
+export const defaultVisual={pattern:'inherit',stripeColor:'#f5e6da',stripeWidth:38,stripeAngle:90,accent:'#FF6A00',surface:'#f7f4ed',ink:'#30271f',font:'classic',scale:100,icons:false,layouts:Object.fromEntries(Object.entries(visualPages).filter(([page])=>page!=='/').map(([page,sections])=>[page,sections.map(([id])=>({id,visible:true}))])),blocks:[],overrides:[]};
 const fail=message=>{throw new HttpError(400,message);};
 const number=(value,min,max)=>{if(typeof value!=='number'||!Number.isFinite(value)||value<min||value>max)fail('Dimension invalide');return value;};
 const option=(value,allowed)=>{if(!allowed.includes(value))fail('Option visuelle invalide');return value;};
@@ -39,7 +39,7 @@ export function validateVisualStyle(value){
 export function validateVisual(value){
  if(value===undefined)return structuredClone(defaultVisual);
  if(!value||typeof value!=='object'||Array.isArray(value))fail('Personnalisation invalide');
- const result={accent:color(value.accent),surface:color(value.surface),ink:color(value.ink),font:option(value.font,['classic','modern','editorial']),scale:number(value.scale,75,140),icons:value.icons,layouts:{},blocks:[],overrides:[]};
+ const result={pattern:option(value.pattern??'inherit',['inherit','plain','stripes']),stripeColor:color(value.stripeColor??'#f5e6da'),stripeWidth:number(value.stripeWidth??38,2,200),stripeAngle:number(value.stripeAngle??90,0,180),accent:color(value.accent),surface:color(value.surface),ink:color(value.ink),font:option(value.font,['classic','modern','editorial']),scale:number(value.scale,75,140),icons:value.icons,layouts:{},blocks:[],overrides:[]};
  if(typeof value.icons!=='boolean')fail('Option d’icônes invalide');
  for(const [page,definitions] of Object.entries(visualPages)){if(page==='/')continue;const items=value.layouts?.[page]??defaultVisual.layouts[page];if(!Array.isArray(items)||items.length!==definitions.length)fail('Mise en page invalide');const seen=new Set();result.layouts[page]=items.map(item=>{if(!item||!definitions.some(([id])=>id===item.id)||seen.has(item.id)||typeof item.visible!=='boolean')fail('Bloc de page invalide');seen.add(item.id);return {id:item.id,visible:item.visible};});if(!result.layouts[page].some(item=>item.visible))fail('Conservez un bloc visible par page');}
  if(!Array.isArray(value.blocks)||value.blocks.length>60||!Array.isArray(value.overrides)||value.overrides.length>200)fail('Trop de personnalisations');
