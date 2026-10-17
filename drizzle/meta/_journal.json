@@ -78,6 +78,13 @@
       "when": 1792264474111,
       "tag": "0010_calendrier_avent",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1792264990015,
+      "tag": "0011_calendar_main_banner",
+      "breakpoints": true
     }
   ]
 }

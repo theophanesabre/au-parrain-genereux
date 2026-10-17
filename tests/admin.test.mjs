@@ -466,9 +466,9 @@ test('shop layout and common striped background save independently of products a
  assert.throws(()=>validateAppearance({...settings,stripedEverywhere:'oui'}));const local={...settings,stripedEverywhere:false};assert.equal(validateAppearance(local).stripedEverywhere,false);env.sqlite.close();
 });
 
-test('calendar appears in news and is added once to existing Puck home content without changing other pages',async()=>{
+test('original calendar addition preserves existing Puck home content and remains idempotent',async()=>{
  const {defaultHighlights}=await import('../admin/highlights.mjs');const {puckDefaults,puckRoot,validatePuckData}=await import('../admin/puck-model.mjs');const {builtinImages}=await import('../data/site-assets.mjs');
- const calendar=defaultHighlights.find(item=>item.id==='calendrier-conte-avent');assert.equal(calendar.placement,'news');assert.equal(calendar.description,'24 bonbons en chocolat.');assert.equal(calendar.image_fit,'contain');assert.ok(builtinImages.some(item=>item.url===calendar.image));assert.ok(readFileSync(new URL('../public'+calendar.image,import.meta.url)).length>0);
+ const calendar=defaultHighlights.find(item=>item.id==='calendrier-conte-avent');assert.equal(calendar.placement,'hero');assert.equal(calendar.description,'24 bonbons en chocolat.');assert.equal(calendar.image_fit,'contain');assert.ok(builtinImages.some(item=>item.url===calendar.image));assert.ok(readFileSync(new URL('../public'+calendar.image,import.meta.url)).length>0);
  const slide=Object.fromEntries(['title','description','kicker','image','alt','href','button_label','image_fit'].map(key=>[key,calendar[key]]));
  const existing={...slide,title:'Nouveauté conservée',image:'/images/boutique-historique.jpeg'};
  const published=validatePuckData({root:{props:{...puckRoot}},content:[{type:'Section',props:{...structuredClone(puckDefaults.Section),id:'section-personnalisee',children:[{type:'Nouveautes',props:{...structuredClone(puckDefaults.Nouveautes),id:'rail-personnalise',title:'Mes nouveautés',items:[existing]}}]}}]});
@@ -476,5 +476,17 @@ test('calendar appears in news and is added once to existing Puck home content w
  const db=database();db.prepare('INSERT INTO puck_pages(path,published,draft,version) VALUES (?,?,?,?)').run('/',JSON.stringify(published),JSON.stringify(draft),7);db.prepare('INSERT INTO puck_pages(path,published,draft,version) VALUES (?,?,?,?)').run('/boutique',JSON.stringify(draft),null,3);
  const migration=readFileSync(new URL('../drizzle/0010_calendrier_avent.sql',import.meta.url),'utf8');db.exec(migration);const row=db.prepare("SELECT * FROM puck_pages WHERE path='/'").get();const updated=validatePuckData(JSON.parse(row.published)),updatedDraft=validatePuckData(JSON.parse(row.draft));
  assert.equal(updated.content[0].props.children[0].props.title,'Mes nouveautés');assert.deepEqual(updated.content[0].props.children[0].props.items,[existing,slide]);assert.equal(updatedDraft.content[0].props.title,'Brouillon conservé');assert.equal(updatedDraft.content[1].type,'Nouveautes');assert.deepEqual(updatedDraft.content[1].props.items,[slide]);assert.equal(row.version,8);assert.equal(db.prepare("SELECT version FROM puck_pages WHERE path='/boutique'").get().version,3);
+ db.exec(migration);assert.deepEqual(db.prepare("SELECT * FROM puck_pages WHERE path='/'").get(),row);db.close();
+});
+
+test('calendar moves into the first banner, leaves other news intact and preserves the owner’s slide changes',async()=>{
+ const {puckDefaults,puckRoot,validatePuckData}=await import('../admin/puck-model.mjs');const calendar=defaultHighlights.find(item=>item.id==='calendrier-conte-avent');
+ const slide=Object.fromEntries(['title','description','kicker','image','alt','href','button_label','image_fit'].map(key=>[key,calendar[key]]));slide.description='24 bonbons en chocolat. Texte personnalisé.';
+ const heritage={...slide,title:'Le chocolat en héritage.',image:'/images/boutique-historique.jpeg'},news={...heritage,title:'Une autre nouveauté'};
+ const published=validatePuckData({root:{props:{...puckRoot}},content:[{type:'Bandeau',props:{...structuredClone(puckDefaults.Bandeau),id:'bandeau-existant',items:[heritage]}},{type:'Section',props:{...structuredClone(puckDefaults.Section),id:'section-existante',children:[{type:'Nouveautes',props:{...structuredClone(puckDefaults.Nouveautes),id:'actualites',items:[news,slide]}}]}}]});
+ const draft=validatePuckData({root:{props:{...puckRoot}},content:[{type:'Texte',props:{...structuredClone(puckDefaults.Texte),id:'texte',title:'Texte conservé'}},{type:'Nouveautes',props:{...structuredClone(puckDefaults.Nouveautes),id:'calendrier-avent-nouveautes',items:[slide]}}]});
+ const db=database();db.prepare('INSERT INTO puck_pages(path,published,draft,version) VALUES (?,?,?,?)').run('/',JSON.stringify(published),JSON.stringify(draft),7);
+ const migration=readFileSync(new URL('../drizzle/0011_calendar_main_banner.sql',import.meta.url),'utf8');db.exec(migration);const row=db.prepare("SELECT * FROM puck_pages WHERE path='/'").get();const updated=validatePuckData(JSON.parse(row.published)),updatedDraft=validatePuckData(JSON.parse(row.draft));
+ assert.deepEqual(updated.content[0].props.items,[heritage,slide]);assert.deepEqual(updated.content[1].props.children[0].props.items,[news]);assert.equal(updatedDraft.content[0].type,'Bandeau');assert.deepEqual(updatedDraft.content[0].props.items,[slide]);assert.equal(updatedDraft.content[1].props.title,'Texte conservé');assert.equal(updatedDraft.content.length,2);assert.equal(row.version,8);
  db.exec(migration);assert.deepEqual(db.prepare("SELECT * FROM puck_pages WHERE path='/'").get(),row);db.close();
 });
