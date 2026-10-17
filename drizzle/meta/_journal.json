@@ -127,6 +127,13 @@
       "when": 1792275185512,
       "tag": "0017_calendar_supplied_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1792276027166,
+      "tag": "0018_product_details",
+      "breakpoints": true
     }
   ]
 }

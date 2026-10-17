@@ -23,14 +23,18 @@ export function CartLink(){const {items,ready}=useCart();return <a className="ap
 export function PurchaseCard({product,preview=false,compact=false}:{product:SaleProduct;preview?:boolean;compact?:boolean}){
   const {add,items,ready}=useCart();const [quantity,setQuantity]=useState(1),[message,setMessage]=useState('');
   const inCart=items.find(item=>item.id===product.id)?.quantity||0;
+  const href='/boutique/'+encodeURIComponent(product.id);
+  const photo=<img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/>;
+  const visual=preview?<span className="apg-product-photo">{photo}</span>:<a className="apg-product-photo" href={href} aria-label={`Découvrir ${product.name}`}>{photo}</a>;
+  const title=preview?product.name:<a href={href}>{product.name}</a>;
   const valid=Number.isSafeInteger(quantity)&&quantity>0&&quantity<=MAX_QUANTITY&&quantity+inCart<=product.stock;
   if(compact)return <article id={product.id} className="apg-purchase apg-product-square" data-ve-commerce="true">
-    <img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/>
-    <div><h2>{product.name}</h2><button type="button" className="apg-shop-primary apg-product-add" aria-label={`Ajouter ${product.name} au panier — ${money(product.price_cents)}`} disabled={preview||!ready||product.stock<=0||inCart>=product.stock||inCart>=MAX_QUANTITY} onClick={()=>{if(preview||!ready||inCart>=product.stock||inCart>=MAX_QUANTITY)return;add(product.id,1);setMessage('Ajouté au panier.');}}><span>{product.stock<=0?'Épuisé':inCart>=product.stock?'Stock atteint':'Ajouter'}</span><span>{money(product.price_cents)}</span></button><p className="apg-product-status" role="status">{message}</p><details className="apg-product-description"><summary>Détails</summary><p>{product.description}</p></details></div>
+    {visual}
+    <div><h2>{title}</h2><button type="button" className="apg-shop-primary apg-product-add" aria-label={`Ajouter ${product.name} au panier — ${money(product.price_cents)}`} disabled={preview||!ready||product.stock<=0||inCart>=product.stock||inCart>=MAX_QUANTITY} onClick={()=>{if(preview||!ready||inCart>=product.stock||inCart>=MAX_QUANTITY)return;add(product.id,1);setMessage('Ajouté au panier.');}}><span>{product.stock<=0?'Épuisé':inCart>=product.stock?'Stock atteint':'Ajouter'}</span><span>{money(product.price_cents)}</span></button><p className="apg-product-status" role="status">{message}</p>{preview?<p>{product.description}</p>:<a className="apg-product-details-link" href={href}>Découvrir cet article</a>}</div>
   </article>;
   return <article className="apg-purchase" data-ve-commerce="true">
-    <img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/>
-    <div><p className="apg-shop-kicker">La collection</p><h2>{product.name}</h2><p>{product.description}</p><p className="apg-shop-price">{money(product.price_cents)} <small>/ pièce</small></p>
+    {visual}
+    <div><p className="apg-shop-kicker">La collection</p><h2>{title}</h2><p>{product.description}</p><p className="apg-shop-price">{money(product.price_cents)} <small>/ pièce</small></p>
       {product.stock>0?<form onSubmit={event=>{event.preventDefault();if(preview||!valid||!ready)return;add(product.id,quantity);setMessage('Ajouté au panier.');}}>
         <label>Quantité en pièces<input type="number" min="1" max={Math.min(MAX_QUANTITY,product.stock-inCart)} step="1" disabled={preview} value={Number.isNaN(quantity)?'':quantity} onChange={event=>{setQuantity(event.target.valueAsNumber);setMessage('');}} required/></label>
         <p>{Number.isSafeInteger(quantity)&&quantity>0?money(product.price_cents*quantity):'Choisissez une quantité'}{inCart>0?` · déjà au panier : ${inCart} pièce(s)`:''}</p>

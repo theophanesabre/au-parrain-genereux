@@ -7,7 +7,7 @@ const headers={'Cache-Control':'private, no-store','X-Content-Type-Options':'nos
 export async function handlePrelaunch(request,env){
  const url=new URL(request.url);
  const path=url.pathname.replace(/\/+$/,'')||'/';
- if(!prelaunchEnabled||!['GET','HEAD'].includes(request.method)||!publicPages.has(path)&&!path.startsWith('/contenu/'))return null;
+ if(!prelaunchEnabled||!['GET','HEAD'].includes(request.method)||!publicPages.has(path)&&!path.startsWith('/contenu/')&&!path.startsWith('/boutique/'))return null;
  if(url.searchParams.get('apercu')==='1'){
   const user=request.headers.get('oai-authenticated-user-id');
   if(!user)return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(url.pathname+url.search)}});
