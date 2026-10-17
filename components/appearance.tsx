@@ -8,8 +8,8 @@ import { defaultShop } from '@/admin/shop.mjs';
 import { CartLink } from './cart';
 import { defaultChrome, defaultAppearance, validateAppearance } from '@/admin/appearance.mjs';
 export type CustomButton={id:string;label:string;href:string;page:string;location:string;position:string;align:string;style:string;size:string;visible:boolean};
-export type Appearance={shop:typeof defaultShop;stripedEverywhere:boolean;chrome:typeof defaultChrome;navigation:{groupLabel:string;items:{label:string;href:string;group:boolean}[]};background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
-const AppearanceContext=createContext<Appearance>(defaultAppearance);
+export type Appearance={design:'editorial'|'classic';shop:typeof defaultShop;stripedEverywhere:boolean;chrome:typeof defaultChrome;navigation:{groupLabel:string;items:{label:string;href:string;group:boolean}[]};background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
+const AppearanceContext=createContext<Appearance>(defaultAppearance as Appearance);
 export function AppearanceShell({initial,children}:{initial:Appearance;children:ReactNode}){
  const [settings,setSettings]=useState<Appearance>(initial??defaultAppearance);
  const path=usePathname()||'/';
@@ -23,7 +23,7 @@ export function AppearanceShell({initial,children}:{initial:Appearance;children:
   return ()=>{window.removeEventListener('message',receive);document.removeEventListener('click',navigate,true);};
  },[]);
  if(path.startsWith('/admin/'))return <AppearanceContext.Provider value={settings}>{children}</AppearanceContext.Provider>;
- return <AppearanceContext.Provider value={settings}><div className="apg-site" data-background={settings.background} data-pattern={settings.stripedEverywhere&&settings.visual.pattern!=='stripes'?'inherit':settings.visual.pattern||'inherit'} data-striped-everywhere={settings.stripedEverywhere} data-spacing={settings.spacing} data-buttons={settings.buttons} data-corners={settings.corners} data-hero={settings.hero} data-columns={settings.columns} data-visual-font={settings.visual.font} data-link-icons={settings.visual.icons?'show':'hide'} style={{'--apg-site-surface':settings.visual.surface,'--apg-stripe-color':settings.visual.stripeColor||'#f5e6da','--apg-stripe-width':`${settings.visual.stripeWidth??38}px`,'--apg-stripe-period':`${(settings.visual.stripeWidth??38)*2}px`,'--apg-stripe-angle':`${settings.visual.stripeAngle??90}deg`,'--apg-accent':settings.visual.accent,'--apg-surface':settings.visual.surface,'--apg-ink':settings.visual.ink,'--apg-scale':String(settings.visual.scale/100)} as React.CSSProperties}><VisualRuntime settings={settings.visual} page={path}/>{children}</div></AppearanceContext.Provider>;
+ return <AppearanceContext.Provider value={settings}><div className="apg-site" data-design={settings.design} data-background={settings.background} data-pattern={settings.stripedEverywhere&&settings.visual.pattern!=='stripes'?'inherit':settings.visual.pattern||'inherit'} data-striped-everywhere={settings.stripedEverywhere} data-spacing={settings.spacing} data-buttons={settings.buttons} data-corners={settings.corners} data-hero={settings.hero} data-columns={settings.columns} data-visual-font={settings.visual.font} data-link-icons={settings.visual.icons?'show':'hide'} style={{'--apg-site-surface':settings.visual.surface,'--apg-stripe-color':settings.visual.stripeColor||'#f5e6da','--apg-stripe-width':`${settings.visual.stripeWidth??38}px`,'--apg-stripe-period':`${(settings.visual.stripeWidth??38)*2}px`,'--apg-stripe-angle':`${settings.visual.stripeAngle??90}deg`,'--apg-accent':settings.visual.accent,'--apg-surface':settings.visual.surface,'--apg-ink':settings.visual.ink,'--apg-scale':String(settings.visual.scale/100)} as React.CSSProperties}><VisualRuntime settings={settings.visual} page={path}/>{children}</div></AppearanceContext.Provider>;
 }
 export function HomeSections({sections}:{sections:{id:string;content:ReactNode}[]}){
  const settings=useContext(AppearanceContext);
@@ -65,10 +65,11 @@ export function MenuLinks({flat=false}:{flat?:boolean}){
 
 type HeaderFallback={logo?:string;logoWidth?:number;background?:string};
 export function StoreHeader({logo='/images/logo-boutique-neon.webp',logoWidth=100,background='#fffdf9'}:HeaderFallback){
- const {chrome}=useContext(AppearanceContext);
+ const {chrome,design}=useContext(AppearanceContext);
  return <header className="apg-store-header" data-logo-position={chrome.logoPosition} data-sticky={chrome.sticky} style={{background:chrome.headerBackground||background,color:chrome.headerColor||'var(--apg-ink,#30271f)','--header-background':chrome.headerBackground||background,'--header-padding':`${chrome.headerPadding}px`,'--menu-size':`${chrome.menuSize}px`,'--menu-gap':`${chrome.menuGap}px`} as React.CSSProperties}>
+  <details className="apg-editorial-menu" onKeyDown={event=>{if(event.key==='Escape'){event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus();}}}><summary><span aria-hidden="true">☰</span> Menu</summary><nav aria-label="Menu principal" onClick={event=>{if((event.target as Element).closest('a'))event.currentTarget.closest('details')?.removeAttribute('open');}}><MenuLinks/></nav></details>
   <a className="apg-store-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src={chrome.logo||logo} alt="Au Parrain Généreux" style={{width:chrome.logoWidth||logoWidth}}/></a>
-  <nav className="apg-store-desktop" aria-label="Navigation principale"><MenuLinks/></nav><div className="apg-store-actions"><CartLink/><details className="apg-store-mobile"><summary aria-label="Ouvrir le menu">☰</summary><nav aria-label="Navigation mobile"><MenuLinks/></nav></details></div>
+  <nav className="apg-store-desktop" aria-label="Navigation principale"><MenuLinks/></nav><div className="apg-store-actions">{design==='editorial'?<a className="apg-store-shop" href="/boutique">Boutique</a>:null}<CartLink/><details className="apg-store-mobile"><summary aria-label="Ouvrir le menu">☰</summary><nav aria-label="Navigation mobile"><MenuLinks/></nav></details></div>
  </header>;
 }
 type FooterFallback={title:string;text:string;address:string;hours:string;phone:string;email:string;background?:string;logo?:string;anchor?:string};
