@@ -4,7 +4,7 @@ import { defaultHighlights, isDefaultHighlight, mergeHighlights, validateHighlig
 import { builtinPages } from '../data/site-content.mjs';
 import { builtinImages } from '../data/site-assets.mjs';
 import { adminPage, pageDefinition, validatePageBody } from './content.mjs';
-import { BONBON_ID, defaultBonbon, isRecipe, productProfile, lineTotal } from './products.mjs';
+import { BONBON_ID, isSale, isRecipe, productProfile, lineTotal } from './products.mjs';
 import { claimAdmin, setupHTML } from './setup.mjs';
 import { authorize, checkOrigin, text, integer, slug, imagePath, transition, imageType, HttpError } from './core.mjs';
 import { adminHTML } from './ui.mjs';
@@ -88,10 +88,6 @@ export async function handleAdmin(request, env) {
       }
       if(resource==='products') {
         const rows=result.results;
-        if(!rows.some(p=>p.id===BONBON_ID)) {
-          const bonbon=await db.prepare('SELECT * FROM products WHERE id=?').bind(BONBON_ID).first();
-          rows.unshift(bonbon||defaultBonbon);
-        }
         return json(rows.map(productProfile));
       }
       return json(result.results);
@@ -158,7 +154,6 @@ export async function handleAdmin(request, env) {
     }
     if(request.method==='DELETE') {
       if(!id || !['products','pages'].includes(resource)) throw new HttpError(405,'Suppression refusée');
-      if(resource==='products' && id===BONBON_ID)throw new HttpError(400,'Le tarif commun Bonbon ne peut pas être supprimé');
       const b=await body(request), version=integer(b.version);
       const result=await db.batch([db.prepare(`DELETE FROM ${resource} WHERE id=? AND version=?`).bind(id,version),log()]);
       if(!result[0].meta.changes) throw new HttpError(409,'Données modifiées ailleurs : rechargez');
@@ -175,14 +170,13 @@ export async function handleAdmin(request, env) {
           fields=['name','description','image','published'];values=[text(b.name),text(b.description,4000),imagePath(b.image),published];
           if(!id){fields.push('price_cents');values.push(0);}
         } else {
-          if(key===BONBON_ID && b.name!=='Bonbon')throw new HttpError(400,'Le nom de l’article commun est Bonbon');
+          if(key===BONBON_ID)throw new HttpError(400,'La vente au kilo est retirée. Créez un article maison avec une nouvelle référence.');
           fields=['name','description','price_cents','stock','image','published'];values=[text(b.name),text(b.description,4000),integer(b.price_cents),integer(b.stock,1000000),imagePath(b.image),published];
         }
       }
       else {fields=['title','body','published'];values=[text(b.title),validatePageBody(key,text(b.body,60000)),published];}
-      const firstBonbonSave=resource==='products' && key===BONBON_ID && id && b.version===0;
       const firstBuiltinPageSave=resource==='pages' && pageDefinition(key) && id && b.version===0;
-      const updating=id && !firstBonbonSave && !firstBuiltinPageSave;
+      const updating=id && !firstBuiltinPageSave;
       const sql=updating?`UPDATE ${resource} SET ${fields.map(f=>f+'=?').join(',')},version=version+1 WHERE id=? AND version=?`:`INSERT INTO ${resource} (${fields.join(',')},id) VALUES (${fields.map(()=>'?').join(',')},?)`;
       const bindings=updating?[...values,key,integer(b.version)]:[...values,key];
       const result=await db.batch([db.prepare(sql).bind(...bindings),log()]);
@@ -192,15 +186,15 @@ export async function handleAdmin(request, env) {
     if(resource==='orders' && request.method==='POST' && !id) {
       if(!Array.isArray(b.items)||!b.items.length||b.items.length>50) throw new HttpError(400,'Articles requis (50 maximum)');
       const seen=new Set(),items=[];let total=0;
-      for(const line of b.items){const productId=slug(line.id),qty=integer(line.quantity,productId===BONBON_ID?1000000:1000);if(!qty||seen.has(productId))throw new HttpError(400,'Quantité ou doublon invalide');seen.add(productId);
-        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p)throw new HttpError(400,'Enregistrez d’abord le produit et son stock');if(isRecipe(p.id))throw new HttpError(400,'Choisissez Bonbon et un poids en grammes, les recettes servent à la découverte');if(p.price_cents<=0)throw new HttpError(400,'Renseignez le prix du produit avant de créer une commande');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty,unit:p.id===BONBON_ID?'g':'piece',line_total_cents:lineTotal(p,qty)});total+=lineTotal(p,qty);}
+      for(const line of b.items){const productId=slug(line.id),qty=integer(line.quantity,1000);if(!qty||seen.has(productId))throw new HttpError(400,'Quantité ou doublon invalide');seen.add(productId);
+        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p)throw new HttpError(400,'Enregistrez d’abord le produit et son stock');if(!isSale(p.id))throw new HttpError(400,'Choisissez un article maison vendu à la pièce.');if(p.price_cents<=0)throw new HttpError(400,'Renseignez le prix du produit avant de créer une commande');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty,unit:'piece',line_total_cents:lineTotal(p,qty)});total+=lineTotal(p,qty);}
       integer(total);const key=crypto.randomUUID();
       await db.batch([db.prepare('INSERT INTO orders (id,customer,contact,items,total_cents,status,created_at) VALUES (?,?,?,?,?,?,?)').bind(key,text(b.customer),text(b.contact),JSON.stringify(items),total,'draft',new Date().toISOString()),log()]);
       return json({id:key},201);
     }
     if(resource==='orders' && request.method==='PUT' && id) {
       const current=await db.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();if(!current)throw new HttpError(404,'Commande introuvable');transition(current.status,b.status);
-      if(b.status==='confirmed' && JSON.parse(current.items).some(line=>isRecipe(line.id)))throw new HttpError(409,'Recréez cette commande avec l’article Bonbon et un poids en grammes');
+      if(b.status==='confirmed' && JSON.parse(current.items).some(line=>!isSale(line.id)))throw new HttpError(409,'Recréez cette commande avec les articles maison actuels');
       const result=await db.batch([db.prepare('UPDATE orders SET status=?,version=version+1 WHERE id=? AND version=?').bind(b.status,id,integer(b.version)),log()]);
       if(!result[0].meta.changes)throw new HttpError(409,'Commande modifiée ailleurs : rechargez');return json({ok:true});
     }

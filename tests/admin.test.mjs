@@ -101,47 +101,32 @@ test('one-time activation requires both signed-in identity and private expiring 
  assert.equal((await claim('owner')).status,200);
  assert.equal((await claim('intruder')).status,409);
  assert.equal((await claim('owner')).status,200);
- assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products').get().n,16);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products').get().n,15);
  assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products WHERE published=1').get().n,15);
  assert.equal((await call(env,'products')).status,200);
  assert.equal((await handleAdmin(req('/admin/api/products',{headers:{'oai-authenticated-user-id':'intruder'}}),env)).status,403);
- const rows=await (await call(env,'products')).json();assert.equal(rows.length,16);
+ const rows=await (await call(env,'products')).json();assert.equal(rows.length,15);
  assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'test',items:[{id:'bonbon-1',quantity:1}]})).status,400);
  env.sqlite.close();
 });
 
-test('one shared Bonbon price, discovery recipes excluded from orders and gram stock reserved atomically',async()=>{
- const env=bindings();
- let rows=await (await call(env,'products')).json();const common=rows.find(p=>p.id==='bonbon');
- assert.equal(common.name,'Bonbon');assert.equal(common.price_cents,10600);assert.equal(common.unit,'kg');
- assert.equal(env.sqlite.prepare("SELECT COUNT(*) AS n FROM products WHERE id='bonbon'").get().n,0);
- const product={id:'bonbon',name:'Bonbon',description:'Assortiment maison',price_cents:10600,stock:1000,image:'',published:false,version:0};
- assert.equal((await call(env,'products/bonbon','PUT',product)).status,200);
- assert.equal((await call(env,'products/bonbon','PUT',product)).status,409);
- const recipe={id:'bonbon-decouverte',name:'Découverte',description:'Notre recette',image:'',published:true};
- assert.equal((await call(env,'products','POST',recipe)).status,201);
- assert.equal((await call(env,'products/bonbon-decouverte','PUT',{...recipe,price_cents:100,version:1})).status,400);
- rows=await (await call(env,'products')).json();const discovery=rows.find(p=>p.id===recipe.id);
- assert.equal(discovery.kind,'recipe');assert.equal(discovery.price_cents,undefined);assert.equal(discovery.stock,undefined);
- const order={customer:'Client',contact:'contact',items:[{id:'bonbon',quantity:250}]};
- assert.equal((await call(env,'orders','POST',{...order,items:[{id:recipe.id,quantity:1}]})).status,400);
- const created=await call(env,'orders','POST',order);assert.equal(created.status,201);const {id}=await created.json();
- const stored=env.sqlite.prepare('SELECT * FROM orders WHERE id=?').get(id);
- assert.equal(stored.total_cents,2650);assert.equal(JSON.parse(stored.items)[0].unit,'g');assert.equal(JSON.parse(stored.items)[0].line_total_cents,2650);
- assert.equal((await call(env,'orders/'+id,'PUT',{status:'confirmed',version:1})).status,200);
- assert.equal(env.sqlite.prepare("SELECT stock FROM products WHERE id='bonbon'").get().stock,750);
- assert.equal((await call(env,'orders/'+id,'PUT',{status:'cancelled',version:2})).status,200);
- assert.equal(env.sqlite.prepare("SELECT stock FROM products WHERE id='bonbon'").get().stock,1000);
- const tooMuch=await (await call(env,'orders','POST',{...order,items:[{id:'bonbon',quantity:1001}]})).json();
- assert.equal((await call(env,'orders/'+tooMuch.id,'PUT',{status:'confirmed',version:1})).status,409);
- assert.equal(env.sqlite.prepare("SELECT stock FROM products WHERE id='bonbon'").get().stock,1000);
- const kilo=await (await call(env,'orders','POST',{...order,items:[{id:'bonbon',quantity:1000}]})).json();
- assert.equal(env.sqlite.prepare('SELECT total_cents FROM orders WHERE id=?').get(kilo.id).total_cents,10600);
- const gram=await (await call(env,'orders','POST',{...order,items:[{id:'bonbon',quantity:1}]})).json();
- assert.equal(env.sqlite.prepare('SELECT total_cents FROM orders WHERE id=?').get(gram.id).total_cents,11);
- assert.equal((await call(env,'orders','POST',{...order,items:[{id:'bonbon',quantity:0.25}]})).status,400);
- assert.equal((await call(env,'products/bonbon','DELETE',{version:3})).status,400);
- env.sqlite.close();
+test('each house article has its own price and stock; weight sales are retired without breaking historical orders',async()=>{
+ const env=bindings();assert.equal((await (await call(env,'products')).json()).some(p=>p.id==='bonbon'),false);
+ const box={id:'boite-maison',name:'Boîte maison',description:'Sélection préparée par la maison',price_cents:2600,stock:8,image:'',published:true};
+ assert.equal((await call(env,'products','POST',box)).status,201);
+ assert.equal((await call(env,'products/boite-maison','PUT',{...box,name:'Coffret signature',price_cents:2800,version:1})).status,200);
+ const order={customer:'Client',contact:'contact',items:[{id:box.id,quantity:2}]};const created=await (await call(env,'orders','POST',order)).json();const stored=env.sqlite.prepare('SELECT * FROM orders WHERE id=?').get(created.id);assert.equal(stored.total_cents,5600);assert.equal(JSON.parse(stored.items)[0].unit,'piece');
+ assert.equal((await call(env,'orders/'+created.id,'PUT',{status:'confirmed',version:1})).status,200);assert.equal(env.sqlite.prepare('SELECT stock FROM products WHERE id=?').get(box.id).stock,6);
+ const recipe={id:'bonbon-decouverte',name:'Découverte',description:'Recette',image:'',published:true};assert.equal((await call(env,'products','POST',recipe)).status,201);assert.equal((await call(env,'orders','POST',{...order,items:[{id:recipe.id,quantity:1}]})).status,400);
+ assert.equal((await call(env,'products','POST',{...box,id:'bonbon'})).status,400);
+ env.sqlite.exec("INSERT INTO products (id,name,description,price_cents,stock,published) VALUES ('bonbon','Bonbon','Ancien article au poids',10600,1000,1)");
+ env.sqlite.exec(readFileSync(new URL('../drizzle/0006_retire_weight_sales.sql',import.meta.url),'utf8'));assert.equal(env.sqlite.prepare("SELECT published FROM products WHERE id='bonbon'").get().published,0);
+ assert.equal((await call(env,'orders','POST',{...order,items:[{id:'bonbon',quantity:250}]})).status,400);
+ const oldItems=JSON.stringify([{id:'bonbon',name:'Bonbon',price_cents:10600,quantity:250,unit:'g',line_total_cents:2650}]);env.sqlite.prepare("INSERT INTO orders (id,customer,contact,items,total_cents,status,created_at) VALUES ('legacy','Client','contact',?,2650,'draft','2026-10-16')").run(oldItems);
+ assert.equal((await call(env,'orders/legacy','PUT',{status:'confirmed',version:1})).status,409);
+ env.sqlite.exec("UPDATE orders SET status='confirmed' WHERE id='legacy'");assert.equal((await call(env,'orders/legacy','PUT',{status:'cancelled',version:1})).status,200);assert.equal(env.sqlite.prepare("SELECT stock FROM products WHERE id='bonbon'").get().stock,1000);assert.equal(env.sqlite.prepare("SELECT total_cents FROM orders WHERE id='legacy'").get().total_cents,2650);
+ const retired=(await (await call(env,'products')).json()).find(p=>p.id==='bonbon');assert.equal(retired.kind,'retired');assert.equal(retired.published,0);
+ assert.equal((await call(env,'products/bonbon','DELETE',{version:retired.version})).status,200);env.sqlite.close();
 });
 
 test('existing pages are listed on an empty database and edited without replacing their layout',async()=>{
@@ -201,7 +186,7 @@ test('admin interface exposes edit controls for the four existing pages and repl
  const context=createContext({document,FormData,confirm:()=>false,fetch:async(path,options={})=>handleAdmin(req(path,{...options,headers:{...options.headers,'oai-authenticated-user-id':'owner',...(options.method&&options.method!=='GET'?{origin}:{})}}),env)});
  new Script(adminHTML('test').match(/<script[^>]*>([\s\S]*)<\/script>/)[1]).runInContext(context);
  const settle=async()=>{for(let i=0;i<5;i++)await new Promise(resolve=>setImmediate(resolve));};
- await settle();assert.equal(nodes.get('#stock-alerts').hidden,false);assert.ok(nodes.get('#stock-alerts').children.some(node=>node.textContent.includes('rupture de stock')));tabs.find(b=>b.dataset.tab==='pages').onclick();await settle();
+ await settle();assert.equal(nodes.get('#stock-alerts').hidden,true);await call(env,'products','POST',{id:'coffret-alerte',name:'Coffret',description:'Maison',price_cents:1800,stock:0,image:'',published:true});await tabs.find(b=>b.dataset.tab==='products').onclick();await settle();assert.equal(nodes.get('#stock-alerts').hidden,false);assert.ok(nodes.get('#stock-alerts').children.some(node=>node.textContent.includes('rupture de stock')));tabs.find(b=>b.dataset.tab==='pages').onclick();await settle();
  let cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,4);
  for(const card of cards)assert.ok(card.children.some(node=>node.tag==='button'&&node.textContent==='Modifier'));
  await cards[0].children.find(node=>node.tag==='button'&&node.textContent==='Modifier').onclick();assert.equal(nodes.get('#dialog').open,true);
@@ -267,7 +252,7 @@ test('carousel server rendering keeps accessible controls, inert hidden slides a
  const escaped=renderToStaticMarkup(createElement(SpotlightCarousel,{items:[{...heroes[0],title:'<script>alert(1)</script>'}]}));assert.ok(!escaped.includes('<script>'));assert.match(escaped,/&lt;script&gt;/);
 });
 
-test('stock alerts include threshold and empty stock, exclude recipes and clear after replenishment',async()=>{const {stockAlerts}=await import('../admin/stock.mjs');assert.deepEqual(stockAlerts([{id:'bonbon',name:'Bonbon',stock:500},{id:'box',name:'Coffret',stock:5},{id:'bonbon-1',stock:0},{id:'full',stock:6}]).map(p=>p.id),['bonbon','box']);assert.equal(stockAlerts([{id:'bonbon',stock:0}])[0].empty,true);assert.equal(stockAlerts([{id:'bonbon',stock:501}]).length,0);});
+test('stock alerts include house articles at five pieces, exclude discovery and retired weight sales',async()=>{const {stockAlerts}=await import('../admin/stock.mjs');assert.deepEqual(stockAlerts([{id:'bonbon',stock:0},{id:'box',name:'Coffret',stock:5},{id:'bonbon-1',stock:0},{id:'full',stock:6}]).map(p=>p.id),['box']);assert.equal(stockAlerts([{id:'box',stock:0}])[0].empty,true);assert.equal(stockAlerts([{id:'box',stock:6}]).length,0);});
 
 test('appearance is protected, versioned, validates layout and restores defaults without deleting content',async()=>{
  const {defaultAppearance}=await import('../admin/appearance.mjs');const env=bindings();

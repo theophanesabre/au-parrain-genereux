@@ -45,7 +45,7 @@ WRANGLER_LOG_PATH=.wrangler/migrations.log npx wrangler d1 migrations apply DB -
 Le chemin des migrations de la configuration générée pointe vers le dossier `drizzle` de ce dépôt pour les vérifications locales. Aucun chemin local absolu ne doit être supposé sur un autre environnement. Pour une installation Cloudflare hors Sites, déclarer explicitement les bindings, `migrations_dir` et la protection d’identité équivalente avant toute publication. Ne pas utiliser `--remote` sans validation.
 
 
-## Bonbons : découverte et vente au poids
+## Ancien fonctionnement au poids (retiré)
 
 La page `/bonbons` présente les recettes (nom, photo et description), avec un tarif commun de **106 €/kg**. Elle ne propose ni sélection de quantité, ni achat par recette. L’administration distingue « Découverte des bonbons » des produits vendus.
 
@@ -117,3 +117,14 @@ Dans **Apparence → Ajouter vos boutons**, créer jusqu’à 30 boutons. Chaque
 Sur les six pages principales (Accueil, Chocolats, Boutique, Maison, Savoir-faire et Panier), placer un bouton après l’en-tête ou avant le pied de page. L’accueil permet aussi de choisir avant/après chacune de ses six sections. Un bouton lié à une section masquée est masqué avec elle. Les pages libres personnalisées n’ont pas encore d’emplacements configurables.
 
 L’aperçu reflète les changements sans les publier. Cliquer sur **Enregistrer sur le site** applique les réglages. Les boutons historiques Histoire/Collection et ceux de Nouveautés restent éditables à leurs emplacements habituels. Les couleurs orange et les protections de l’API sont conservées. Les réglages existants sans boutons personnalisés restent compatibles ; aucune migration supplémentaire ni bouton automatique n’est ajouté.
+
+
+## Articles maison : fonctionnement actuel
+
+La vente au kilo et le choix de poids sont retirés. La page Bonbons reste une découverte des recettes, sans composition d’assortiment ni prix au kilo. Le panier accepte uniquement des articles maison vendus à la pièce. Il retire l’ancien article `bonbon` des sélections locales et l’API refuse de le commander, même si un client envoie manuellement sa référence.
+
+Dans **Produits et stocks → Ajouter**, le propriétaire crée chaque boîte, coffret ou autre article avec une référence propre, un nom libre, une description, une image, un prix et un stock en pièces. Publication, modification et suppression restent indépendantes pour chaque article. Aucun coffret fictif n’est ajouté automatiquement. Les recettes de découverte sont gérées dans leur onglet et ne constituent pas des articles achetables. Les alertes concernent les articles à cinq pièces ou moins.
+
+La migration `0006_retire_weight_sales.sql` dépublie uniquement l’ancienne référence `bonbon`, sans convertir son stock en pièces ni modifier les commandes historiques. L’admin identifie l’ancien article comme retiré ; il peut être supprimé si les règles de protection des commandes le permettent. Il ne peut pas être réactivé sous cette référence. Créer une nouvelle référence pour les articles actuels. Les anciens brouillons au poids doivent être recréés avec les articles maison ; les commandes déjà confirmées peuvent terminer leur cycle ou être annulées en restituant correctement leur ancien stock.
+
+Cette section remplace les indications historiques sur le tarif unique et les quantités en grammes présentes plus haut.
