@@ -1,4 +1,6 @@
 import test from 'node:test';
+import {builtinImages} from '../data/site-assets.mjs';
+import {defaultHighlights} from '../admin/highlights.mjs';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
@@ -153,7 +155,7 @@ test('existing pages are listed on an empty database and edited without replacin
 
 test('existing images are visible, replacement is reversible and used uploads cannot be deleted',async()=>{
  const env=bindings();let images=await (await call(env,'images')).json();
- assert.equal(images.filter(image=>image.static).length,21);
+ assert.equal(images.filter(image=>image.static).length,builtinImages.length);
  assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM images').get().n,0);
  const asset=images.find(image=>image.id==='asset-logo');assert.equal(asset.url,'/images/logo-boutique-neon.webp');
  const form=new FormData();form.set('alt','Nouvelle enseigne');form.set('replace',asset.id);form.set('file',new File([new Uint8Array([137,80,78,71,13,10,26,10])],'enseigne.png',{type:'image/png'}));
@@ -191,9 +193,9 @@ test('admin interface exposes edit controls for the four existing pages and repl
  for(const card of cards)assert.ok(card.children.some(node=>node.tag==='button'&&node.textContent==='Modifier'));
  await cards[0].children.find(node=>node.tag==='button'&&node.textContent==='Modifier').onclick();assert.equal(nodes.get('#dialog').open,true);
  assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='content_heroTitle'&&input.value.includes('Le chocolat artisanal'))));
- tabs.find(b=>b.dataset.tab==='images').onclick();await settle();cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,21);
+ tabs.find(b=>b.dataset.tab==='images').onclick();await settle();cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,builtinImages.length);
  assert.ok(cards[0].children.some(node=>node.tag==='button'&&node.textContent==='Remplacer'));
- tabs.find(b=>b.dataset.tab==='highlights').onclick();await settle();cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,5);
+ tabs.find(b=>b.dataset.tab==='highlights').onclick();await settle();cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,defaultHighlights.length);
  await cards[0].children.find(node=>node.tag==='button'&&node.textContent==='Modifier').onclick();
  assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='placement'&&input.tag==='select')));
  assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='image'&&input.tag==='select'&&input.children.length>20)));
@@ -202,7 +204,7 @@ test('admin interface exposes edit controls for the four existing pages and repl
 
 test('highlights can be ordered, published and hidden permanently without modifying source defaults',async()=>{
  const {mergeHighlights,defaultHighlights}=await import('../admin/highlights.mjs');const env=bindings();
- const initial=await (await call(env,'highlights')).json();assert.equal(initial.length,5);assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM highlights').get().n,0);
+ const initial=await (await call(env,'highlights')).json();assert.equal(initial.length,defaultHighlights.length);assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM highlights').get().n,0);
  const hero=initial.find(item=>item.placement==='hero');
  assert.equal((await call(env,'highlights/'+hero.id,'DELETE',{version:0})).status,200);
  let all=await (await call(env,'highlights')).json();assert.equal(all.find(item=>item.id===hero.id).published,0);
@@ -462,4 +464,17 @@ test('shop layout and common striped background save independently of products a
  const before=env.sqlite.prepare('SELECT * FROM products ORDER BY id').all();assert.equal((await call(env,'appearance','PUT',{settings,version:0})).status,200);const saved=(await(await call(env,'appearance')).json()).settings;assert.deepEqual(saved.shop,settings.shop);assert.equal(saved.stripedEverywhere,true);assert.deepEqual(env.sqlite.prepare('SELECT * FROM products ORDER BY id').all(),before);
  for(const change of [{columns:1.5},{mobileColumns:4},{imageHeight:50},{gap:-1},{imageFit:'url(evil)'},{cardBackground:'url(evil)'},{layout:'absolute'}])assert.throws(()=>validateAppearance({...settings,shop:{...settings.shop,...change}}));
  assert.throws(()=>validateAppearance({...settings,stripedEverywhere:'oui'}));const local={...settings,stripedEverywhere:false};assert.equal(validateAppearance(local).stripedEverywhere,false);env.sqlite.close();
+});
+
+test('calendar appears in news and is added once to existing Puck home content without changing other pages',async()=>{
+ const {defaultHighlights}=await import('../admin/highlights.mjs');const {puckDefaults,puckRoot,validatePuckData}=await import('../admin/puck-model.mjs');const {builtinImages}=await import('../data/site-assets.mjs');
+ const calendar=defaultHighlights.find(item=>item.id==='calendrier-conte-avent');assert.equal(calendar.placement,'news');assert.equal(calendar.description,'24 bonbons en chocolat.');assert.equal(calendar.image_fit,'contain');assert.ok(builtinImages.some(item=>item.url===calendar.image));assert.ok(readFileSync(new URL('../public'+calendar.image,import.meta.url)).length>0);
+ const slide=Object.fromEntries(['title','description','kicker','image','alt','href','button_label','image_fit'].map(key=>[key,calendar[key]]));
+ const existing={...slide,title:'Nouveauté conservée',image:'/images/boutique-historique.jpeg'};
+ const published=validatePuckData({root:{props:{...puckRoot}},content:[{type:'Section',props:{...structuredClone(puckDefaults.Section),id:'section-personnalisee',children:[{type:'Nouveautes',props:{...structuredClone(puckDefaults.Nouveautes),id:'rail-personnalise',title:'Mes nouveautés',items:[existing]}}]}}]});
+ const draft=validatePuckData({root:{props:{...puckRoot}},content:[{type:'Texte',props:{...structuredClone(puckDefaults.Texte),id:'texte-brouillon',title:'Brouillon conservé'}}]});
+ const db=database();db.prepare('INSERT INTO puck_pages(path,published,draft,version) VALUES (?,?,?,?)').run('/',JSON.stringify(published),JSON.stringify(draft),7);db.prepare('INSERT INTO puck_pages(path,published,draft,version) VALUES (?,?,?,?)').run('/boutique',JSON.stringify(draft),null,3);
+ const migration=readFileSync(new URL('../drizzle/0010_calendrier_avent.sql',import.meta.url),'utf8');db.exec(migration);const row=db.prepare("SELECT * FROM puck_pages WHERE path='/'").get();const updated=validatePuckData(JSON.parse(row.published)),updatedDraft=validatePuckData(JSON.parse(row.draft));
+ assert.equal(updated.content[0].props.children[0].props.title,'Mes nouveautés');assert.deepEqual(updated.content[0].props.children[0].props.items,[existing,slide]);assert.equal(updatedDraft.content[0].props.title,'Brouillon conservé');assert.equal(updatedDraft.content[1].type,'Nouveautes');assert.deepEqual(updatedDraft.content[1].props.items,[slide]);assert.equal(row.version,8);assert.equal(db.prepare("SELECT version FROM puck_pages WHERE path='/boutique'").get().version,3);
+ db.exec(migration);assert.deepEqual(db.prepare("SELECT * FROM puck_pages WHERE path='/'").get(),row);db.close();
 });
