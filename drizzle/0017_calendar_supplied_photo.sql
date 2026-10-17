@@ -1,0 +1,7 @@
+UPDATE products SET image='/images/calendrier-conte-avent-photo.jpg',version=version+1 WHERE id='calendrier-conte-avent' AND image<>'/images/calendrier-conte-avent-photo.jpg';
+--> statement-breakpoint
+UPDATE highlights SET image='/images/calendrier-conte-avent-photo.jpg',version=version+1 WHERE image IN ('/images/calendrier-conte-avent.png','/images/calendrier-conte-avent-miniature.png');
+--> statement-breakpoint
+UPDATE puck_pages SET published=replace(replace(published,'/images/calendrier-conte-avent.png','/images/calendrier-conte-avent-photo.jpg'),'/images/calendrier-conte-avent-miniature.png','/images/calendrier-conte-avent-photo.jpg'),draft=replace(replace(draft,'/images/calendrier-conte-avent.png','/images/calendrier-conte-avent-photo.jpg'),'/images/calendrier-conte-avent-miniature.png','/images/calendrier-conte-avent-photo.jpg'),version=version+1 WHERE instr(COALESCE(published,''),'/images/calendrier-conte-avent.png')>0 OR instr(COALESCE(published,''),'/images/calendrier-conte-avent-miniature.png')>0 OR instr(COALESCE(draft,''),'/images/calendrier-conte-avent.png')>0 OR instr(COALESCE(draft,''),'/images/calendrier-conte-avent-miniature.png')>0;
+--> statement-breakpoint
+UPDATE site_settings SET body=replace(replace(body,'/images/calendrier-conte-avent.png','/images/calendrier-conte-avent-photo.jpg'),'/images/calendrier-conte-avent-miniature.png','/images/calendrier-conte-avent-photo.jpg'),version=version+1 WHERE instr(body,'/images/calendrier-conte-avent.png')>0 OR instr(body,'/images/calendrier-conte-avent-miniature.png')>0;
