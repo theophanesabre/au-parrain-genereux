@@ -1,3 +1,7 @@
+import { builtinPages } from '../data/site-content.mjs';
+import { builtinImages } from '../data/site-assets.mjs';
+import { adminPage, pageDefinition, validatePageBody } from './content.mjs';
+import { BONBON_ID, defaultBonbon, isRecipe, productProfile, lineTotal } from './products.mjs';
 import { claimAdmin, setupHTML } from './setup.mjs';
 import { authorize, checkOrigin, text, integer, slug, imagePath, transition, imageType, HttpError } from './core.mjs';
 import { adminHTML } from './ui.mjs';
@@ -46,12 +50,35 @@ export async function handleAdmin(request, env) {
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
     const db=env.DB;
+    const resetImage=path.match(/^\/admin\/api\/image-replacements\/(asset-[a-z0-9-]+)$/);
+    if(resetImage){
+      if(request.method!=='DELETE')throw new HttpError(405,'Méthode refusée');checkOrigin(request);
+      const asset=builtinImages.find(image=>image.id===resetImage[1]);if(!asset)throw new HttpError(404,'Image inconnue');
+      await db.batch([db.prepare('DELETE FROM image_replacements WHERE original=?').bind(asset.url),db.prepare('INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),actor,'RESTORE_IMAGE',asset.id,new Date().toISOString())]);
+      return json({ok:true});
+    }
     const match=path.match(/^\/admin\/api\/(products|pages|images|orders|audit)(?:\/([a-z0-9-]+))?$/);
     if(!match) return json({error:'Introuvable'},404);
     const [,resource,id]=match;
     if(request.method==='GET') {
       if(id) throw new HttpError(405,'Utiliser la liste');
       const result=await db.prepare(`SELECT * FROM ${resource} ORDER BY ${resource==='orders'||resource==='audit'?'created_at DESC':'id'} LIMIT 500`).all();
+      if(resource==='pages') {
+        const rows=result.results;
+        return json([...builtinPages.map(page=>adminPage(page,rows.find(row=>row.id===page.id))),...rows.filter(row=>!pageDefinition(row.id))]);
+      }
+      if(resource==='images') {
+        const mappings=(await db.prepare('SELECT original,image_id FROM image_replacements').all()).results;
+        return json([...builtinImages.map(image=>{const mapping=mappings.find(row=>row.original===image.url);const upload=mapping && result.results.find(row=>row.id===mapping.image_id);return {...image,url:mapping?`/media/${mapping.image_id}`:image.url,original:image.url,replaced:Boolean(mapping),alt:upload?.alt||image.alt};}),...result.results]);
+      }
+      if(resource==='products') {
+        const rows=result.results;
+        if(!rows.some(p=>p.id===BONBON_ID)) {
+          const bonbon=await db.prepare('SELECT * FROM products WHERE id=?').bind(BONBON_ID).first();
+          rows.unshift(bonbon||defaultBonbon);
+        }
+        return json(rows.map(productProfile));
+      }
       return json(result.results);
     }
     if(!['POST','PUT','DELETE'].includes(request.method)) throw new HttpError(405,'Méthode refusée');
@@ -67,18 +94,27 @@ export async function handleAdmin(request, env) {
       const form=await new Request(request.url,{method:'POST',headers:{'content-type':request.headers.get('content-type')},body:data}).formData();
       const file=form.get('file'); if(!(file instanceof File) || file.size>5*1024*1024 || !file.size) throw new HttpError(400,'Fichier invalide');
       const bytes=new Uint8Array(await file.arrayBuffer()), type=imageType(bytes), key=crypto.randomUUID(), alt=text(form.get('alt'));
+      const replacement=form.get('replace');const asset=replacement?builtinImages.find(image=>image.id===replacement):null;
+      if(replacement && !asset)throw new HttpError(400,'Image du site inconnue');
       await env.BUCKET.put(key,bytes,{httpMetadata:{contentType:type}});
-      try {await db.batch([db.prepare('INSERT INTO images (id,alt,type,size) VALUES (?,?,?,?)').bind(key,alt,type,file.size),log()]);}
+      try {
+        const statements=[db.prepare('INSERT INTO images (id,alt,type,size) VALUES (?,?,?,?)').bind(key,alt,type,file.size)];
+        if(asset)statements.push(db.prepare('INSERT INTO image_replacements (original,image_id) VALUES (?,?) ON CONFLICT(original) DO UPDATE SET image_id=excluded.image_id').bind(asset.url,key));
+        statements.push(log());await db.batch(statements);
+      }
       catch(error){await env.BUCKET.delete(key);throw error;}
       return json({id:key,url:`/media/${key}`},201);
     }
     if(resource==='images' && request.method==='DELETE' && id) {
       const used=await db.prepare('SELECT id FROM products WHERE image=? LIMIT 1').bind(`/media/${id}`).first();
       if(used) throw new HttpError(409,'Cette image est utilisée par un produit');
+      const replacement=await db.prepare('SELECT original FROM image_replacements WHERE image_id=? LIMIT 1').bind(id).first();
+      if(replacement)throw new HttpError(409,'Cette image est actuellement utilisée sur le site ; restaurez ou remplacez-la avant suppression');
       await db.batch([db.prepare('DELETE FROM images WHERE id=?').bind(id),log()]); await env.BUCKET.delete(id); return json({ok:true});
     }
     if(request.method==='DELETE') {
       if(!id || !['products','pages'].includes(resource)) throw new HttpError(405,'Suppression refusée');
+      if(resource==='products' && id===BONBON_ID)throw new HttpError(400,'Le tarif commun Bonbon ne peut pas être supprimé');
       const b=await body(request), version=integer(b.version);
       const result=await db.batch([db.prepare(`DELETE FROM ${resource} WHERE id=? AND version=?`).bind(id,version),log()]);
       if(!result[0].meta.changes) throw new HttpError(409,'Données modifiées ailleurs : rechargez');
@@ -89,25 +125,38 @@ export async function handleAdmin(request, env) {
       if((request.method==='PUT')!==Boolean(id)) throw new HttpError(405,'Méthode refusée');
       const key=id||slug(b.id), published=b.published===true?1:0;
       let fields,values;
-      if(resource==='products') {fields=['name','description','price_cents','stock','image','published'];values=[text(b.name),text(b.description,4000),integer(b.price_cents),integer(b.stock,1000000),imagePath(b.image),published];}
-      else {fields=['title','body','published'];values=[text(b.title),text(b.body,20000),published];}
-      const sql=id?`UPDATE ${resource} SET ${fields.map(f=>f+'=?').join(',')},version=version+1 WHERE id=? AND version=?`:`INSERT INTO ${resource} (${fields.join(',')},id) VALUES (${fields.map(()=>'?').join(',')},?)`;
-      const bindings=id?[...values,key,integer(b.version)]:[...values,key];
+      if(resource==='products') {
+        if(isRecipe(key)) {
+          if(b.price_cents!==undefined || b.stock!==undefined)throw new HttpError(400,'Les recettes de découverte ne possèdent pas de prix ni de stock individuels');
+          fields=['name','description','image','published'];values=[text(b.name),text(b.description,4000),imagePath(b.image),published];
+          if(!id){fields.push('price_cents');values.push(0);}
+        } else {
+          if(key===BONBON_ID && b.name!=='Bonbon')throw new HttpError(400,'Le nom de l’article commun est Bonbon');
+          fields=['name','description','price_cents','stock','image','published'];values=[text(b.name),text(b.description,4000),integer(b.price_cents),integer(b.stock,1000000),imagePath(b.image),published];
+        }
+      }
+      else {fields=['title','body','published'];values=[text(b.title),validatePageBody(key,text(b.body,60000)),published];}
+      const firstBonbonSave=resource==='products' && key===BONBON_ID && id && b.version===0;
+      const firstBuiltinPageSave=resource==='pages' && pageDefinition(key) && id && b.version===0;
+      const updating=id && !firstBonbonSave && !firstBuiltinPageSave;
+      const sql=updating?`UPDATE ${resource} SET ${fields.map(f=>f+'=?').join(',')},version=version+1 WHERE id=? AND version=?`:`INSERT INTO ${resource} (${fields.join(',')},id) VALUES (${fields.map(()=>'?').join(',')},?)`;
+      const bindings=updating?[...values,key,integer(b.version)]:[...values,key];
       const result=await db.batch([db.prepare(sql).bind(...bindings),log()]);
-      if(id&&!result[0].meta.changes) throw new HttpError(409,'Données modifiées ailleurs : rechargez');
+      if(updating&&!result[0].meta.changes) throw new HttpError(409,'Données modifiées ailleurs : rechargez');
       return json({ok:true},id?200:201);
     }
     if(resource==='orders' && request.method==='POST' && !id) {
       if(!Array.isArray(b.items)||!b.items.length||b.items.length>50) throw new HttpError(400,'Articles requis (50 maximum)');
       const seen=new Set(),items=[];let total=0;
-      for(const line of b.items){const productId=slug(line.id),qty=integer(line.quantity,1000);if(!qty||seen.has(productId))throw new HttpError(400,'Quantité ou doublon invalide');seen.add(productId);
-        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p)throw new HttpError(400,'Produit inconnu');if(p.price_cents<=0)throw new HttpError(400,'Renseignez le prix du produit avant de créer une commande');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty});total+=p.price_cents*qty;}
+      for(const line of b.items){const productId=slug(line.id),qty=integer(line.quantity,productId===BONBON_ID?1000000:1000);if(!qty||seen.has(productId))throw new HttpError(400,'Quantité ou doublon invalide');seen.add(productId);
+        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p)throw new HttpError(400,'Enregistrez d’abord le produit et son stock');if(isRecipe(p.id))throw new HttpError(400,'Choisissez Bonbon et un poids en grammes, les recettes servent à la découverte');if(p.price_cents<=0)throw new HttpError(400,'Renseignez le prix du produit avant de créer une commande');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty,unit:p.id===BONBON_ID?'g':'piece',line_total_cents:lineTotal(p,qty)});total+=lineTotal(p,qty);}
       integer(total);const key=crypto.randomUUID();
       await db.batch([db.prepare('INSERT INTO orders (id,customer,contact,items,total_cents,status,created_at) VALUES (?,?,?,?,?,?,?)').bind(key,text(b.customer),text(b.contact),JSON.stringify(items),total,'draft',new Date().toISOString()),log()]);
       return json({id:key},201);
     }
     if(resource==='orders' && request.method==='PUT' && id) {
       const current=await db.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();if(!current)throw new HttpError(404,'Commande introuvable');transition(current.status,b.status);
+      if(b.status==='confirmed' && JSON.parse(current.items).some(line=>isRecipe(line.id)))throw new HttpError(409,'Recréez cette commande avec l’article Bonbon et un poids en grammes');
       const result=await db.batch([db.prepare('UPDATE orders SET status=?,version=version+1 WHERE id=? AND version=?').bind(b.status,id,integer(b.version)),log()]);
       if(!result[0].meta.changes)throw new HttpError(409,'Commande modifiée ailleurs : rechargez');return json({ok:true});
     }

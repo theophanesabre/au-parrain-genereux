@@ -1,3 +1,4 @@
+import { defaultBonbon } from './products.mjs';
 import { HttpError, checkOrigin } from './core.mjs';
 import { initialCatalog } from './catalog.mjs';
 export async function claimAdmin(request, env) {
@@ -15,6 +16,7 @@ export async function claimAdmin(request, env) {
   if(existing){if(existing.user_id!==actor)throw new HttpError(409,'L’administration est déjà activée');return {ok:true};}
   // Unique singleton slot and batch transaction ensure only one account can claim ownership.
   const seed=initialCatalog.map(p=>env.DB.prepare('INSERT OR IGNORE INTO products (id,name,description,price_cents,stock,image,published) VALUES (?,?,?,0,0,?,1)').bind(p.id,p.name,p.description,p.image));
+  seed.push(env.DB.prepare("INSERT OR IGNORE INTO products (id,name,description,price_cents,stock,image,published) VALUES (?,?,?,?,0,'',0)").bind(defaultBonbon.id,defaultBonbon.name,defaultBonbon.description,defaultBonbon.price_cents));
   await env.DB.batch([env.DB.prepare('INSERT INTO admin_access (slot,user_id,created_at) VALUES (1,?,?)').bind(actor,new Date().toISOString()),...seed,env.DB.prepare('INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),actor,'ACTIVATE','administration',new Date().toISOString())]);
   return {ok:true};
 }
