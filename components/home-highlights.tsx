@@ -73,34 +73,18 @@ export function SpotlightCarousel({items,label='À la une'}:{items:Highlight[];l
       <div className="apg-spotlight__dots" aria-label="Choisir une mise à la une">
         {items.map((item,index)=><button key={item.id} type="button" aria-label={`Afficher ${item.title}`} aria-current={index===current?'true':undefined} aria-controls={id} onClick={()=>goTo(index)}/>)}
       </div>
-      <div className="apg-spotlight__buttons">
-        {!reducedMotion?<button className="apg-spotlight__pause" type="button" onClick={()=>setPaused(value=>!value)} aria-label={paused?'Activer le défilement automatique':'Mettre le défilement automatique en pause'}>{paused?'Lecture':'Pause'}</button>:null}
-        <button type="button" aria-label="Diapositive précédente" aria-controls={id} onClick={()=>goTo(current-1)}>←</button>
-        <button type="button" aria-label="Diapositive suivante" aria-controls={id} onClick={()=>goTo(current+1)}>→</button>
-      </div>
       <span className="apg-visually-hidden" aria-live={paused?'polite':'off'} aria-atomic="true">Diapositive {current+1} sur {items.length}</span>
     </div>:null}
   </section>;
 }
 
 export function NewsRail({items,title,intro,kicker}:{items:Highlight[];title:string;intro:string;kicker:string}) {
-  const rail=useRef<HTMLDivElement>(null);
   const id=useId();
-  const reducedMotion=useMotionPreference();
-  const [atStart,setAtStart]=useState(true),[atEnd,setAtEnd]=useState(false);
-  function updateEdges(){const node=rail.current;if(node){setAtStart(node.scrollLeft<=2);setAtEnd(node.scrollLeft+node.clientWidth>=node.scrollWidth-2);}}
-  useEffect(()=>{
-    const node=rail.current;if(!node)return;
-    const observer=new ResizeObserver(updateEdges);observer.observe(node);updateEdges();
-    return ()=>observer.disconnect();
-  },[items.length]);
-  function move(direction:number){const node=rail.current;if(node)node.scrollBy({left:direction*node.clientWidth*.85,behavior:reducedMotion?'instant':'smooth'});}
   if(!items.length)return null;
   return <section className="apg-news" aria-labelledby={id+'-heading'}>
     <header className="apg-news__header"><div><p className="apg-news__kicker">{kicker}</p><h2 id={id+'-heading'}>{title}</h2>{intro?<p className="apg-news__intro">{intro}</p>:null}</div>
-      {items.length>1?<div className="apg-news__buttons"><button type="button" aria-label="Faire défiler les nouveautés vers la gauche" aria-controls={id} disabled={atStart} onClick={()=>move(-1)}>←</button><button type="button" aria-label="Faire défiler les nouveautés vers la droite" aria-controls={id} disabled={atEnd} onClick={()=>move(1)}>→</button></div>:null}
     </header>
-    <div id={id} ref={rail} className="apg-news__rail" onScroll={updateEdges} tabIndex={0} role="region" aria-label="Nouveautés et découvertes à faire défiler">
+    <div id={id} className="apg-news__rail" tabIndex={0} role="region" aria-label="Nouveautés et découvertes à faire défiler">
       {items.map(item=><article className="apg-news__card" key={item.id}>
         <a href={item.href}>
           <div className="apg-news__visual"><Image src={item.image} alt={item.alt} fill sizes="(max-width: 620px) 82vw, (max-width: 980px) 45vw, 32vw" style={{objectFit:item.image_fit}}/>{item.kicker?<span className="apg-news__badge">{item.kicker}</span>:null}</div>
@@ -108,6 +92,6 @@ export function NewsRail({items,title,intro,kicker}:{items:Highlight[];title:str
         </a>
       </article>)}
     </div>
-    <p className="apg-news__hint">Faites glisser pour découvrir la suite <span aria-hidden="true">→</span></p>
+    <p className="apg-news__hint">Faites glisser pour découvrir la suite</p>
   </section>;
 }

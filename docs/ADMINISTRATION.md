@@ -128,3 +128,8 @@ Dans **Produits et stocks → Ajouter**, le propriétaire crée chaque boîte, c
 La migration `0006_retire_weight_sales.sql` dépublie uniquement l’ancienne référence `bonbon`, sans convertir son stock en pièces ni modifier les commandes historiques. L’admin identifie l’ancien article comme retiré ; il peut être supprimé si les règles de protection des commandes le permettent. Il ne peut pas être réactivé sous cette référence. Créer une nouvelle référence pour les articles actuels. Les anciens brouillons au poids doivent être recréés avec les articles maison ; les commandes déjà confirmées peuvent terminer leur cycle ou être annulées en restituant correctement leur ancien stock.
 
 Cette section remplace les indications historiques sur le tarif unique et les quantités en grammes présentes plus haut.
+
+
+## Simplification de l’interface
+
+Les titres et introductions au-dessus des listes d’administration sont masqués. Les informations des articles et les formulaires sont conservés. Sur l’accueil, les commandes Lecture/Pause et les flèches de navigation des nouveautés sont retirées. Les indicateurs du bandeau, le glissement tactile, les touches de navigation et le défilement natif de la rangée restent disponibles. Le focus et les interactions suspendent toujours l’avance automatique du bandeau.

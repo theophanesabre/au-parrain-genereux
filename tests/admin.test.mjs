@@ -244,11 +244,11 @@ test('carousel server rendering keeps accessible controls, inert hidden slides a
  code=code.replace(/from (['"])next\/image\1/g,'from '+JSON.stringify(imageModule));
  const {SpotlightCarousel,NewsRail}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  const heroes=defaultHighlights.filter(item=>item.placement==='hero');const hero=renderToStaticMarkup(createElement(SpotlightCarousel,{items:heroes}));
- assert.match(hero,/aria-roledescription="carrousel"/);assert.match(hero,/Diapositive suivante/);assert.match(hero,/hidden=""/);assert.match(hero,/inert=""/);assert.match(hero,/aria-current="true"/);
+ assert.match(hero,/aria-roledescription="carrousel"/);assert.doesNotMatch(hero,/Diapositive suivante|Diapositive précédente|défilement automatique/);assert.match(hero,/hidden=""/);assert.match(hero,/inert=""/);assert.match(hero,/aria-current="true"/);
  const single=renderToStaticMarkup(createElement(SpotlightCarousel,{items:heroes.slice(0,1)}));assert.doesNotMatch(single,/Diapositive suivante/);
  assert.equal(renderToStaticMarkup(createElement(SpotlightCarousel,{items:[]})),'');
  const rail=renderToStaticMarkup(createElement(NewsRail,{items:defaultHighlights.filter(item=>item.placement==='news'),title:'Nouveautés',intro:'Les recettes de la maison',kicker:'À découvrir'}));
- assert.match(rail,/apg-news__rail/);assert.match(rail,/\/bonbons#bonbon-1/);assert.match(rail,/Faire défiler les nouveautés vers la droite/);
+ assert.match(rail,/apg-news__rail/);assert.match(rail,/\/bonbons#bonbon-1/);assert.doesNotMatch(rail,/Faire défiler les nouveautés vers la droite|Faire défiler les nouveautés vers la gauche/);assert.match(rail,/tabindex="0"/);
  const escaped=renderToStaticMarkup(createElement(SpotlightCarousel,{items:[{...heroes[0],title:'<script>alert(1)</script>'}]}));assert.ok(!escaped.includes('<script>'));assert.match(escaped,/&lt;script&gt;/);
 });
 
