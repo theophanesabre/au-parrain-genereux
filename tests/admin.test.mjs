@@ -386,3 +386,14 @@ test('published Puck renderer preserves nested column layout and safely renders 
  const doc=validatePuckData({root:{props:{...puckRoot,showHeader:'non',showFooter:'non'}},content:[{type:'Colonnes',props:{...structuredClone(puckDefaults.Colonnes),id:'columns',children:[{type:'Texte',props:{...structuredClone(puckDefaults.Texte),id:'title',title:'<script>alert(1)</script>',body:'Maison'}},{type:'Bouton',props:{...structuredClone(puckDefaults.Bouton),id:'button',label:'Découvrir',href:'/boutique'}}]}}]});
  const html=renderToStaticMarkup(React.createElement(Render,{config:puckConfig(),data:doc}));assert.match(html,/data-puck-page="true"/);assert.match(html,/class="puck-columns"/);assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);assert.match(html,/href="\/boutique"/);assert.match(html,/Maison/);
 });
+
+test('design controls persist stripes and block dimensions and accept older Puck documents',async()=>{
+ const {puckRoot,puckDefaults,validatePuckData}=await import('../admin/puck-model.mjs');
+ const doc={root:{props:{...puckRoot,pattern:'stripes',stripeColor:'#FF6A00',stripeWidth:24,stripeAngle:45}},content:[{type:'Bandeau',props:{...structuredClone(puckDefaults.Bandeau),id:'banner'}}]};
+ Object.assign(doc.content[0].props.style,{width:75,minHeight:280,visualHeight:240,background:'#112233',visualBackground:'#abcdef'});
+ const saved=validatePuckData(JSON.parse(JSON.stringify(doc)));assert.equal(saved.root.props.pattern,'stripes');assert.equal(saved.root.props.stripeWidth,24);assert.equal(saved.content[0].props.style.visualHeight,240);assert.equal(saved.content[0].props.style.width,75);assert.equal(saved.content[0].props.style.background,'#112233');
+ const old=structuredClone(doc);for(const key of ['pattern','stripeColor','stripeWidth','stripeAngle'])delete old.root.props[key];for(const key of ['width','minHeight','visualHeight','visualBackground'])delete old.content[0].props.style[key];
+ const migrated=validatePuckData(old);assert.equal(migrated.root.props.pattern,'plain');assert.equal(migrated.content[0].props.style.width,100);assert.equal(migrated.content[0].props.style.visualHeight,0);
+ for(const value of [-1,2001,NaN]){const invalid=structuredClone(doc);invalid.content[0].props.style.visualHeight=value;assert.throws(()=>validatePuckData(invalid));}
+ const invalid=structuredClone(doc);invalid.root.props.stripeColor='url(https://example.com)';assert.throws(()=>validatePuckData(invalid));
+});
