@@ -36,7 +36,7 @@ export function SpotlightCarousel({items,label='À la une'}:{items:Highlight[];l
   },[items.length,paused,hovered,hidden,reducedMotion]);
   function goTo(index:number){setActive((index+items.length)%items.length);setPaused(true);}
   if(!items.length)return null;
-  return <section className="apg-spotlight" data-transparent-background={items[current]?.image==='/images/calendrier-conte-avent.png'?'true':undefined} aria-roledescription="carrousel" aria-label={label}
+  return <section className="apg-spotlight" data-transparent-background={items[current]?.image==='/images/calendrier-conte-avent-photo.jpg'?'true':undefined} aria-roledescription="carrousel" aria-label={label}
     tabIndex={items.length>1?0:undefined}
     onPointerEnter={()=>setHovered(true)} onPointerLeave={()=>setHovered(false)}
     onFocusCapture={()=>setPaused(true)}

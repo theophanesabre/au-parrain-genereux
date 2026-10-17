@@ -120,6 +120,13 @@
       "when": 1792273913470,
       "tag": "0016_boite_decouverte",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1792275185512,
+      "tag": "0017_calendar_supplied_photo",
+      "breakpoints": true
     }
   ]
 }
