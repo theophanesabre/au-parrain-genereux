@@ -92,6 +92,13 @@
       "when": 1792265395141,
       "tag": "0012_calendar_transparency",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1792266895837,
+      "tag": "0013_calendar_product",
+      "breakpoints": true
     }
   ]
 }

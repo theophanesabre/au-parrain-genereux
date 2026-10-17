@@ -38,11 +38,11 @@ test('migrations reserve, prevent overselling, roll back failed confirmation, an
  const db=database();db.exec("INSERT INTO products (id,name,description,price_cents,stock) VALUES ('p','Praliné','Maison',100,3)");
  const insert=db.prepare('INSERT INTO orders (id,customer,contact,items,total_cents,created_at) VALUES (?,?,?,?,?,?)');
  const items=JSON.stringify([{id:'p',quantity:2,name:'Praliné',price_cents:100}]);for(const id of ['a','b'])insert.run(id,'Client','contact',items,200,'2026-10-16');
- db.exec("UPDATE orders SET status='confirmed' WHERE id='a'");assert.equal(db.prepare("SELECT stock FROM products").get().stock,1);
+ db.exec("UPDATE orders SET status='confirmed' WHERE id='a'");assert.equal(db.prepare("SELECT stock FROM products WHERE id='p'").get().stock,1);
  assert.throws(()=>db.exec("UPDATE orders SET status='confirmed' WHERE id='b'"),/stock/);assert.equal(db.prepare("SELECT status FROM orders WHERE id='b'").get().status,'draft');
  assert.throws(()=>db.exec("DELETE FROM products WHERE id='p'"),/reserved/);
- db.exec("UPDATE orders SET status='cancelled' WHERE id='a'");assert.equal(db.prepare('SELECT stock FROM products').get().stock,3);
- db.exec("UPDATE orders SET status='cancelled' WHERE id='a'");assert.equal(db.prepare('SELECT stock FROM products').get().stock,3);db.close();
+ db.exec("UPDATE orders SET status='cancelled' WHERE id='a'");assert.equal(db.prepare("SELECT stock FROM products WHERE id='p'").get().stock,3);
+ db.exec("UPDATE orders SET status='cancelled' WHERE id='a'");assert.equal(db.prepare("SELECT stock FROM products WHERE id='p'").get().stock,3);db.close();
 });
 test('optimistic version prevents silent overwrite after stock reservation',()=>{
  const db=database();db.exec("INSERT INTO products (id,name,description,price_cents,stock) VALUES ('p','Praliné','Maison',100,3)");
@@ -103,11 +103,11 @@ test('one-time activation requires both signed-in identity and private expiring 
  assert.equal((await claim('owner')).status,200);
  assert.equal((await claim('intruder')).status,409);
  assert.equal((await claim('owner')).status,200);
- assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products').get().n,15);
- assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products WHERE published=1').get().n,15);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products').get().n,16);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products WHERE published=1').get().n,16);
  assert.equal((await call(env,'products')).status,200);
  assert.equal((await handleAdmin(req('/admin/api/products',{headers:{'oai-authenticated-user-id':'intruder'}}),env)).status,403);
- const rows=await (await call(env,'products')).json();assert.equal(rows.length,15);
+ const rows=await (await call(env,'products')).json();assert.equal(rows.length,16);
  assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'test',items:[{id:'bonbon-1',quantity:1}]})).status,400);
  env.sqlite.close();
 });
@@ -188,7 +188,7 @@ test('admin interface exposes edit controls for the four existing pages and repl
  const context=createContext({document,FormData,confirm:()=>false,fetch:async(path,options={})=>handleAdmin(req(path,{...options,headers:{...options.headers,'oai-authenticated-user-id':'owner',...(options.method&&options.method!=='GET'?{origin}:{})}}),env)});
  new Script(adminHTML('test').match(/<script[^>]*>([\s\S]*)<\/script>/)[1]).runInContext(context);
  const settle=async()=>{for(let i=0;i<5;i++)await new Promise(resolve=>setImmediate(resolve));};
- await settle();assert.equal(nodes.get('#stock-alerts').hidden,true);await call(env,'products','POST',{id:'coffret-alerte',name:'Coffret',description:'Maison',price_cents:1800,stock:0,image:'',published:true});await tabs.find(b=>b.dataset.tab==='products').onclick();await settle();assert.equal(nodes.get('#stock-alerts').hidden,false);assert.ok(nodes.get('#stock-alerts').children.some(node=>node.textContent.includes('rupture de stock')));tabs.find(b=>b.dataset.tab==='pages').onclick();await settle();
+ await settle();assert.equal(nodes.get('#stock-alerts').hidden,false);assert.ok(nodes.get('#stock-alerts').children.some(node=>node.textContent.includes('Le Conte de l’Avent')));await call(env,'products','POST',{id:'coffret-alerte',name:'Coffret',description:'Maison',price_cents:1800,stock:0,image:'',published:true});await tabs.find(b=>b.dataset.tab==='products').onclick();await settle();assert.equal(nodes.get('#stock-alerts').hidden,false);assert.ok(nodes.get('#stock-alerts').children.some(node=>node.textContent.includes('rupture de stock')));tabs.find(b=>b.dataset.tab==='pages').onclick();await settle();
  let cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,4);
  for(const card of cards)assert.ok(card.children.some(node=>node.tag==='button'&&node.textContent==='Modifier'));
  await cards[0].children.find(node=>node.tag==='button'&&node.textContent==='Modifier').onclick();assert.equal(nodes.get('#dialog').open,true);
@@ -496,4 +496,10 @@ test('calendar transparency migration replaces stored URLs while preserving edit
  const bytes=readFileSync(new URL('../public/images/calendrier-conte-avent.png',import.meta.url));assert.equal(bytes.subarray(1,4).toString(),'PNG');assert.equal(bytes[25],6);
  const document={root:{props:{...puckRoot}},content:[{type:'Bandeau',props:{...structuredClone(puckDefaults.Bandeau),id:'banner',items:[{title:'Mon titre conservé',description:'24 bonbons en chocolat.',kicker:'Avent',image:'/images/calendrier-conte-avent.jpg',alt:'Calendrier',href:'/boutique',button_label:'Découvrir',image_fit:'contain'}]}}]};
  const db=database();db.prepare('INSERT INTO puck_pages(path,published,draft,version) VALUES (?,?,?,?)').run('/',null,JSON.stringify(document),5);const migration=readFileSync(new URL('../drizzle/0012_calendar_transparency.sql',import.meta.url),'utf8');db.exec(migration);const row=db.prepare("SELECT * FROM puck_pages WHERE path='/'").get();assert.equal(row.published,null);assert.equal(row.version,6);const item=JSON.parse(row.draft).content[0].props.items[0];assert.equal(item.title,'Mon titre conservé');assert.equal(item.image,calendar.image);db.exec(migration);assert.deepEqual(db.prepare("SELECT * FROM puck_pages WHERE path='/'").get(),row);db.close();
+});
+
+test('calendar is published at the supplied price and stock and keeps later owner edits',async()=>{
+ const {quoteCart}=await import('../commerce/cart.mjs');const env=bindings();const product=(await(await call(env,'products')).json()).find(item=>item.id==='calendrier-conte-avent');
+ assert.equal(product.kind,'sale');assert.equal(product.name,'Le Conte de l’Avent');assert.equal(product.description,'Calendrier de l’Avent composé de 24 bonbons en chocolat.');assert.equal(product.image,'/images/calendrier-conte-avent.png');assert.equal(product.published,1);assert.equal(product.stock,5);assert.equal(product.price_cents,1800);const quote=quoteCart([{id:product.id,quantity:1}],[product]);assert.equal(quote.valid,true);assert.equal(quote.total_cents,1800);
+ const edited={...product,name:'Mon calendrier personnalisé',price_cents:4200,stock:12,published:false};assert.equal((await call(env,'products/'+product.id,'PUT',edited)).status,200);const saved=env.sqlite.prepare('SELECT * FROM products WHERE id=?').get(product.id);env.sqlite.exec(readFileSync(new URL('../drizzle/0013_calendar_product.sql',import.meta.url),'utf8'));assert.deepEqual(env.sqlite.prepare('SELECT * FROM products WHERE id=?').get(product.id),saved);env.sqlite.close();
 });
