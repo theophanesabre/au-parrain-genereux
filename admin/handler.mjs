@@ -197,6 +197,7 @@ export async function handleAdmin(request, env) {
         } else {
           if(key===BONBON_ID)throw new HttpError(400,'La vente au kilo est retirée. Créez un article maison avec une nouvelle référence.');
           fields=['name','description','price_cents','stock','image','published'];values=[text(b.name),text(b.description,4000),integer(b.price_cents),integer(b.stock,1000000),imagePath(b.image),published];
+          for(const field of ['weight','conservation','ingredients','allergens']){if(b[field]!==undefined){fields.push(field);values.push(b[field]===''?'':text(b[field],field==='weight'?100:8000));}}
         }
       }
       else {fields=['title','body','published'];values=[text(b.title),validatePageBody(key,text(b.body,60000)),published];}

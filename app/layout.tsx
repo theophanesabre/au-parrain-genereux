@@ -10,6 +10,7 @@ import "./cart.css";
 import "./appearance.css";
 import "./puck-site.css";
 import "./chrome.css";
+import "./product.css";
 
 export const metadata: Metadata = {
   title: "Au Parrain Généreux | Chocolaterie artisanale au Havre",

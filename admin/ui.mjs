@@ -38,8 +38,8 @@ if(['products','recipes','pages'].includes(tab) && !row?.builtin){
 if(tab!=='recipes'){const id=field('id','Référence (minuscules, chiffres et tirets)','text',row?.id);id.pattern='[a-z0-9]+(-[a-z0-9]+)*';id.disabled=Boolean(row);}
 const name=field(tab==='pages'?'title':'name',tab==='pages'?'Titre':'Nom','text',row?.name||row?.title);
 }
-if(['products','recipes'].includes(tab)){field('description','Description','textarea',row?.description);
-if(tab==='products'){const price=field('price_euros','Prix en euros par article','number',(row?.price_cents??0)/100);price.step='0.01';field('stock','Stock disponible en pièces','number',row?.stock??0);}
+if(['products','recipes'].includes(tab)){const description=field('description','Description — présentez le produit et son assortiment','textarea',row?.description);description.maxLength=4000;
+if(tab==='products'){const price=field('price_euros','Prix en euros par article','number',(row?.price_cents??0)/100);price.step='0.01';field('stock','Stock disponible en pièces','number',row?.stock??0);field('weight','Poids ou contenance (ex. 150 g)','text',row?.weight||'',false);for(const [key,label] of [['conservation','Conseils de conservation'],['ingredients','Ingrédients (composition complète)'],['allergens','Allergènes et traces éventuelles']]){const input=field(key,label,'textarea',row?.[key]||'',false);input.maxLength=8000;}}
 field('image','Chemin de l’image (/images/… ou /media/…)','text',row?.image||'',false);
 }
 if(tab==='pages'){if(row?.builtin){el('p','Les textes ci-dessous modifient la page existante en conservant sa mise en page et ses images.',$('#fields'));for(const f of row.fields){const input=field('content_'+f.key,f.label,'textarea',f.value,false);input.maxLength=6000;}}else field('body','Contenu (texte brut)','textarea',row?.body);}
