@@ -1,3 +1,4 @@
+import { getPageContent } from "@/components/site-data";
 import { getManagedPage, ManagedPage } from "@/components/managed-page";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
@@ -12,23 +13,23 @@ const gestes = [
 
 export const dynamic = "force-dynamic";
 export default async function SavoirFaire() {
-  const managed = await getManagedPage("savoir-faire");
+  const [managed,content] = await Promise.all([getManagedPage("savoir-faire"),getPageContent("savoir-faire")]);
   if (managed) return <ManagedPage page={managed}/>;
   return <main className="inner-page craft-page">
     <SiteHeader />
     <section className="craft-intro">
-      <p className="section-index">Le savoir-faire</p>
-      <h1>Chaque chocolat passe par notre atelier.</h1>
-      <div><p>Nous réalisons chaque étape nous-mêmes : tempérer, mouler, garnir et enrober. Le travail en petites séries nous permet de suivre chaque fabrication avec attention, de préserver la fraîcheur et de respecter l’équilibre de nos recettes.</p></div>
+      <p className="section-index">{content.kicker}</p>
+      <h1>{content.title}</h1>
+      <div><p>{content.intro}</p></div>
     </section>
 
     <section className="craft-process" aria-labelledby="gestes-title">
-      <header><p>Les gestes</p><h2 id="gestes-title">De la matière au bonbon</h2></header>
-      <div>{gestes.map(([titre, texte]) => <article key={titre}><h3>{titre}</h3><p>{texte}</p></article>)}</div>
+      <header><p>{content.processKicker}</p><h2 id="gestes-title">{content.processTitle}</h2></header>
+      <div>{gestes.map(([titre, texte], index) => <article key={titre}><h3>{content[`gesture${index+1}Title`] || titre}</h3><p>{content[`gesture${index+1}Text`] || texte}</p></article>)}</div>
     </section>
 
     <section className="craft-made">
-      <p>Dans notre atelier</p><div><h2>Le savoir-faire se prolonge au-delà du chocolat.</h2><p>Nous préparons également nos pâtes de fruits, pâtes à tartiner et caramels. Les fruits cuisent doucement, les fruits secs sont torréfiés et les pralinés sont broyés sur place pour obtenir les textures et les goûts que nous recherchons.</p><a href="/#nous-trouver">Venir nous rencontrer</a></div>
+      <p>{content.workshopKicker}</p><div><h2>{content.workshopTitle}</h2><p>{content.workshopText}</p><a href="/#nous-trouver">Venir nous rencontrer</a></div>
     </section>
     <SiteFooter />
   </main>;

@@ -26,3 +26,7 @@ export const audit = sqliteTable('audit', {
 export const adminAccess = sqliteTable('admin_access', {
   slot: integer('slot').primaryKey(), userId: text('user_id').notNull(), createdAt: text('created_at').notNull(),
 });
+
+export const imageReplacements = sqliteTable('image_replacements', {
+  original: text('original').primaryKey(), imageId: text('image_id').notNull().references(() => images.id),
+});
