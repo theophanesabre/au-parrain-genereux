@@ -327,7 +327,10 @@ test('visual editor client keeps changes in preview until save, supports undo an
  events.message({origin:'https://evil.example',source:nodes.get('#canvas').contentWindow,data:{type:'apg-visual-selection',selection:{id:'evil'}}});
  events.message({origin,source:nodes.get('#canvas').contentWindow,data:{type:'apg-visual-selection',selection:{id:'history/section:1/h2:1',page:'/',tag:'h2',text:'Titre initial',canText:true,native:'history',computed:{}}}});
  const find=(node,predicate)=>predicate(node)?node:node.children.map(child=>find(child,predicate)).find(Boolean);const label=find(nodes.get('#properties'),node=>node.tagName==='LABEL'&&node.textContent==='Texte');const input=label.children[0];input.value='Titre choisi dans l’aperçu';input.oninput();assert.equal(messages.at(-1).settings.visual.overrides[0].text,'Titre choisi dans l’aperçu');
- await nodes.get('#save').click();const result=await (await call(env,'appearance')).json();assert.equal(result.version,1);assert.equal(result.settings.visual.blocks.length,1);assert.equal(result.settings.visual.overrides[0].text,'Titre choisi dans l’aperçu');env.sqlite.close();
+ await nodes.get('#save').click();const result=await (await call(env,'appearance')).json();assert.equal(result.version,1);assert.equal(result.settings.visual.blocks.length,1);assert.equal(result.settings.visual.overrides[0].text,'Titre choisi dans l’aperçu');
+ events.message({origin,source:nodes.get('#canvas').contentWindow,data:{type:'apg-visual-selection',selection:{id:result.settings.visual.blocks[0].id+'/block',newBlock:result.settings.visual.blocks[0].id}}});
+ for(const title of ['Titre après enregistrement','Titre corrigé à nouveau']){const label=find(nodes.get('#properties'),node=>node.tagName==='LABEL'&&node.textContent==='Titre');label.children[0].value=title;label.children[0].oninput();await nodes.get('#save').click();assert.equal((await (await call(env,'appearance')).json()).settings.visual.blocks[0].title,title);}
+ env.sqlite.close();
 });
 
 
