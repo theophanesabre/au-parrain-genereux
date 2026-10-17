@@ -1,6 +1,5 @@
 import { publishedPuckPage } from "@/components/puck/published";
-import { HomeSections, HomeButton, PageButtons, MenuLinks } from "@/components/appearance";
-import { CartLink } from "@/components/cart";
+import { HomeSections, HomeButton, PageButtons, StoreHeader } from "@/components/appearance";
 import { SpotlightCarousel, NewsRail } from "@/components/home-highlights";
 import { getPageContent, getImageSources, getImageDescriptions, getHighlights } from "@/components/site-data";
 import { getManagedPage, ManagedPage } from "@/components/managed-page";
@@ -22,21 +21,8 @@ export default async function Home() {
   const slides=highlights.map(item=>({...item,image:imageSources[item.image]||item.image,alt:imageAlts[item.image]||item.alt}));
   if (managed) return <ManagedPage page={managed}/>;
   return <main className="heritage-home">
-    <header className="heritage-header">
-      <nav className="heritage-header__desktop-nav" aria-label="Navigation principale">
-        <MenuLinks/>
-        <a className="heritage-header__logo" href="/" aria-label="Au Parrain Généreux — Accueil"><Image src={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"} alt={imageAlts["/images/logo-boutique-neon.webp"] || "Enseigne Au Parrain Généreux sur la façade de la boutique"} width={1536} height={1024} priority /></a>
+    <StoreHeader logo={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"}/>
 
-      </nav>
-      <CartLink />
-      <details className="heritage-mobile-menu">
-        <summary aria-label="Ouvrir le menu" title="Menu"><span /><span /><span /></summary>
-        <nav className="heritage-mobile-menu__nav" aria-label="Navigation mobile">
-          <MenuLinks/>
-          <a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a>
-        </nav>
-      </details>
-    </header>
 
     <PageButtons location="page-top"/>
     <HomeSections sections={[

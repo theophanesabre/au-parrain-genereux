@@ -9,7 +9,7 @@ import { appearanceHTML } from './appearance-ui.mjs';
 import { defaultHighlights, isDefaultHighlight, mergeHighlights, validateHighlight } from './highlights.mjs';
 import { builtinPages } from '../data/site-content.mjs';
 import { builtinImages } from '../data/site-assets.mjs';
-import { adminPage, pageDefinition, validatePageBody } from './content.mjs';
+import { adminPage, pageDefinition, contentValues, validatePageBody } from './content.mjs';
 import { BONBON_ID, isSale, isRecipe, productProfile, lineTotal } from './products.mjs';
 import { claimAdmin, setupHTML } from './setup.mjs';
 import { authorize, checkOrigin, text, integer, slug, imagePath, transition, imageType, HttpError } from './core.mjs';
@@ -77,7 +77,7 @@ export async function handleAdmin(request, env) {
       const [result]=await db.batch([statement,db.prepare('INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),actor,'PUCK_'+input.action.toUpperCase(),page,new Date().toISOString())]);if(result.meta.changes!==1)throw new HttpError(409,'La page a été modifiée ailleurs. Rechargez avant de réessayer.');return json({version:version+1});
     }
     if(path==='/admin/api/appearance'){
-      if(request.method==='GET'){const row=await db.prepare("SELECT body,version FROM site_settings WHERE id='appearance'").first();return json({settings:row?appearanceValues(row.body):defaultAppearance,defaults:defaultAppearance,version:row?.version??0});}
+      if(request.method==='GET'){const [row,page]=await Promise.all([db.prepare("SELECT body,version FROM site_settings WHERE id='appearance'").first(),db.prepare("SELECT body FROM pages WHERE id='accueil' AND published=1").first()]);const c=contentValues(pageDefinition('accueil'),page?.body);return json({settings:row?appearanceValues(row.body):defaultAppearance,defaults:defaultAppearance,version:row?.version??0,footerDefaults:{footerTitle:c.footerTitle,footerText:c.footerText,address:[c.address,c.city].filter(Boolean).join(' · '),hours:[c.days,c.hours].filter(Boolean).join(' · '),phone:c.phone,email:c.email}});}
       if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const data=await body(request),settings=validateAppearance(data.settings),version=integer(data.version);
       const change=version===0?db.prepare("INSERT OR IGNORE INTO site_settings (id,body) VALUES ('appearance',?)").bind(JSON.stringify(settings)):db.prepare("UPDATE site_settings SET body=?,version=version+1 WHERE id='appearance' AND version=?").bind(JSON.stringify(settings),version);
       const [result]=await db.batch([change,db.prepare('INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),actor,'UPDATE_APPEARANCE','appearance',new Date().toISOString())]);
@@ -144,7 +144,7 @@ export async function handleAdmin(request, env) {
       const highlight=await db.prepare('SELECT id FROM highlights WHERE image=? LIMIT 1').bind(`/media/${id}`).first();
       if(highlight)throw new HttpError(409,'Cette image est utilisée par une mise à la une ou une nouveauté');
       const appearance=await db.prepare("SELECT body FROM site_settings WHERE id='appearance'").first();
-      if(appearance){const visual=appearanceValues(appearance.body).visual;if([...visual.blocks,...visual.overrides].some(item=>item.image===`/media/${id}`))throw new HttpError(409,'Cette image est utilisée dans l’éditeur visuel');}
+      if(appearance){const settings=appearanceValues(appearance.body);if(settings.chrome.logo===`/media/${id}`)throw new HttpError(409,'Cette image est utilisée par le logo du site');const visual=settings.visual;if([...visual.blocks,...visual.overrides].some(item=>item.image===`/media/${id}`))throw new HttpError(409,'Cette image est utilisée dans l’éditeur visuel');}
       const puckPages=await db.prepare('SELECT published,draft FROM puck_pages').all();
       if(puckPages.results.some(row=>[row.published,row.draft].filter(Boolean).some(body=>puckImages(JSON.parse(body)).includes(`/media/${id}`))))throw new HttpError(409,'Cette image est utilisée dans une page ou un brouillon Puck');
       await db.batch([db.prepare('DELETE FROM images WHERE id=?').bind(id),log()]); await env.BUCKET.delete(id); return json({ok:true});

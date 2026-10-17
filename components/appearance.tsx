@@ -4,9 +4,10 @@ import { visualStyle } from './visual-style';
 import type { VisualSettings } from './visual-types';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { defaultAppearance, validateAppearance } from '@/admin/appearance.mjs';
+import { CartLink } from './cart';
+import { defaultChrome, defaultAppearance, validateAppearance } from '@/admin/appearance.mjs';
 export type CustomButton={id:string;label:string;href:string;page:string;location:string;position:string;align:string;style:string;size:string;visible:boolean};
-export type Appearance={navigation:{groupLabel:string;items:{label:string;href:string;group:boolean}[]};background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
+export type Appearance={chrome:typeof defaultChrome;navigation:{groupLabel:string;items:{label:string;href:string;group:boolean}[]};background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
 const AppearanceContext=createContext<Appearance>(defaultAppearance);
 export function AppearanceShell({initial,children}:{initial:Appearance;children:ReactNode}){
  const [settings,setSettings]=useState<Appearance>(initial??defaultAppearance);
@@ -59,4 +60,22 @@ export function MenuLinks({flat=false}:{flat?:boolean}){
  const link=(item:{label:string;href:string},index:number)=><a href={item.href} key={index}>{item.label}</a>;
  if(flat)return <>{items.map(link)}</>;
  return <>{grouped.length?<details className="apg-menu-group"><summary>{navigation.groupLabel}</summary><div className="apg-menu-group__links">{grouped.map(link)}</div></details>:null}{items.filter(item=>!item.group).map(link)}</>;
+}
+
+type HeaderFallback={logo?:string;logoWidth?:number;background?:string};
+export function StoreHeader({logo='/images/logo-boutique-neon.webp',logoWidth=100,background='#fffdf9'}:HeaderFallback){
+ const {chrome}=useContext(AppearanceContext);
+ return <header className="apg-store-header" data-logo-position={chrome.logoPosition} data-sticky={chrome.sticky} style={{background:chrome.headerBackground||background,color:chrome.headerColor||'var(--apg-ink,#30271f)','--header-background':chrome.headerBackground||background,'--header-padding':`${chrome.headerPadding}px`,'--menu-size':`${chrome.menuSize}px`,'--menu-gap':`${chrome.menuGap}px`} as React.CSSProperties}>
+  <a className="apg-store-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src={chrome.logo||logo} alt="Au Parrain Généreux" style={{width:chrome.logoWidth||logoWidth}}/></a>
+  <nav className="apg-store-desktop" aria-label="Navigation principale"><MenuLinks/></nav><div className="apg-store-actions"><CartLink/><details className="apg-store-mobile"><summary aria-label="Ouvrir le menu">☰</summary><nav aria-label="Navigation mobile"><MenuLinks/></nav></details></div>
+ </header>;
+}
+type FooterFallback={title:string;text:string;address:string;hours:string;phone:string;email:string;background?:string;logo?:string;anchor?:string};
+export function StoreFooter(props:FooterFallback){
+ const {chrome}=useContext(AppearanceContext);const content=chrome.overrideContent?{title:chrome.footerTitle,text:chrome.footerText,address:chrome.address,hours:chrome.hours,phone:chrome.phone,email:chrome.email}:props;
+ return <footer id={props.anchor} className="apg-store-footer" style={{background:chrome.footerBackground||props.background||'#fffdf9',color:chrome.footerColor||'var(--apg-ink,#30271f)',padding:`${chrome.footerPadding}px clamp(20px,5vw,80px)`,'--footer-columns':chrome.footerColumns} as React.CSSProperties}>
+ <div className="apg-store-footer__grid"><div>{chrome.showFooterLogo?<img className="apg-store-footer__logo" src={chrome.logo||props.logo||'/images/logo-boutique-neon.webp'} alt="Au Parrain Généreux"/>:null}{content.title?<h2>{content.title}</h2>:null}{content.text?<p>{content.text}</p>:null}</div>
+ {chrome.showFooterLinks?<nav aria-label="Liens de bas de page"><h3>Liens utiles</h3><MenuLinks flat/></nav>:null}
+ <address>{content.address?<p>{content.address}</p>:null}{content.hours?<p>{content.hours}</p>:null}{content.phone?<a href={'tel:'+content.phone.replace(/[^+0-9]/g,'')}>{content.phone}</a>:null}{content.email?<a href={'mailto:'+content.email}>{content.email}</a>:null}</address></div><p className="apg-store-footer__legal">{chrome.legal||'© 2026 Au Parrain Généreux'}</p>
+ </footer>;
 }
