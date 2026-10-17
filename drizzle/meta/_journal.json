@@ -43,6 +43,13 @@
       "when": 1792200712609,
       "tag": "0005_pretty_thena",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792204213265,
+      "tag": "0006_retire_weight_sales",
+      "breakpoints": true
     }
   ]
 }

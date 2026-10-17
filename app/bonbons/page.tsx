@@ -1,5 +1,5 @@
 import { getPageContent, getImageSources, getImageDescriptions } from "@/components/site-data";
-import { BONBON_ID, BONBON_PRICE_CENTS_PER_KG, isRecipe } from "@/admin/products.mjs";
+import { isRecipe } from "@/admin/products.mjs";
 import { env } from "cloudflare:workers";
 import { getDb } from "@/db";
 import { products } from "@/db/schema";
@@ -32,16 +32,14 @@ export default async function Bonbons() {
   const [imageSources,imageAlts]=await Promise.all([getImageSources(),getImageDescriptions()]);
   const stored = env.DB ? await getDb().select().from(products).where(eq(products.published, 1)) : null;
   const initialized = env.DB ? await env.DB.prepare("SELECT slot FROM admin_access WHERE slot=1").first() : null;
-  const [commonProduct] = env.DB ? await getDb().select().from(products).where(eq(products.id, BONBON_ID)).limit(1) : [];
-  const pricePerKg = ((commonProduct?.priceCents ?? BONBON_PRICE_CENTS_PER_KG) / 100).toLocaleString("fr-FR", {maximumFractionDigits:2});
   const recipes = stored?.filter(product => isRecipe(product.id));
   const collection = recipes && (recipes.length > 0 || initialized) ? recipes : bonbons.map((name, index) => ({id: `bonbon-${index + 1}`, name, description: descriptions[index], image: `/images/bonbons-ia-basse-def/${index + 1}.png`}));
   return <main className="inner-page">
     <SiteHeader />
     <PageIntro index="04" kicker={content.kicker} title={content.title}>
-      <p>Nos bonbons de chocolat sont tous proposés au même tarif : <strong>{pricePerKg} € le kilo</strong>. {content.intro} <a className="inline-text-link" href="/#nous-trouver">Consulter nos informations pratiques</a>.</p>
+      <p>{content.intro} <a className="inline-text-link" href="/#nous-trouver">Consulter nos informations pratiques</a>.</p>
     </PageIntro>
-    <div className="apg-discovery-shop"><p>Envie de déguster nos recettes ? Retrouvez notre assortiment de bonbons, vendu au poids.</p><a className="apg-shop-primary" href="/boutique">Composer mon assortiment</a></div>
+    <div className="apg-discovery-shop"><p>Découvrez nos articles et nos boîtes préparées par la maison.</p><a className="apg-shop-primary" href="/boutique">Voir les articles de la maison</a></div>
     <section className="bonbon-grid standalone bonbon-collection">
       {collection.map((product) => <figure key={product.id} id={product.id}>
         <div className="bonbon-card__visual">
