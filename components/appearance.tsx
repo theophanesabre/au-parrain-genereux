@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { defaultAppearance, validateAppearance } from '@/admin/appearance.mjs';
 export type CustomButton={id:string;label:string;href:string;page:string;location:string;position:string;align:string;style:string;size:string;visible:boolean};
-export type Appearance={background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
+export type Appearance={navigation:{groupLabel:string;items:{label:string;href:string;group:boolean}[]};background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
 const AppearanceContext=createContext<Appearance>(defaultAppearance);
 export function AppearanceShell({initial,children}:{initial:Appearance;children:ReactNode}){
  const [settings,setSettings]=useState<Appearance>(initial??defaultAppearance);
@@ -51,4 +51,12 @@ export function VisualBlocks({page,anchor,position='after'}:{page:string;anchor:
 export function PageSections({page,items}:{page:string;items:{id:string;content:ReactNode}[]}){
  const {visual}=useContext(AppearanceContext);const layout=visual.layouts[page]||items.map(item=>({id:item.id,visible:true}));
  return <>{layout.filter(item=>item.visible).map(item=><div className="apg-page-section" key={item.id} data-ve-native={item.id}><VisualBlocks page={page} anchor={item.id} position="before"/>{items.find(block=>block.id===item.id)?.content}<VisualBlocks page={page} anchor={item.id} position="after"/></div>)}</>;
+}
+
+export function MenuLinks({flat=false}:{flat?:boolean}){
+ const {navigation}=useContext(AppearanceContext);
+ const items=navigation.items,grouped=items.filter(item=>item.group);
+ const link=(item:{label:string;href:string},index:number)=><a href={item.href} key={index}>{item.label}</a>;
+ if(flat)return <>{items.map(link)}</>;
+ return <>{grouped.length?<details className="apg-menu-group"><summary>{navigation.groupLabel}</summary><div className="apg-menu-group__links">{grouped.map(link)}</div></details>:null}{items.filter(item=>!item.group).map(link)}</>;
 }

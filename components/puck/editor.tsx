@@ -3,7 +3,7 @@ import { Puck, type Data } from '@puckeditor/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { puckConfig } from './config';
 import type { LibraryImage, Storefront } from './types';
-const pages=[['/','Accueil'],['/maison','La maison'],['/savoir-faire','Savoir-faire'],['/bonbons','Les recettes'],['/boutique','La boutique'],['/panier','Le panier']];
+const pages=[['/','Accueil'],['/maison','La maison'],['/savoir-faire','Savoir-faire'],['/bonbons','Nos recettes'],['/boutique','Boutique en ligne'],['/panier','Le panier']];
 type Loaded={data:Data;defaultData:Data;version:number;published:boolean;storefront:Storefront};
 async function jsonResponse(response:Response){const result=await response.json();if(!response.ok)throw Error(response.status===401?'Votre session a expiré. Reconnectez-vous à l’administration.':result.error||'Opération impossible.');return result;}
 export function PuckEditor(){

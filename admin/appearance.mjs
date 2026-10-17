@@ -1,12 +1,14 @@
+import { visualHref } from './visual.mjs';
 import { defaultVisual, validateVisual } from './visual.mjs';
 import { highlightHref } from './highlights.mjs';
 import { text, HttpError } from './core.mjs';
 export const homeSections=[['spotlight','Bandeau principal'],['news','Nouveautés'],['visit','Nous trouver'],['history','Histoire de la maison'],['chapters','Découvrir la maison'],['collection','Collection de chocolats']];
-export const defaultAppearance={background:'cream',spacing:'airy',buttons:'filled',corners:'soft',hero:'image-left',columns:'3',historyLabel:'Découvrir notre histoire',historyHref:'/maison',collectionLabel:'Voir les bonbons',collectionHref:'/bonbons',customButtons:[],visual:defaultVisual,sections:homeSections.map(([id])=>({id,visible:true}))};
+export const defaultNavigation={groupLabel:'La maison',items:[{label:'La maison',href:'/maison',group:true},{label:'Savoir-faire',href:'/savoir-faire',group:true},{label:'Nos recettes',href:'/bonbons',group:true},{label:'Boutique en ligne',href:'/boutique',group:false},{label:'Nous trouver',href:'/#nous-trouver',group:false}]};
+export const defaultAppearance={navigation:defaultNavigation,background:'cream',spacing:'airy',buttons:'filled',corners:'soft',hero:'image-left',columns:'3',historyLabel:'Découvrir notre histoire',historyHref:'/maison',collectionLabel:'Voir les bonbons',collectionHref:'/bonbons',customButtons:[],visual:defaultVisual,sections:homeSections.map(([id])=>({id,visible:true}))};
 export function validateAppearance(value){
  if(!value||typeof value!=='object')throw new HttpError(400,'Réglages invalides');
  const choices={background:['cream','white'],spacing:['airy','compact'],buttons:['filled','outline'],corners:['square','soft','round'],hero:['image-left','image-right'],columns:['2','3','4']};
- const result={...defaultAppearance};for(const [key,allowed] of Object.entries(choices)){if(!allowed.includes(value[key]))throw new HttpError(400,'Réglage invalide : '+key);result[key]=value[key];}
+ const result={...defaultAppearance};const navigation=value.navigation??defaultNavigation;if(!navigation||!Array.isArray(navigation.items)||navigation.items.length>20)throw new HttpError(400,'Menu invalide');result.navigation={groupLabel:text(navigation.groupLabel,80),items:navigation.items.map(item=>{if(!item||typeof item.group!=='boolean')throw new HttpError(400,'Groupe de menu invalide');return {label:text(item.label,80),href:visualHref(item.href),group:item.group};})};for(const [key,allowed] of Object.entries(choices)){if(!allowed.includes(value[key]))throw new HttpError(400,'Réglage invalide : '+key);result[key]=value[key];}
  for(const prefix of ['history','collection']){result[prefix+'Label']=text(value[prefix+'Label'],80);result[prefix+'Href']=highlightHref(value[prefix+'Href']);}
  if(!Array.isArray(value.sections)||value.sections.length!==homeSections.length)throw new HttpError(400,'Sections invalides');
  const ids=new Set(homeSections.map(([id])=>id)),seen=new Set();
