@@ -1,3 +1,4 @@
+import { PageSections } from "@/components/appearance";
 import { getPageContent, getImageSources, getImageDescriptions } from "@/components/site-data";
 import { isRecipe } from "@/admin/products.mjs";
 import { env } from "cloudflare:workers";
@@ -36,18 +37,20 @@ export default async function Bonbons() {
   const collection = recipes && (recipes.length > 0 || initialized) ? recipes : bonbons.map((name, index) => ({id: `bonbon-${index + 1}`, name, description: descriptions[index], image: `/images/bonbons-ia-basse-def/${index + 1}.png`}));
   return <main className="inner-page">
     <SiteHeader />
-    <PageIntro index="04" kicker={content.kicker} title={content.title}>
+    <PageSections page="/bonbons" items={[
+{id:'intro',content:(<><PageIntro index="04" kicker={content.kicker} title={content.title}>
       <p>{content.intro} <a className="inline-text-link" href="/#nous-trouver">Consulter nos informations pratiques</a>.</p>
-    </PageIntro>
-    <div className="apg-discovery-shop"><p>Découvrez nos articles et nos boîtes préparées par la maison.</p><a className="apg-shop-primary" href="/boutique">Voir les articles de la maison</a></div>
-    <section className="bonbon-grid standalone bonbon-collection">
+    </PageIntro></>)},
+{id:'shop',content:(<><div className="apg-discovery-shop"><p>Découvrez nos articles et nos boîtes préparées par la maison.</p><a className="apg-shop-primary" href="/boutique">Voir les articles de la maison</a></div></>)},
+{id:'recipes',content:(<><section className="bonbon-grid standalone bonbon-collection">
       {collection.map((product) => <figure key={product.id} id={product.id}>
         <div className="bonbon-card__visual">
           <Image src={imageSources[product.image] || product.image || imageSources["/logo-au-parrain-genereux.png"] || "/logo-au-parrain-genereux.png"} alt={imageAlts[product.image] || `${product.name}, bonbon de chocolat maison`} width={768} height={768} quality={84} sizes="(max-width: 620px) 90vw, (max-width: 980px) 45vw, 30vw" />
         </div>
         <figcaption><strong>{product.name}</strong><p>{product.description}</p></figcaption>
       </figure>)}
-    </section>
+    </section></>)}
+]}/>
     <SiteFooter />
   </main>;
 }

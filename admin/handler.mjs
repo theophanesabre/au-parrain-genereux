@@ -1,3 +1,4 @@
+import { visualHTML } from './visual-ui.mjs';
 import { defaultAppearance, appearanceValues, validateAppearance } from './appearance.mjs';
 import { appearanceHTML } from './appearance-ui.mjs';
 import { defaultHighlights, isDefaultHighlight, mergeHighlights, validateHighlight } from './highlights.mjs';
@@ -43,11 +44,11 @@ export async function handleAdmin(request, env) {
         if(!grant)throw error;actor=user;
       }
     } catch(error) {
-      if(error.status===401 && path==='/admin' && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to=%2Fadmin'}});
+      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
       throw error;
     }
-    if(path==='/admin/apparence' && request.method==='GET') {
-      const nonce=crypto.randomUUID();return new Response(appearanceHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; frame-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
+    if((path==='/admin/apparence'||path==='/admin/editeur') && request.method==='GET') {
+      const nonce=crypto.randomUUID();return new Response(path==='/admin/editeur'?visualHTML(nonce):appearanceHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; frame-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
     }
     if(path==='/admin' && request.method==='GET') {
       const nonce=crypto.randomUUID();
@@ -123,6 +124,8 @@ export async function handleAdmin(request, env) {
       if(replacement)throw new HttpError(409,'Cette image est actuellement utilisée sur le site ; restaurez ou remplacez-la avant suppression');
       const highlight=await db.prepare('SELECT id FROM highlights WHERE image=? LIMIT 1').bind(`/media/${id}`).first();
       if(highlight)throw new HttpError(409,'Cette image est utilisée par une mise à la une ou une nouveauté');
+      const appearance=await db.prepare("SELECT body FROM site_settings WHERE id='appearance'").first();
+      if(appearance){const visual=appearanceValues(appearance.body).visual;if([...visual.blocks,...visual.overrides].some(item=>item.image===`/media/${id}`))throw new HttpError(409,'Cette image est utilisée dans l’éditeur visuel');}
       await db.batch([db.prepare('DELETE FROM images WHERE id=?').bind(id),log()]); await env.BUCKET.delete(id); return json({ok:true});
     }
     if(resource==='highlights') {

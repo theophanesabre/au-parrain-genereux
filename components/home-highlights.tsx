@@ -30,7 +30,7 @@ export function SpotlightCarousel({items,label='À la une'}:{items:Highlight[];l
     return ()=>document.removeEventListener('visibilitychange',update);
   },[]);
   useEffect(()=>{
-    if(items.length<2||paused||hovered||hidden||reducedMotion)return;
+    if(items.length<2||paused||hovered||hidden||reducedMotion||(new URLSearchParams(window.location.search).get('edition')==='1'&&window.parent!==window))return;
     const timer=window.setInterval(()=>setActive(previous=>(previous+1)%items.length),7000);
     return ()=>window.clearInterval(timer);
   },[items.length,paused,hovered,hidden,reducedMotion]);
@@ -64,7 +64,7 @@ export function SpotlightCarousel({items,label='À la une'}:{items:Highlight[];l
           {item.kicker?<p className="apg-spotlight__kicker">{item.kicker}</p>:null}
           <h2 className="apg-spotlight__title">{item.title}</h2>
           {item.description?<p className="apg-spotlight__description">{item.description}</p>:null}
-          <a className="apg-spotlight__link" href={item.href}>{item.button_label}<span aria-hidden="true">↗</span></a>
+          <a className="apg-spotlight__link" href={item.href}><span data-ve-label>{item.button_label}</span><span className="apg-link-icon" aria-hidden="true">↗</span></a>
         </div>
       </article>)}
     </div>
@@ -88,7 +88,7 @@ export function NewsRail({items,title,intro,kicker}:{items:Highlight[];title:str
       {items.map(item=><article className="apg-news__card" key={item.id}>
         <a href={item.href}>
           <div className="apg-news__visual"><Image src={item.image} alt={item.alt} fill sizes="(max-width: 620px) 82vw, (max-width: 980px) 45vw, 32vw" style={{objectFit:item.image_fit}}/>{item.kicker?<span className="apg-news__badge">{item.kicker}</span>:null}</div>
-          <div className="apg-news__copy"><h3>{item.title}</h3>{item.description?<p>{item.description}</p>:null}<span className="apg-news__link">{item.button_label}<span aria-hidden="true"> ↗</span></span></div>
+          <div className="apg-news__copy"><h3>{item.title}</h3>{item.description?<p>{item.description}</p>:null}<span className="apg-news__link"><span data-ve-label>{item.button_label}</span><span className="apg-link-icon" aria-hidden="true"> ↗</span></span></div>
         </a>
       </article>)}
     </div>

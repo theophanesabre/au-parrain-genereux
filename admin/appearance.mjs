@@ -1,7 +1,8 @@
+import { defaultVisual, validateVisual } from './visual.mjs';
 import { highlightHref } from './highlights.mjs';
 import { text, HttpError } from './core.mjs';
 export const homeSections=[['spotlight','Bandeau principal'],['news','Nouveautés'],['visit','Nous trouver'],['history','Histoire de la maison'],['chapters','Découvrir la maison'],['collection','Collection de chocolats']];
-export const defaultAppearance={background:'cream',spacing:'airy',buttons:'filled',corners:'soft',hero:'image-left',columns:'3',historyLabel:'Découvrir notre histoire',historyHref:'/maison',collectionLabel:'Voir les bonbons',collectionHref:'/bonbons',customButtons:[],sections:homeSections.map(([id])=>({id,visible:true}))};
+export const defaultAppearance={background:'cream',spacing:'airy',buttons:'filled',corners:'soft',hero:'image-left',columns:'3',historyLabel:'Découvrir notre histoire',historyHref:'/maison',collectionLabel:'Voir les bonbons',collectionHref:'/bonbons',customButtons:[],visual:defaultVisual,sections:homeSections.map(([id])=>({id,visible:true}))};
 export function validateAppearance(value){
  if(!value||typeof value!=='object')throw new HttpError(400,'Réglages invalides');
  const choices={background:['cream','white'],spacing:['airy','compact'],buttons:['filled','outline'],corners:['square','soft','round'],hero:['image-left','image-right'],columns:['2','3','4']};
@@ -21,6 +22,9 @@ export function validateAppearance(value){
   return {id:button.id,label:text(button.label,80),href:highlightHref(button.href),page:button.page,location:button.location,position:button.position,align:button.align,style:button.style,size:button.size,visible:button.visible};
  });
  if(!result.sections.some(section=>section.visible))throw new HttpError(400,'Conservez au moins une section visible');
+ result.visual=validateVisual(value.visual);
+ if(value.visual===undefined&&value.background==='white')result.visual.surface='#ffffff';
+ if(JSON.stringify(result).length>60000)throw new HttpError(400,'Personnalisation trop volumineuse : réduisez le nombre de modifications');
  return result;
 }
 export function appearanceValues(body){try{return validateAppearance(JSON.parse(body));}catch{return defaultAppearance;}}
