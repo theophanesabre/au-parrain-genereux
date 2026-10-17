@@ -313,7 +313,7 @@ test('visual editor validates themes, styles, links, layouts and content before 
  for(const href of ['javascript:alert(1)','data:text/html,<script>','//evil.example','/admin','https://name:password@example.org'])assert.throws(()=>visualHref(href));
  assert.equal(visualHref('https://example.org/'), 'https://example.org/');assert.equal(visualHref('mailto:contact@example.org'),'mailto:contact@example.org');
  for(const bad of [{...visual,blocks:[{...block,image:'https://evil.example/x.jpg',kind:'image',alt:'Image'}]},{...visual,blocks:[block,block]},{...visual,overrides:[{page:'/',id:'body<script>',style:{}}]},{...visual,layouts:{...visual.layouts,'/maison':[{id:'intro',visible:false},{id:'signature',visible:false}]}},{...visual,blocks:Array.from({length:61},(_,i)=>({...block,id:'b-'+i}))}])assert.throws(()=>validateVisual(bad));
- const anonymous=await handleAdmin(req('/admin/editeur'),env);assert.equal(anonymous.status,302);const response=await handleAdmin(req('/admin/editeur',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(response.status,200);assert.match(response.headers.get('content-security-policy'),/frame-src 'self'/);const html=await response.text();assert.match(html,/Site à personnaliser/);const {Script}=await import('node:vm');new Script(html.match(/<script[^>]*>([\s\S]*)<\/script>/)[1]);env.sqlite.close();
+ const anonymous=await handleAdmin(req('/admin/editeur'),env);assert.equal(anonymous.status,302);const response=await handleAdmin(req('/admin/editeur',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(response.status,302);assert.equal(response.headers.get('location'),'/admin/puck');assert.equal(await handleAdmin(req('/admin/puck',{headers:{'oai-authenticated-user-id':'owner'}}),env),null);env.sqlite.close();
 });
 
 test('visual editor client keeps changes in preview until save, supports undo and selection edits',async()=>{
@@ -337,4 +337,52 @@ test('visual editor client keeps changes in preview until save, supports undo an
 test('images referenced by visual blocks cannot be deleted until the block is removed',async()=>{
  const {defaultAppearance}=await import('../admin/appearance.mjs');const env=bindings();const upload=new FormData();upload.set('alt','Photo de la maison');upload.set('file',new Blob([new Uint8Array([137,80,78,71,13,10,26,10,0])],{type:'image/png'}),'photo.png');const response=await handleAdmin(req('/admin/api/images',{method:'POST',headers:{origin,'oai-authenticated-user-id':'owner'},body:upload}),env);assert.equal(response.status,201);const image=await response.json();
  const visual={...structuredClone(defaultAppearance.visual),blocks:[{id:'photo-maison',page:'/',anchor:'history',position:'after',kind:'image',visible:true,title:'',body:'',image:image.url,alt:'Maison',label:'',href:'',style:{}}]};assert.equal((await call(env,'appearance','PUT',{settings:{...defaultAppearance,visual},version:0})).status,200);assert.equal((await call(env,'images/'+image.id,'DELETE')).status,409);assert.equal((await call(env,'appearance','PUT',{settings:defaultAppearance,version:1})).status,200);assert.equal((await call(env,'images/'+image.id,'DELETE')).status,200);env.sqlite.close();
+});
+
+test('Puck converts every existing page without writing and isolates drafts, publications and concurrent edits',async()=>{
+ const env=bindings();const {validatePuckData}=await import('../admin/puck-model.mjs');
+ for(const path of ['/','/maison','/savoir-faire','/bonbons','/boutique','/panier']){const response=await call(env,'puck?path='+encodeURIComponent(path));assert.equal(response.status,200);const page=await response.json();assert.equal(page.version,0);assert.equal(page.published,false);assert.deepEqual(validatePuckData(page.data),page.data);assert.ok(page.data.content.length);}
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM puck_pages').get().n,0);
+ const doc=(await(await call(env,'puck?path=/maison')).json()).data;doc.content[0].props.title='Une maison';
+ assert.equal((await call(env,'puck?path=/maison','PUT',{action:'draft',version:0,data:doc})).status,200);
+ assert.equal(env.sqlite.prepare("SELECT published FROM puck_pages WHERE path='/maison'").get().published,null);
+ assert.equal((await(await call(env,'puck?path=/maison')).json()).data.content[0].props.title,'Une maison');
+ assert.equal((await call(env,'puck?path=/maison','PUT',{action:'publish',version:0,data:doc})).status,409);
+ assert.equal((await call(env,'puck?path=/maison','PUT',{action:'publish',version:1,data:doc})).status,200);
+ const published=env.sqlite.prepare("SELECT published FROM puck_pages WHERE path='/maison'").get().published;assert.equal(JSON.parse(published).content[0].props.title,'Une maison');
+ doc.content[0].props.title='Brouillon suivant';assert.equal((await call(env,'puck?path=/maison','PUT',{action:'draft',version:2,data:doc})).status,200);
+ assert.equal(env.sqlite.prepare("SELECT published FROM puck_pages WHERE path='/maison'").get().published,published);
+ assert.equal((await(await call(env,'puck?path=/')).json()).version,0);
+ assert.equal((await call(env,'puck?path=/maison','PUT',{action:'restore',version:3})).status,200);
+ const restored=await(await call(env,'puck?path=/maison')).json();assert.equal(restored.published,false);assert.notEqual(restored.data.content[0].props.title,'Brouillon suivant');assert.equal(restored.version,4);
+ assert.ok(env.sqlite.prepare("SELECT COUNT(*) AS n FROM audit WHERE action='PUCK_PUBLISH'").get().n);env.sqlite.close();
+});
+test('Puck validates nested slots, links, styles and image references at the authenticated boundary',async()=>{
+ const env=bindings();const {puckDefaults,validatePuckData,puckImages}=await import('../admin/puck-model.mjs');
+ assert.equal((await handleAdmin(req('/admin/api/puck'),env)).status,401);assert.equal((await handleAdmin(req('/admin/puck'),env)).status,302);
+ const doc=(await(await call(env,'puck?path=/')).json()).data;
+ const block={type:'Bouton',props:{...structuredClone(puckDefaults.Bouton),id:'safe-button'}};doc.content=[{type:'Colonnes',props:{...structuredClone(puckDefaults.Colonnes),id:'columns',children:[block]}}];
+ assert.equal(validatePuckData(doc).content[0].props.children[0].type,'Bouton');
+ for(const href of ['javascript:alert(1)','//evil.test','data:text/html,x']){const bad=structuredClone(doc);bad.content[0].props.children[0].props.href=href;assert.equal((await call(env,'puck','PUT',{action:'publish',version:0,data:bad})).status,400);}
+ const unknown=structuredClone(doc);unknown.content[0].props.onClick='alert(1)';assert.throws(()=>validatePuckData(unknown));
+ const css=structuredClone(doc);css.content[0].props.style.background='url(https://evil.test)';assert.throws(()=>validatePuckData(css));
+ const duplicate=structuredClone(doc);duplicate.content.push(duplicate.content[0]);assert.throws(()=>validatePuckData(duplicate));
+ assert.equal((await call(env,'puck?path=/admin','PUT',{action:'publish',version:0,data:doc})).status,400);
+ assert.equal((await handleAdmin(req('/admin/api/puck',{method:'PUT',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.example'},body:JSON.stringify({action:'publish',version:0,data:doc})}),env)).status,403);
+ const form=new FormData();form.set('alt','Image de Puck');form.set('file',new File([new Uint8Array([137,80,78,71,13,10,26,10])],'puck.png',{type:'image/png'}));
+ const image=await(await handleAdmin(req('/admin/api/images',{method:'POST',headers:{'oai-authenticated-user-id':'owner',origin},body:form}),env)).json();
+ doc.content[0].props.children.push({type:'Image',props:{...structuredClone(puckDefaults.Image),id:'photo',src:image.url}});assert.ok(puckImages(doc).includes(image.url));
+ assert.equal((await call(env,'puck','PUT',{action:'draft',version:0,data:doc})).status,200);assert.equal((await call(env,'images/'+image.id,'DELETE')).status,409);
+ await call(env,'puck','PUT',{action:'publish',version:1,data:doc});const cleared=structuredClone(doc);cleared.content=[];await call(env,'puck','PUT',{action:'draft',version:2,data:cleared});assert.equal((await call(env,'images/'+image.id,'DELETE')).status,409);
+ await call(env,'puck','PUT',{action:'restore',version:3});assert.equal((await call(env,'images/'+image.id,'DELETE')).status,200);env.sqlite.close();
+});
+
+test('published Puck renderer preserves nested column layout and safely renders owner content',async()=>{
+ const ts=await import('typescript');const React=await import('react');const {renderToStaticMarkup}=await import('react-dom/server');const {Render}=await import('@puckeditor/core/rsc');const {puckDefaults,puckRoot,validatePuckData}=await import('../admin/puck-model.mjs');
+ const mocks='data:text/javascript;base64,'+Buffer.from('export const PuckImageField=()=>null;export const CartLink=()=>null;export const CartPage=()=>null;export const Catalog=()=>null;export const SpotlightCarousel=()=>null;export const NewsRail=()=>null;').toString('base64');
+ let code=ts.transpileModule(readFileSync(new URL('../components/puck/config.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ code=code.replace(/from (['"])(react(?:\/jsx-runtime)?)\1/g,(_,quote,name)=>'from '+JSON.stringify(import.meta.resolve(name))).replace(/from (['"])@\/admin\/puck-model.mjs\1/g,'from '+JSON.stringify(new URL('../admin/puck-model.mjs',import.meta.url).href)).replace(/from (['"])(?:\.\/image-field|\.\.\/home-highlights|\.\.\/cart|\.\.\/catalog)\1/g,'from '+JSON.stringify(mocks));
+ const {puckConfig}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+ const doc=validatePuckData({root:{props:{...puckRoot,showHeader:'non',showFooter:'non'}},content:[{type:'Colonnes',props:{...structuredClone(puckDefaults.Colonnes),id:'columns',children:[{type:'Texte',props:{...structuredClone(puckDefaults.Texte),id:'title',title:'<script>alert(1)</script>',body:'Maison'}},{type:'Bouton',props:{...structuredClone(puckDefaults.Bouton),id:'button',label:'Découvrir',href:'/boutique'}}]}}]});
+ const html=renderToStaticMarkup(React.createElement(Render,{config:puckConfig(),data:doc}));assert.match(html,/data-puck-page="true"/);assert.match(html,/class="puck-columns"/);assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);assert.match(html,/href="\/boutique"/);assert.match(html,/Maison/);
 });

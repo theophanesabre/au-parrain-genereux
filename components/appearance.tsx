@@ -19,6 +19,7 @@ export function AppearanceShell({initial,children}:{initial:Appearance;children:
   window.addEventListener('message',receive);window.parent.postMessage({type:'apg-preview-ready'},window.location.origin);
   return ()=>{window.removeEventListener('message',receive);document.removeEventListener('click',navigate);};
  },[]);
+ if(path.startsWith('/admin/'))return <>{children}</>;
  return <AppearanceContext.Provider value={settings}><div className="apg-site" data-background={settings.background} data-spacing={settings.spacing} data-buttons={settings.buttons} data-corners={settings.corners} data-hero={settings.hero} data-columns={settings.columns} data-visual-font={settings.visual.font} data-link-icons={settings.visual.icons?'show':'hide'} style={{'--apg-accent':settings.visual.accent,'--apg-surface':settings.visual.surface,'--apg-ink':settings.visual.ink,'--apg-scale':String(settings.visual.scale/100)} as React.CSSProperties}><VisualRuntime settings={settings.visual} page={path}/>{children}</div></AppearanceContext.Provider>;
 }
 export function HomeSections({sections}:{sections:{id:string;content:ReactNode}[]}){

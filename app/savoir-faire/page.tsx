@@ -1,3 +1,4 @@
+import { publishedPuckPage } from "@/components/puck/published";
 import { PageSections } from "@/components/appearance";
 import { getPageContent } from "@/components/site-data";
 import { getManagedPage, ManagedPage } from "@/components/managed-page";
@@ -14,6 +15,8 @@ const gestes = [
 
 export const dynamic = "force-dynamic";
 export default async function SavoirFaire() {
+  const puck=await publishedPuckPage("/savoir-faire");if(puck)return puck;
+
   const [managed,content] = await Promise.all([getManagedPage("savoir-faire"),getPageContent("savoir-faire")]);
   if (managed) return <ManagedPage page={managed}/>;
   return <main className="inner-page craft-page">

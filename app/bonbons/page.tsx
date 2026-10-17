@@ -1,3 +1,4 @@
+import { publishedPuckPage } from "@/components/puck/published";
 import { PageSections } from "@/components/appearance";
 import { getPageContent, getImageSources, getImageDescriptions } from "@/components/site-data";
 import { isRecipe } from "@/admin/products.mjs";
@@ -9,26 +10,12 @@ import Image from "next/image";
 import { bonbons } from "@/data/bonbons";
 import { PageIntro, SiteFooter, SiteHeader } from "@/components/site-chrome";
 
-const descriptions = [
-  "Pâte d’amande et praliné maison, enrobés de chocolat noir ou au lait.",
-  "Praliné onctueux, délicatement enrobé de chocolat noir.",
-  "Praliné noisette et chocolat blanc, enrobé de chocolat noir, au lait ou blanc.",
-  "Praliné à l’ancienne aux éclats d’amandes grillées, enrobé de chocolat.",
-  "Gianduja surmonté d’une fleur cristallisée de violette ou de mimosa.",
-  "Praliné lisse d’amande, enrobé de chocolat noir ou au lait.",
-  "Praliné à l’ancienne, enrobé de chocolat noir, au lait ou blanc.",
-  "Praliné à l’ancienne et paillettes de chocolat, sous un fin enrobage.",
-  "Biscuit dentelle au beurre et praliné, enrobés de chocolat noir ou au lait.",
-  "Biscuit spéculoos mêlé au praliné, enrobé de chocolat noir ou au lait.",
-  "Pâte d’amande fondante, enrobée de chocolat noir ou au lait.",
-  "Un godet de chocolat garni d’un gianduja généreux.",
-  "Zestes de citron et d’orange confits, délicatement enrobés de chocolat.",
-  "Confiserie d’œuf, de miel et d’amande, enrobée de chocolat noir ou au lait.",
-  "Praliné lisse de noix de pécan, enrobé de chocolat au lait ou noir.",
-];
+import { bonbonDescriptions as descriptions } from "@/data/bonbon-descriptions.mjs";
 
 export const dynamic = "force-dynamic";
 export default async function Bonbons() {
+  const puck=await publishedPuckPage("/bonbons");if(puck)return puck;
+
   const content=await getPageContent("bonbons");
   const [imageSources,imageAlts]=await Promise.all([getImageSources(),getImageDescriptions()]);
   const stored = env.DB ? await getDb().select().from(products).where(eq(products.published, 1)) : null;

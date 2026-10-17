@@ -1,3 +1,4 @@
+import { publishedPuckPage } from "@/components/puck/published";
 import { HomeSections, HomeButton, PageButtons } from "@/components/appearance";
 import { CartLink } from "@/components/cart";
 import { SpotlightCarousel, NewsRail } from "@/components/home-highlights";
@@ -15,6 +16,8 @@ const chapters = [
 
 export const dynamic = "force-dynamic";
 export default async function Home() {
+  const puck=await publishedPuckPage("/");if(puck)return puck;
+
   const [managed,content,imageSources,imageAlts,highlights] = await Promise.all([getManagedPage("accueil"),getPageContent("accueil"),getImageSources(),getImageDescriptions(),getHighlights()]);
   const slides=highlights.map(item=>({...item,image:imageSources[item.image]||item.image,alt:imageAlts[item.image]||item.alt}));
   if (managed) return <ManagedPage page={managed}/>;

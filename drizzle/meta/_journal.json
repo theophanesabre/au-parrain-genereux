@@ -50,6 +50,13 @@
       "when": 1792204213265,
       "tag": "0006_retire_weight_sales",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1792217544409,
+      "tag": "0007_puck_pages",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,5 @@
+import { puckPaths, validatePuckData, puckImages } from './puck-model.mjs';
+import { puckContext, defaultPuckData } from './puck-defaults.mjs';
 import { visualHTML } from './visual-ui.mjs';
 import { defaultAppearance, appearanceValues, validateAppearance } from './appearance.mjs';
 import { appearanceHTML } from './appearance-ui.mjs';
@@ -11,12 +13,12 @@ import { authorize, checkOrigin, text, integer, slug, imagePath, transition, ima
 import { adminHTML } from './ui.mjs';
 const headers = {'Cache-Control':'private, no-store', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'same-origin', 'X-Frame-Options':'DENY'};
 const json = (data, status=200) => Response.json(data, {status, headers});
-async function body(request) {
+async function body(request,limit=65536) {
   if (!request.headers.get('content-type')?.includes('application/json')) throw new HttpError(415, 'JSON requis');
-  if (Number(request.headers.get('content-length')) > 65536) throw new HttpError(413, 'Requête trop volumineuse');
+  if (Number(request.headers.get('content-length')) > limit) throw new HttpError(413, 'Requête trop volumineuse');
   const reader=request.body?.getReader(); let size=0; const chunks=[];
   if (!reader) throw new HttpError(400,'Corps requis');
-  while (true) {const {done,value}=await reader.read(); if(done) break; size+=value.length; if(size>65536){await reader.cancel();throw new HttpError(413,'Requête trop volumineuse');} chunks.push(value);}
+  while (true) {const {done,value}=await reader.read(); if(done) break; size+=value.length; if(size>limit){await reader.cancel();throw new HttpError(413,'Requête trop volumineuse');} chunks.push(value);}
   try {return JSON.parse(new TextDecoder().decode(await new Blob(chunks).arrayBuffer()));} catch {throw new HttpError(400,'JSON invalide');}
 }
 export async function handleAdmin(request, env) {
@@ -44,9 +46,11 @@ export async function handleAdmin(request, env) {
         if(!grant)throw error;actor=user;
       }
     } catch(error) {
-      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
+      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
       throw error;
     }
+    if(path==='/admin/puck'&&request.method==='GET')return null;
+    if(path==='/admin/editeur'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck'}});
     if((path==='/admin/apparence'||path==='/admin/editeur') && request.method==='GET') {
       const nonce=crypto.randomUUID();return new Response(path==='/admin/editeur'?visualHTML(nonce):appearanceHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; frame-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
     }
@@ -57,6 +61,14 @@ export async function handleAdmin(request, env) {
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
     const db=env.DB;
+    if(path==='/admin/api/puck'){
+      const page=url.searchParams.get('path')||'/';if(!puckPaths.includes(page))throw new HttpError(400,'Page inconnue');
+      if(request.method==='GET'){const [row,context]=await Promise.all([db.prepare('SELECT published,draft,version FROM puck_pages WHERE path=?').bind(page).first(),puckContext(db,page)]);const initial=validatePuckData(defaultPuckData(page,context));return json({data:row?.draft?JSON.parse(row.draft):row?.published?JSON.parse(row.published):initial,defaultData:initial,version:row?.version??0,published:Boolean(row?.published),storefront:context.storefront});}
+      if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const input=await body(request,262144),version=integer(input.version);if(!['draft','publish','restore'].includes(input.action))throw new HttpError(400,'Action inconnue');
+      const data=input.action==='restore'?null:JSON.stringify(validatePuckData(input.data));
+      const statement=version===0?db.prepare('INSERT OR IGNORE INTO puck_pages (path,published,draft) VALUES (?,?,?)').bind(page,input.action==='publish'?data:null,input.action==='restore'?null:data):input.action==='draft'?db.prepare('UPDATE puck_pages SET draft=?,version=version+1 WHERE path=? AND version=?').bind(data,page,version):db.prepare('UPDATE puck_pages SET published=?,draft=?,version=version+1 WHERE path=? AND version=?').bind(data,data,page,version);
+      const [result]=await db.batch([statement,db.prepare('INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),actor,'PUCK_'+input.action.toUpperCase(),page,new Date().toISOString())]);if(result.meta.changes!==1)throw new HttpError(409,'La page a été modifiée ailleurs. Rechargez avant de réessayer.');return json({version:version+1});
+    }
     if(path==='/admin/api/appearance'){
       if(request.method==='GET'){const row=await db.prepare("SELECT body,version FROM site_settings WHERE id='appearance'").first();return json({settings:row?appearanceValues(row.body):defaultAppearance,defaults:defaultAppearance,version:row?.version??0});}
       if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const data=await body(request),settings=validateAppearance(data.settings),version=integer(data.version);
@@ -126,6 +138,8 @@ export async function handleAdmin(request, env) {
       if(highlight)throw new HttpError(409,'Cette image est utilisée par une mise à la une ou une nouveauté');
       const appearance=await db.prepare("SELECT body FROM site_settings WHERE id='appearance'").first();
       if(appearance){const visual=appearanceValues(appearance.body).visual;if([...visual.blocks,...visual.overrides].some(item=>item.image===`/media/${id}`))throw new HttpError(409,'Cette image est utilisée dans l’éditeur visuel');}
+      const puckPages=await db.prepare('SELECT published,draft FROM puck_pages').all();
+      if(puckPages.results.some(row=>[row.published,row.draft].filter(Boolean).some(body=>puckImages(JSON.parse(body)).includes(`/media/${id}`))))throw new HttpError(409,'Cette image est utilisée dans une page ou un brouillon Puck');
       await db.batch([db.prepare('DELETE FROM images WHERE id=?').bind(id),log()]); await env.BUCKET.delete(id); return json({ok:true});
     }
     if(resource==='highlights') {
