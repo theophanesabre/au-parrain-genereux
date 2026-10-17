@@ -12,12 +12,13 @@ export function AppearanceShell({initial,children}:{initial:Appearance;children:
  const [settings,setSettings]=useState<Appearance>(initial??defaultAppearance);
  const path=usePathname()||'/';
  useEffect(()=>{
-  if(new URLSearchParams(window.location.search).get('apercu')!=='1'||window.parent===window)return;
-  const receive=(event:MessageEvent)=>{if(event.origin!==window.location.origin||event.source!==window.parent||event.data?.type!=='apg-appearance')return;try{setSettings(validateAppearance(event.data.settings) as Appearance);}catch{/* Ignore invalid preview messages. */}};
-  const navigate=(event:MouseEvent)=>{const anchor=(event.target as Element).closest('a');if(!anchor||anchor.target==='_blank')return;const url=new URL(anchor.href,location.href);if(url.origin!==location.origin||url.pathname.startsWith('/admin'))return;url.searchParams.set('apercu','1');anchor.href=url.href;};
-  document.addEventListener('click',navigate);
-  window.addEventListener('message',receive);window.parent.postMessage({type:'apg-preview-ready'},window.location.origin);
-  return ()=>{window.removeEventListener('message',receive);document.removeEventListener('click',navigate);};
+  if(new URLSearchParams(window.location.search).get('apercu')!=='1')return;
+  const embedded=window.parent!==window;
+  const receive=(event:MessageEvent)=>{if(!embedded||event.origin!==window.location.origin||event.source!==window.parent||event.data?.type!=='apg-appearance')return;try{setSettings(validateAppearance(event.data.settings) as Appearance);}catch{/* Ignore invalid preview messages. */}};
+  const navigate=(event:MouseEvent)=>{const anchor=(event.target as Element).closest('a');if(!anchor||anchor.target==='_blank')return;const url=new URL(anchor.href,location.href);if(url.origin!==location.origin||!['/','/maison','/savoir-faire','/bonbons','/boutique','/panier','/paiement'].includes(url.pathname.replace(/\/+$/,'')||'/'))return;url.searchParams.set('apercu','1');anchor.href=url.href;};
+  document.addEventListener('click',navigate,true);
+  window.addEventListener('message',receive);if(embedded)window.parent.postMessage({type:'apg-preview-ready'},window.location.origin);
+  return ()=>{window.removeEventListener('message',receive);document.removeEventListener('click',navigate,true);};
  },[]);
  if(path.startsWith('/admin/'))return <>{children}</>;
  return <AppearanceContext.Provider value={settings}><div className="apg-site" data-background={settings.background} data-spacing={settings.spacing} data-buttons={settings.buttons} data-corners={settings.corners} data-hero={settings.hero} data-columns={settings.columns} data-visual-font={settings.visual.font} data-link-icons={settings.visual.icons?'show':'hide'} style={{'--apg-accent':settings.visual.accent,'--apg-surface':settings.visual.surface,'--apg-ink':settings.visual.ink,'--apg-scale':String(settings.visual.scale/100)} as React.CSSProperties}><VisualRuntime settings={settings.visual} page={path}/>{children}</div></AppearanceContext.Provider>;
