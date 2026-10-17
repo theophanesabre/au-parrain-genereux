@@ -1,29 +1,13 @@
-import { PageButtons, MenuLinks } from "./appearance";
-import { CartLink } from "./cart";
-import { getPageContent, getImageSources, getImageDescriptions } from "./site-data";
+import { PageButtons, StoreHeader, StoreFooter } from "./appearance";
+import { getPageContent, getImageSources } from "./site-data";
 export async function SiteHeader() {
-  const [imageSources,imageAlts]=await Promise.all([getImageSources(),getImageDescriptions()]);
-  return <><header className="site-header">
-    <a className="brand brand-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"} alt={imageAlts["/images/logo-boutique-neon.webp"] || "Enseigne Au Parrain Généreux sur la façade de la boutique"} /></a>
-    <nav aria-label="Navigation principale"><MenuLinks/></nav>
-    <CartLink />
-    <details className="mobile-menu">
-      <summary aria-label="Ouvrir le menu"><span/><span/><span/></summary>
-      <nav aria-label="Navigation mobile"><MenuLinks/><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a></nav>
-    </details>
-  </header><PageButtons location="page-top"/></>;
+  const imageSources=await getImageSources();
+  return <><StoreHeader logo={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"}/><PageButtons location="page-top"/></>;
 }
 
 export async function SiteFooter() {
   const content=await getPageContent("accueil");
-  return <><PageButtons location="page-bottom"/><footer className="site-footer">
-    <div className="site-footer__history"><p>Depuis 1890</p><h2>{content.footerTitle}</h2><p>{content.footerText}</p></div>
-    <div className="site-footer__useful">
-      <nav aria-label="Liens de bas de page"><h3>Liens utiles</h3><MenuLinks flat/><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a></nav>
-      <address><h3>Contact</h3><span>{content.address}<br/>{content.city}</span><span>{content.days}<br/>{content.hours}</span><a href={`tel:${content.phone.replace(/[^+0-9]/g, "")}`}>{content.phone}</a><a href={`mailto:${content.email}`}>{content.email}</a></address>
-    </div>
-    <p className="site-footer__legal">© 2026 Au Parrain Généreux</p>
-  </footer></>;
+  return <><PageButtons location="page-bottom"/><StoreFooter title={content.footerTitle} text={content.footerText} address={[content.address,content.city].filter(Boolean).join(' · ')} hours={[content.days,content.hours].filter(Boolean).join(' · ')} phone={content.phone} email={content.email}/></>;
 }
 
 export function PageIntro({ index, kicker, title, children }: { index: string; kicker: string; title: string; children: React.ReactNode }) {

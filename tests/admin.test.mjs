@@ -258,7 +258,7 @@ test('appearance is protected, versioned, validates layout and restores defaults
  const {defaultAppearance}=await import('../admin/appearance.mjs');const env=bindings();
  assert.equal((await handleAdmin(req('/admin/apparence'),env)).status,302);
  assert.equal((await handleAdmin(req('/admin/api/appearance'),env)).status,401);
- const initial=await (await call(env,'appearance')).json();assert.equal(initial.version,0);assert.deepEqual(initial.settings,defaultAppearance);
+ const initial=await (await call(env,'appearance')).json();assert.equal(typeof initial.footerDefaults.footerTitle,'string');assert.equal(initial.version,0);assert.deepEqual(initial.settings,defaultAppearance);
  const settings={...initial.settings,navigation:{groupLabel:'Notre maison',items:[{label:'Recettes maison',href:'/bonbons',group:true},{label:'Boutique en ligne',href:'/boutique',group:false}]},hero:'image-right',buttons:'outline',collectionLabel:'Tous les articles',collectionHref:'/boutique',sections:[...initial.settings.sections].reverse().map((section,index)=>({...section,visible:index!==0}))};
  let response=await call(env,'appearance','PUT',{settings,version:0});assert.equal(response.status,200);assert.equal((await response.json()).version,1);
  const stored=(await (await call(env,'appearance')).json()).settings;assert.equal(stored.sections[0].id,'collection');assert.deepEqual(stored.navigation,settings.navigation);
@@ -277,9 +277,13 @@ test('appearance rendering falls back safely and applies section order, visibili
  for(const name of ['react/jsx-runtime','react'])code=code.replaceAll(`from "${name}"`,`from ${JSON.stringify(import.meta.resolve(name))}`).replaceAll(`from '${name}'`,`from ${JSON.stringify(import.meta.resolve(name))}`);
  code=code.replaceAll("'@/admin/appearance.mjs'",JSON.stringify(new URL('../admin/appearance.mjs',import.meta.url).href));
  code=code.replace("import { usePathname } from 'next/navigation';","const usePathname=()=>'/';");
- const styleCode=ts.transpileModule(readFileSync(new URL('../components/visual-style.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;code=code.replace("import { VisualRuntime } from './visual-runtime';","const VisualRuntime=()=>null;").replace("'./visual-style'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(styleCode).toString('base64')));
- const {AppearanceShell,HomeSections,HomeButton,PageButtons,PageSections}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+ const styleCode=ts.transpileModule(readFileSync(new URL('../components/visual-style.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;code=code.replace("import { CartLink } from './cart';","const CartLink=()=>null;");code=code.replace("import { VisualRuntime } from './visual-runtime';","const VisualRuntime=()=>null;").replace("'./visual-style'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(styleCode).toString('base64')));
+ const {AppearanceShell,HomeSections,HomeButton,PageButtons,PageSections,StoreHeader,StoreFooter}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  assert.match(renderToStaticMarkup(createElement(AppearanceShell,{initial:undefined},'Contenu')),/data-background="cream"/);
+ const chrome={...defaultAppearance.chrome,headerBackground:'#112233',headerColor:'#ffffff',logoWidth:140,menuGap:40,logoPosition:'center',footerColumns:2,overrideContent:true,footerTitle:'La maison havraise',footerText:'<script>texte</script>',address:'Le Havre',hours:'Du mardi au samedi',phone:'0235000000',email:'boutique@example.fr',legal:'Maison depuis 1890'};
+ const chromeHtml=renderToStaticMarkup(createElement(AppearanceShell,{initial:{...defaultAppearance,chrome}},createElement(StoreHeader),createElement(StoreFooter,{title:'Ancien titre',text:'Ancien texte',address:'',hours:'',phone:'',email:''})));
+ assert.match(chromeHtml,/class="apg-store-header"/);assert.match(chromeHtml,/data-logo-position="center"/);assert.match(chromeHtml,/--menu-gap:40px/);assert.match(chromeHtml,/width:140px/);assert.match(chromeHtml,/La maison havraise/);assert.match(chromeHtml,/&lt;script&gt;texte/);assert.doesNotMatch(chromeHtml,/Ancien titre|<script>texte/);assert.match(chromeHtml,/--footer-columns:2/);assert.match(chromeHtml,/Nos recettes/);assert.match(chromeHtml,/Boutique en ligne/);
+
  const custom={id:'custom-one',label:'Choisir mes chocolats',href:'/boutique',page:'/',location:'history',position:'before',align:'right',style:'outline',size:'large',visible:true};
  const settings={...defaultAppearance,customButtons:[custom,{...custom,id:'custom-two',label:'Ne pas afficher',location:'news'},{...custom,id:'custom-three',label:'Bouton masqué',visible:false},{...custom,id:'custom-four',label:'En haut',location:'page-top'}],background:'white',collectionLabel:'Acheter',collectionHref:'/boutique',sections:[...defaultAppearance.sections].reverse().map(section=>({...section,visible:section.id!=='news'}))};
  const html=renderToStaticMarkup(createElement(AppearanceShell,{initial:settings},createElement(HomeSections,{sections:defaultAppearance.sections.map(section=>({id:section.id,content:section.id}))}),createElement(HomeButton,{kind:'collection'}),createElement(PageButtons,{location:'page-top'})));
@@ -379,7 +383,7 @@ test('Puck validates nested slots, links, styles and image references at the aut
 
 test('published Puck renderer preserves nested column layout and safely renders owner content',async()=>{
  const ts=await import('typescript');const React=await import('react');const {renderToStaticMarkup}=await import('react-dom/server');const {Render}=await import('@puckeditor/core/rsc');const {puckDefaults,puckRoot,validatePuckData}=await import('../admin/puck-model.mjs');
- const mocks='data:text/javascript;base64,'+Buffer.from('export const MenuLinks=()=>null;export const PuckImageField=()=>null;export const CartLink=()=>null;export const CartPage=()=>null;export const Catalog=()=>null;export const SpotlightCarousel=()=>null;export const NewsRail=()=>null;').toString('base64');
+ const mocks='data:text/javascript;base64,'+Buffer.from('export const StoreHeader=()=>null;export const StoreFooter=()=>null;export const MenuLinks=()=>null;export const PuckImageField=()=>null;export const CartLink=()=>null;export const CartPage=()=>null;export const Catalog=()=>null;export const SpotlightCarousel=()=>null;export const NewsRail=()=>null;').toString('base64');
  let code=ts.transpileModule(readFileSync(new URL('../components/puck/config.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
  code=code.replace(/from (['"])(react(?:\/jsx-runtime)?)\1/g,(_,quote,name)=>'from '+JSON.stringify(import.meta.resolve(name))).replace(/from (['"])@\/admin\/puck-model.mjs\1/g,'from '+JSON.stringify(new URL('../admin/puck-model.mjs',import.meta.url).href)).replace(/from (['"])(?:\.\/image-field|\.\.\/home-highlights|\.\.\/cart|\.\.\/catalog|\.\.\/appearance)\1/g,'from '+JSON.stringify(mocks));
  const {puckConfig}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
@@ -393,7 +397,7 @@ test('design controls persist stripes and block dimensions and accept older Puck
  Object.assign(doc.content[0].props.style,{width:75,minHeight:280,visualHeight:240,background:'#112233',visualBackground:'#abcdef'});
  const saved=validatePuckData(JSON.parse(JSON.stringify(doc)));assert.equal(saved.root.props.pattern,'stripes');assert.equal(saved.root.props.stripeWidth,24);assert.equal(saved.content[0].props.style.visualHeight,240);assert.equal(saved.content[0].props.style.width,75);assert.equal(saved.content[0].props.style.background,'#112233');
  const old=structuredClone(doc);for(const key of ['pattern','stripeColor','stripeWidth','stripeAngle'])delete old.root.props[key];for(const key of ['width','minHeight','visualHeight','visualBackground'])delete old.content[0].props.style[key];
- const migrated=validatePuckData(old);assert.equal(migrated.root.props.pattern,'plain');assert.equal(migrated.content[0].props.style.width,100);assert.equal(migrated.content[0].props.style.visualHeight,0);
+ const migrated=validatePuckData(old);assert.equal(migrated.root.props.pattern,'inherit');assert.equal(migrated.content[0].props.style.width,100);assert.equal(migrated.content[0].props.style.visualHeight,0);
  for(const value of [-1,2001,NaN]){const invalid=structuredClone(doc);invalid.content[0].props.style.visualHeight=value;assert.throws(()=>validatePuckData(invalid));}
  const invalid=structuredClone(doc);invalid.root.props.stripeColor='url(https://example.com)';assert.throws(()=>validatePuckData(invalid));
 });
@@ -405,4 +409,23 @@ test('shared navigation persists editable grouping and destinations while old se
  const edited=structuredClone(upgraded);edited.navigation.groupLabel='Découvrir';edited.navigation.items=[{label:'Mes créations',href:'/boutique',group:false},{label:'Les recettes',href:'/bonbons',group:true}];assert.deepEqual(validateAppearance(JSON.parse(JSON.stringify(edited))).navigation,edited.navigation);
  for(const href of ['javascript:alert(1)','//evil.test','/admin']){const invalid=structuredClone(edited);invalid.navigation.items[0].href=href;assert.throws(()=>validateAppearance(invalid));}
  const invalid=structuredClone(edited);invalid.navigation.items[0].group='oui';assert.throws(()=>validateAppearance(invalid));
+});
+
+test('header and footer configuration persists safely, preserves old content and protects the selected logo',async()=>{
+ const {defaultAppearance,validateAppearance}=await import('../admin/appearance.mjs');const env=bindings();
+ const old=structuredClone(defaultAppearance);delete old.chrome;assert.deepEqual(validateAppearance(old).chrome,defaultAppearance.chrome);
+ const form=new FormData();form.set('alt','Logo de la maison');form.set('file',new File([new Uint8Array([137,80,78,71,13,10,26,10])],'logo.png',{type:'image/png'}));
+ const upload=await handleAdmin(req('/admin/api/images',{method:'POST',headers:{'oai-authenticated-user-id':'owner',origin},body:form}),env);assert.equal(upload.status,201);const image=await upload.json();
+ const settings=structuredClone(defaultAppearance);settings.chrome={...settings.chrome,logo:image.url,logoWidth:130,menuSize:16,menuGap:28,headerPadding:20,footerColumns:2,overrideContent:true,footerTitle:'La maison',footerText:'Notre histoire',address:'Le Havre',hours:'10 h – 19 h',legal:'Depuis 1890'};
+ assert.equal((await call(env,'appearance','PUT',{settings,version:0})).status,200);assert.deepEqual((await (await call(env,'appearance')).json()).settings.chrome,settings.chrome);assert.equal((await call(env,'images/'+image.id,'DELETE')).status,409);
+ for(const change of [{headerBackground:'url(evil)'},{logo:'https://evil.example/logo.png'},{logoWidth:1000},{footerColumns:1.5},{sticky:'oui'},{footerText:42}])assert.throws(()=>validateAppearance({...settings,chrome:{...settings.chrome,...change}}));
+ assert.throws(()=>validateAppearance({...settings,chrome:[]}));
+ const clear=structuredClone(settings);clear.chrome.logo='';assert.equal((await call(env,'appearance','PUT',{settings:clear,version:1})).status,200);assert.equal((await call(env,'images/'+image.id,'DELETE')).status,200);env.sqlite.close();
+});
+
+test('Puck restores global stripes for earlier solid defaults and preserves explicit page backgrounds after save',async()=>{
+ const {puckRoot,validatePuckData}=await import('../admin/puck-model.mjs');
+ const old={root:{props:{...puckRoot,pattern:'plain'}},content:[]};delete old.root.props.themeVersion;
+ assert.equal(validatePuckData(old).root.props.pattern,'inherit');
+ const current={root:{props:{...puckRoot,pattern:'plain'}},content:[]};assert.equal(validatePuckData(current).root.props.pattern,'plain');current.root.props.pattern='stripes';assert.equal(validatePuckData(current).root.props.pattern,'stripes');
 });
