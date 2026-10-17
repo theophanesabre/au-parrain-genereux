@@ -85,6 +85,13 @@
       "when": 1792264990015,
       "tag": "0011_calendar_main_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1792265395141,
+      "tag": "0012_calendar_transparency",
+      "breakpoints": true
     }
   ]
 }
