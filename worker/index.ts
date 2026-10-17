@@ -1,3 +1,4 @@
+import { handlePrelaunch } from '../site/prelaunch.mjs';
 import { handleCommerce } from '../commerce/handler.mjs';
 import { handleAdmin } from "../admin/handler.mjs";
 /** Cloudflare Worker entry point for the vinext-starter template. */
@@ -37,6 +38,8 @@ const worker = {
     if (commerceResponse) return commerceResponse;
     const adminResponse = await handleAdmin(request, env);
     if (adminResponse) return adminResponse;
+    const prelaunchResponse = await handlePrelaunch(request, env);
+    if (prelaunchResponse) return prelaunchResponse;
     const url = new URL(request.url);
 
     if (url.pathname === "/_vinext/image") {
@@ -51,7 +54,7 @@ const worker = {
     }
 
     const response=await handler.fetch(request, env, ctx);
-    if(url.pathname==='/admin/puck'){const headers=new Headers(response.headers);headers.set('Cache-Control','private, no-store');headers.set('X-Frame-Options','DENY');headers.set('X-Content-Type-Options','nosniff');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
+    if(url.pathname==='/admin/puck'||url.searchParams.get('apercu')==='1'){const headers=new Headers(response.headers);headers.set('Cache-Control','private, no-store');if(url.pathname==='/admin/puck')headers.set('X-Frame-Options','DENY');headers.set('X-Robots-Tag','noindex');headers.set('X-Content-Type-Options','nosniff');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
     return response;
   },
 };
