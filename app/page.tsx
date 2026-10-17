@@ -22,7 +22,7 @@ export default async function Home() {
       <nav className="heritage-header__desktop-nav" aria-label="Navigation principale">
         <a href="/maison">La Maison</a><a href="/savoir-faire">Savoir-faire</a>
         <a className="heritage-header__logo" href="/" aria-label="Au Parrain Généreux — Accueil"><Image src={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"} alt={imageAlts["/images/logo-boutique-neon.webp"] || "Enseigne Au Parrain Généreux sur la façade de la boutique"} width={1536} height={1024} priority /></a>
-        <a href="/bonbons">Les chocolats</a><a href="#nous-trouver">Nous trouver</a>
+        <a href="/bonbons">Les chocolats</a><a href="/boutique">Boutique</a>
       </nav>
       <CartLink />
       <details className="heritage-mobile-menu">
