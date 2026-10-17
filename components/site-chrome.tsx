@@ -1,15 +1,15 @@
-import { PageButtons } from "./appearance";
+import { PageButtons, MenuLinks } from "./appearance";
 import { CartLink } from "./cart";
 import { getPageContent, getImageSources, getImageDescriptions } from "./site-data";
 export async function SiteHeader() {
   const [imageSources,imageAlts]=await Promise.all([getImageSources(),getImageDescriptions()]);
   return <><header className="site-header">
     <a className="brand brand-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"} alt={imageAlts["/images/logo-boutique-neon.webp"] || "Enseigne Au Parrain Généreux sur la façade de la boutique"} /></a>
-    <nav aria-label="Navigation principale"><a href="/bonbons">Chocolats</a><a href="/boutique">Boutique</a><a href="/maison">La maison</a><a href="/savoir-faire">Savoir-faire</a><a href="/#nous-trouver">Nous trouver</a></nav>
+    <nav aria-label="Navigation principale"><MenuLinks/></nav>
     <CartLink />
     <details className="mobile-menu">
       <summary aria-label="Ouvrir le menu"><span/><span/><span/></summary>
-      <nav aria-label="Navigation mobile"><a href="/bonbons">Chocolats</a><a href="/boutique">Boutique</a><a href="/maison">La maison</a><a href="/savoir-faire">Savoir-faire</a><a href="/#nous-trouver">Nous trouver</a><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a></nav>
+      <nav aria-label="Navigation mobile"><MenuLinks/><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a></nav>
     </details>
   </header><PageButtons location="page-top"/></>;
 }
@@ -19,7 +19,7 @@ export async function SiteFooter() {
   return <><PageButtons location="page-bottom"/><footer className="site-footer">
     <div className="site-footer__history"><p>Depuis 1890</p><h2>{content.footerTitle}</h2><p>{content.footerText}</p></div>
     <div className="site-footer__useful">
-      <nav aria-label="Liens de bas de page"><h3>Liens utiles</h3><a href="/bonbons">Les chocolats</a><a href="/boutique">Tous les articles</a><a href="/maison">La maison</a><a href="/savoir-faire">Le savoir-faire</a><a href="/#nous-trouver">Nous trouver</a><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a></nav>
+      <nav aria-label="Liens de bas de page"><h3>Liens utiles</h3><MenuLinks flat/><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer">Instagram</a></nav>
       <address><h3>Contact</h3><span>{content.address}<br/>{content.city}</span><span>{content.days}<br/>{content.hours}</span><a href={`tel:${content.phone.replace(/[^+0-9]/g, "")}`}>{content.phone}</a><a href={`mailto:${content.email}`}>{content.email}</a></address>
     </div>
     <p className="site-footer__legal">© 2026 Au Parrain Généreux</p>

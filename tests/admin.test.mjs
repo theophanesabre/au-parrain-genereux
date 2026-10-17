@@ -259,9 +259,9 @@ test('appearance is protected, versioned, validates layout and restores defaults
  assert.equal((await handleAdmin(req('/admin/apparence'),env)).status,302);
  assert.equal((await handleAdmin(req('/admin/api/appearance'),env)).status,401);
  const initial=await (await call(env,'appearance')).json();assert.equal(initial.version,0);assert.deepEqual(initial.settings,defaultAppearance);
- const settings={...initial.settings,hero:'image-right',buttons:'outline',collectionLabel:'Tous les articles',collectionHref:'/boutique',sections:[...initial.settings.sections].reverse().map((section,index)=>({...section,visible:index!==0}))};
+ const settings={...initial.settings,navigation:{groupLabel:'Notre maison',items:[{label:'Recettes maison',href:'/bonbons',group:true},{label:'Boutique en ligne',href:'/boutique',group:false}]},hero:'image-right',buttons:'outline',collectionLabel:'Tous les articles',collectionHref:'/boutique',sections:[...initial.settings.sections].reverse().map((section,index)=>({...section,visible:index!==0}))};
  let response=await call(env,'appearance','PUT',{settings,version:0});assert.equal(response.status,200);assert.equal((await response.json()).version,1);
- assert.equal((await (await call(env,'appearance')).json()).settings.sections[0].id,'collection');
+ const stored=(await (await call(env,'appearance')).json()).settings;assert.equal(stored.sections[0].id,'collection');assert.deepEqual(stored.navigation,settings.navigation);
  assert.equal((await call(env,'appearance','PUT',{settings,version:0})).status,409);
  for(const bad of [{...settings,background:'url(evil)'},{...settings,sections:settings.sections.map(s=>({...s,visible:false}))},{...settings,sections:[...settings.sections.slice(1),settings.sections[1]]},{...settings,historyHref:'https://evil.example'},{...settings,collectionHref:'/admin'}])assert.equal((await call(env,'appearance','PUT',{settings:bad,version:1})).status,400);
  assert.equal((await handleAdmin(req('/admin/api/appearance',{method:'PUT',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.example','content-type':'application/json'},body:JSON.stringify({settings,version:1})}),env)).status,403);
@@ -379,9 +379,9 @@ test('Puck validates nested slots, links, styles and image references at the aut
 
 test('published Puck renderer preserves nested column layout and safely renders owner content',async()=>{
  const ts=await import('typescript');const React=await import('react');const {renderToStaticMarkup}=await import('react-dom/server');const {Render}=await import('@puckeditor/core/rsc');const {puckDefaults,puckRoot,validatePuckData}=await import('../admin/puck-model.mjs');
- const mocks='data:text/javascript;base64,'+Buffer.from('export const PuckImageField=()=>null;export const CartLink=()=>null;export const CartPage=()=>null;export const Catalog=()=>null;export const SpotlightCarousel=()=>null;export const NewsRail=()=>null;').toString('base64');
+ const mocks='data:text/javascript;base64,'+Buffer.from('export const MenuLinks=()=>null;export const PuckImageField=()=>null;export const CartLink=()=>null;export const CartPage=()=>null;export const Catalog=()=>null;export const SpotlightCarousel=()=>null;export const NewsRail=()=>null;').toString('base64');
  let code=ts.transpileModule(readFileSync(new URL('../components/puck/config.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
- code=code.replace(/from (['"])(react(?:\/jsx-runtime)?)\1/g,(_,quote,name)=>'from '+JSON.stringify(import.meta.resolve(name))).replace(/from (['"])@\/admin\/puck-model.mjs\1/g,'from '+JSON.stringify(new URL('../admin/puck-model.mjs',import.meta.url).href)).replace(/from (['"])(?:\.\/image-field|\.\.\/home-highlights|\.\.\/cart|\.\.\/catalog)\1/g,'from '+JSON.stringify(mocks));
+ code=code.replace(/from (['"])(react(?:\/jsx-runtime)?)\1/g,(_,quote,name)=>'from '+JSON.stringify(import.meta.resolve(name))).replace(/from (['"])@\/admin\/puck-model.mjs\1/g,'from '+JSON.stringify(new URL('../admin/puck-model.mjs',import.meta.url).href)).replace(/from (['"])(?:\.\/image-field|\.\.\/home-highlights|\.\.\/cart|\.\.\/catalog|\.\.\/appearance)\1/g,'from '+JSON.stringify(mocks));
  const {puckConfig}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  const doc=validatePuckData({root:{props:{...puckRoot,showHeader:'non',showFooter:'non'}},content:[{type:'Colonnes',props:{...structuredClone(puckDefaults.Colonnes),id:'columns',children:[{type:'Texte',props:{...structuredClone(puckDefaults.Texte),id:'title',title:'<script>alert(1)</script>',body:'Maison'}},{type:'Bouton',props:{...structuredClone(puckDefaults.Bouton),id:'button',label:'Découvrir',href:'/boutique'}}]}}]});
  const html=renderToStaticMarkup(React.createElement(Render,{config:puckConfig(),data:doc}));assert.match(html,/data-puck-page="true"/);assert.match(html,/class="puck-columns"/);assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);assert.match(html,/href="\/boutique"/);assert.match(html,/Maison/);
@@ -396,4 +396,13 @@ test('design controls persist stripes and block dimensions and accept older Puck
  const migrated=validatePuckData(old);assert.equal(migrated.root.props.pattern,'plain');assert.equal(migrated.content[0].props.style.width,100);assert.equal(migrated.content[0].props.style.visualHeight,0);
  for(const value of [-1,2001,NaN]){const invalid=structuredClone(doc);invalid.content[0].props.style.visualHeight=value;assert.throws(()=>validatePuckData(invalid));}
  const invalid=structuredClone(doc);invalid.root.props.stripeColor='url(https://example.com)';assert.throws(()=>validatePuckData(invalid));
+});
+
+test('shared navigation persists editable grouping and destinations while old settings receive the new menu',async()=>{
+ const {defaultAppearance,validateAppearance}=await import('../admin/appearance.mjs');
+ const previous=structuredClone(defaultAppearance);delete previous.navigation;
+ const upgraded=validateAppearance(previous);assert.deepEqual(upgraded.navigation.items.filter(item=>item.group).map(item=>item.href),['/maison','/savoir-faire','/bonbons']);assert.equal(upgraded.navigation.items.find(item=>item.href==='/bonbons').label,'Nos recettes');assert.equal(upgraded.navigation.items.find(item=>item.href==='/boutique').label,'Boutique en ligne');
+ const edited=structuredClone(upgraded);edited.navigation.groupLabel='Découvrir';edited.navigation.items=[{label:'Mes créations',href:'/boutique',group:false},{label:'Les recettes',href:'/bonbons',group:true}];assert.deepEqual(validateAppearance(JSON.parse(JSON.stringify(edited))).navigation,edited.navigation);
+ for(const href of ['javascript:alert(1)','//evil.test','/admin']){const invalid=structuredClone(edited);invalid.navigation.items[0].href=href;assert.throws(()=>validateAppearance(invalid));}
+ const invalid=structuredClone(edited);invalid.navigation.items[0].group='oui';assert.throws(()=>validateAppearance(invalid));
 });
