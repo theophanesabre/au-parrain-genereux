@@ -4,10 +4,11 @@ import { visualStyle } from './visual-style';
 import type { VisualSettings } from './visual-types';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { defaultShop } from '@/admin/shop.mjs';
 import { CartLink } from './cart';
 import { defaultChrome, defaultAppearance, validateAppearance } from '@/admin/appearance.mjs';
 export type CustomButton={id:string;label:string;href:string;page:string;location:string;position:string;align:string;style:string;size:string;visible:boolean};
-export type Appearance={chrome:typeof defaultChrome;navigation:{groupLabel:string;items:{label:string;href:string;group:boolean}[]};background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
+export type Appearance={shop:typeof defaultShop;stripedEverywhere:boolean;chrome:typeof defaultChrome;navigation:{groupLabel:string;items:{label:string;href:string;group:boolean}[]};background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
 const AppearanceContext=createContext<Appearance>(defaultAppearance);
 export function AppearanceShell({initial,children}:{initial:Appearance;children:ReactNode}){
  const [settings,setSettings]=useState<Appearance>(initial??defaultAppearance);
@@ -22,7 +23,7 @@ export function AppearanceShell({initial,children}:{initial:Appearance;children:
   return ()=>{window.removeEventListener('message',receive);document.removeEventListener('click',navigate,true);};
  },[]);
  if(path.startsWith('/admin/'))return <AppearanceContext.Provider value={settings}>{children}</AppearanceContext.Provider>;
- return <AppearanceContext.Provider value={settings}><div className="apg-site" data-background={settings.background} data-pattern={settings.visual.pattern||'inherit'} data-spacing={settings.spacing} data-buttons={settings.buttons} data-corners={settings.corners} data-hero={settings.hero} data-columns={settings.columns} data-visual-font={settings.visual.font} data-link-icons={settings.visual.icons?'show':'hide'} style={{'--apg-stripe-color':settings.visual.stripeColor||'#f5e6da','--apg-stripe-width':`${settings.visual.stripeWidth??38}px`,'--apg-stripe-period':`${(settings.visual.stripeWidth??38)*2}px`,'--apg-stripe-angle':`${settings.visual.stripeAngle??90}deg`,'--apg-accent':settings.visual.accent,'--apg-surface':settings.visual.surface,'--apg-ink':settings.visual.ink,'--apg-scale':String(settings.visual.scale/100)} as React.CSSProperties}><VisualRuntime settings={settings.visual} page={path}/>{children}</div></AppearanceContext.Provider>;
+ return <AppearanceContext.Provider value={settings}><div className="apg-site" data-background={settings.background} data-pattern={settings.stripedEverywhere&&settings.visual.pattern!=='stripes'?'inherit':settings.visual.pattern||'inherit'} data-striped-everywhere={settings.stripedEverywhere} data-spacing={settings.spacing} data-buttons={settings.buttons} data-corners={settings.corners} data-hero={settings.hero} data-columns={settings.columns} data-visual-font={settings.visual.font} data-link-icons={settings.visual.icons?'show':'hide'} style={{'--apg-site-surface':settings.visual.surface,'--apg-stripe-color':settings.visual.stripeColor||'#f5e6da','--apg-stripe-width':`${settings.visual.stripeWidth??38}px`,'--apg-stripe-period':`${(settings.visual.stripeWidth??38)*2}px`,'--apg-stripe-angle':`${settings.visual.stripeAngle??90}deg`,'--apg-accent':settings.visual.accent,'--apg-surface':settings.visual.surface,'--apg-ink':settings.visual.ink,'--apg-scale':String(settings.visual.scale/100)} as React.CSSProperties}><VisualRuntime settings={settings.visual} page={path}/>{children}</div></AppearanceContext.Provider>;
 }
 export function HomeSections({sections}:{sections:{id:string;content:ReactNode}[]}){
  const settings=useContext(AppearanceContext);
@@ -79,3 +80,5 @@ export function StoreFooter(props:FooterFallback){
  <address>{content.address?<p>{content.address}</p>:null}{content.hours?<p>{content.hours}</p>:null}{content.phone?<a href={'tel:'+content.phone.replace(/[^+0-9]/g,'')}>{content.phone}</a>:null}{content.email?<a href={'mailto:'+content.email}>{content.email}</a>:null}</address></div><p className="apg-store-footer__legal">{chrome.legal||'© 2026 Au Parrain Généreux'}</p>
  </footer>;
 }
+
+export function useShopSettings(){return useContext(AppearanceContext).shop;}

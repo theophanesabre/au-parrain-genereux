@@ -20,17 +20,17 @@ export function CartProvider({children}:{children:ReactNode}){
 }
 export function useCart(){const value=useContext(CartContext);if(!value)throw new Error('Panier absent');return value;}
 export function CartLink(){const {items,ready}=useCart();return <a className="apg-cart-link" href="/panier" aria-label={`Panier${ready?`, ${items.length} article${items.length>1?'s':''}`:''}`}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span>Panier</span>{ready&&items.length>0?<b>{items.length}</b>:null}</a>;}
-export function PurchaseCard({product}:{product:SaleProduct}){
+export function PurchaseCard({product,preview=false}:{product:SaleProduct;preview?:boolean}){
   const {add,items,ready}=useCart();const [quantity,setQuantity]=useState(1),[message,setMessage]=useState('');
   const inCart=items.find(item=>item.id===product.id)?.quantity||0;
   const valid=Number.isSafeInteger(quantity)&&quantity>0&&quantity<=MAX_QUANTITY&&quantity+inCart<=product.stock;
   return <article className="apg-purchase" data-ve-commerce="true">
     <img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/>
     <div><p className="apg-shop-kicker">La collection</p><h2>{product.name}</h2><p>{product.description}</p><p className="apg-shop-price">{money(product.price_cents)} <small>/ pièce</small></p>
-      {product.stock>0?<form onSubmit={event=>{event.preventDefault();if(!valid||!ready)return;add(product.id,quantity);setMessage('Ajouté au panier.');}}>
-        <label>Quantité en pièces<input type="number" min="1" max={Math.min(MAX_QUANTITY,product.stock-inCart)} step="1" value={Number.isNaN(quantity)?'':quantity} onChange={event=>{setQuantity(event.target.valueAsNumber);setMessage('');}} required/></label>
+      {product.stock>0?<form onSubmit={event=>{event.preventDefault();if(preview||!valid||!ready)return;add(product.id,quantity);setMessage('Ajouté au panier.');}}>
+        <label>Quantité en pièces<input type="number" min="1" max={Math.min(MAX_QUANTITY,product.stock-inCart)} step="1" disabled={preview} value={Number.isNaN(quantity)?'':quantity} onChange={event=>{setQuantity(event.target.valueAsNumber);setMessage('');}} required/></label>
         <p>{Number.isSafeInteger(quantity)&&quantity>0?money(product.price_cents*quantity):'Choisissez une quantité'}{inCart>0?` · déjà au panier : ${inCart} pièce(s)`:''}</p>
-        <button className="apg-shop-primary" disabled={!ready||!valid}>Ajouter au panier</button><p role="status">{message} {message?<a href="/panier">Voir mon panier →</a>:null}</p>
+        <button className="apg-shop-primary" disabled={preview||!ready||!valid}>Ajouter au panier</button><p role="status">{message} {message?<a href="/panier">Voir mon panier →</a>:null}</p>
       </form>:<p>Temporairement indisponible.</p>}
     </div>
   </article>;
