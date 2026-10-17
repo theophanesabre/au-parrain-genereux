@@ -1,3 +1,5 @@
+import { AppearanceShell } from "@/components/appearance";
+import { getAppearance } from "@/components/site-data";
 import { CartProvider } from "@/components/cart";
 import type { Metadata } from "next";
 import "./globals.css";
@@ -5,6 +7,7 @@ import "./gallery.css";
 import "./multipage.css";
 import "./highlights.css";
 import "./cart.css";
+import "./appearance.css";
 
 export const metadata: Metadata = {
   title: "Au Parrain Généreux | Chocolaterie artisanale au Havre",
@@ -25,12 +28,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const appearance=await getAppearance();
   return (
     <html lang="fr">
-      <body><CartProvider>{children}</CartProvider></body>
+      <body><AppearanceShell initial={appearance}><CartProvider>{children}</CartProvider></AppearanceShell></body>
     </html>
   );
 }

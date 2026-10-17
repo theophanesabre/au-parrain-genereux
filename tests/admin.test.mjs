@@ -268,3 +268,20 @@ test('carousel server rendering keeps accessible controls, inert hidden slides a
 });
 
 test('stock alerts include threshold and empty stock, exclude recipes and clear after replenishment',async()=>{const {stockAlerts}=await import('../admin/stock.mjs');assert.deepEqual(stockAlerts([{id:'bonbon',name:'Bonbon',stock:500},{id:'box',name:'Coffret',stock:5},{id:'bonbon-1',stock:0},{id:'full',stock:6}]).map(p=>p.id),['bonbon','box']);assert.equal(stockAlerts([{id:'bonbon',stock:0}])[0].empty,true);assert.equal(stockAlerts([{id:'bonbon',stock:501}]).length,0);});
+
+test('appearance is protected, versioned, validates layout and restores defaults without deleting content',async()=>{
+ const {defaultAppearance}=await import('../admin/appearance.mjs');const env=bindings();
+ assert.equal((await handleAdmin(req('/admin/apparence'),env)).status,401);
+ assert.equal((await handleAdmin(req('/admin/api/appearance'),env)).status,401);
+ const initial=await (await call(env,'appearance')).json();assert.equal(initial.version,0);assert.deepEqual(initial.settings,defaultAppearance);
+ const settings={...initial.settings,hero:'image-right',buttons:'outline',collectionLabel:'Tous les articles',collectionHref:'/boutique',sections:[...initial.settings.sections].reverse().map((section,index)=>({...section,visible:index!==0}))};
+ let response=await call(env,'appearance','PUT',{settings,version:0});assert.equal(response.status,200);assert.equal((await response.json()).version,1);
+ assert.equal((await (await call(env,'appearance')).json()).settings.sections[0].id,'collection');
+ assert.equal((await call(env,'appearance','PUT',{settings,version:0})).status,409);
+ for(const bad of [{...settings,background:'url(evil)'},{...settings,sections:settings.sections.map(s=>({...s,visible:false}))},{...settings,sections:[...settings.sections.slice(1),settings.sections[1]]},{...settings,historyHref:'https://evil.example'},{...settings,collectionHref:'/admin'}])assert.equal((await call(env,'appearance','PUT',{settings:bad,version:1})).status,400);
+ assert.equal((await handleAdmin(req('/admin/api/appearance',{method:'PUT',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.example','content-type':'application/json'},body:JSON.stringify({settings,version:1})}),env)).status,403);
+ assert.equal((await call(env,'appearance','PUT',{settings:defaultAppearance,version:1})).status,200);
+ const restored=await (await call(env,'appearance')).json();assert.equal(restored.version,2);assert.deepEqual(restored.settings,defaultAppearance);
+ const html=await (await handleAdmin(req('/admin/apparence',{headers:{'oai-authenticated-user-id':'owner'}}),env)).text();assert.match(html,/Sections de l’accueil/);assert.match(html,/Aperçu de la mise en page/);
+ env.sqlite.close();
+});

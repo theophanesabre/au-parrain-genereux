@@ -21,3 +21,9 @@ export const getHighlights=cache(async ():Promise<Highlight[]>=>{
   const rows=env.DB?(await env.DB.prepare('SELECT * FROM highlights ORDER BY placement,position,id LIMIT 500').all<Highlight>()).results:[];
   return mergeHighlights(rows).filter(item=>item.published===1) as Highlight[];
 });
+
+export const getAppearance=cache(async()=>{
+ const {appearanceValues,defaultAppearance}=await import('@/admin/appearance.mjs');
+ const record=env.DB?await env.DB.prepare("SELECT body FROM site_settings WHERE id='appearance'").first<{body:string}>():null;
+ return record?appearanceValues(record.body):defaultAppearance;
+});
