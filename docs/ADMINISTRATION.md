@@ -65,3 +65,15 @@ Les pages existantes utilisent le format interne `site-fields-v1` dans la colonn
 La migration `0003_slow_star_brand.sql` crée uniquement `image_replacements`. Aucun fichier ni contenu existant n’est supprimé. Appliquer cette migration avant de publier le Worker utilisant les remplacements. L’accès aux enregistrements de page et d’image est mutualisé par requête avec `React.cache`, sans cache global de données personnelles.
 
 Vérification : 13 tests couvrent les opérations métier, les listes de contenus d’origine sur base vide, l’édition/restauration, le remplacement/restauration d’images, et l’exposition des boutons d’édition dans le script de l’interface. Le test d’interface simule le DOM ; il ne constitue pas une vérification visuelle dans un navigateur.
+
+## Nouveautés et mises à la une
+
+L’onglet **Nouveautés** gère deux emplacements : le grand bandeau de l’accueil et les cartes qui défilent horizontalement. Pour chaque élément, choisir une image dans la bibliothèque, renseigner sa description alternative, les textes, le bouton et une destination interne (par exemple `/bonbons`). Le cadrage « contenir » conserve le produit entier ; « couvrir » remplit le visuel. Un numéro de position plus petit apparaît en premier. La case de publication permet de préparer un brouillon.
+
+Deux mises à la une et trois découvertes reprennent les photographies et recettes existantes, sans annoncer de nouveaux produits fictifs. Ces exemples sont virtuels : leur lecture ne remplit pas la base. Ils peuvent être modifiés ou masqués ; un exemple masqué ne réapparaît pas au prochain chargement. Les titres de la section se modifient dans **Pages → Accueil**. Une image utilisée par une nouveauté, même en brouillon, est protégée contre la suppression.
+
+Le bandeau avance toutes les sept secondes, avec commandes précédent/suivant, indicateurs et pause. Le focus, une navigation manuelle ou un onglet masqué suspendent la lecture ; la préférence de réduction des animations désactive l’avance automatique. Les cartes se parcourent par glissement, défilement natif ou boutons. Aucun contenu d’une autre enseigne n’est repris.
+
+La migration `0004_typical_lady_deathstrike.sql` crée uniquement la table `highlights`. Elle doit être appliquée avant la publication du Worker. Les écritures conservent les contrôles d’identité, d’origine et de version de l’administration. Les liens sont limités au site et les textes sont échappés.
+
+Vérification : 17 tests passent, dont la gestion des nouveautés, les destinations interdites, les images référencées, l’interface d’administration et le rendu serveur des carrousels. Le rendu serveur ne vérifie pas les gestes ni l’apparence dans un navigateur ; un contrôle visuel mobile reste à faire avant publication.

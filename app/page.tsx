@@ -1,4 +1,5 @@
-import { getPageContent, getImageSources, getImageDescriptions } from "@/components/site-data";
+import { SpotlightCarousel, NewsRail } from "@/components/home-highlights";
+import { getPageContent, getImageSources, getImageDescriptions, getHighlights } from "@/components/site-data";
 import { getManagedPage, ManagedPage } from "@/components/managed-page";
 import Image from "next/image";
 import { SiteFooter } from "@/components/site-chrome";
@@ -12,7 +13,8 @@ const chapters = [
 
 export const dynamic = "force-dynamic";
 export default async function Home() {
-  const [managed,content,imageSources,imageAlts] = await Promise.all([getManagedPage("accueil"),getPageContent("accueil"),getImageSources(),getImageDescriptions()]);
+  const [managed,content,imageSources,imageAlts,highlights] = await Promise.all([getManagedPage("accueil"),getPageContent("accueil"),getImageSources(),getImageDescriptions(),getHighlights()]);
+  const slides=highlights.map(item=>({...item,image:imageSources[item.image]||item.image,alt:imageAlts[item.image]||item.alt}));
   if (managed) return <ManagedPage page={managed}/>;
   return <main className="heritage-home">
     <header className="heritage-header">
@@ -32,6 +34,9 @@ export default async function Home() {
         </nav>
       </details>
     </header>
+
+    <SpotlightCarousel items={slides.filter(item=>item.placement==='hero')} label={content.spotlightLabel}/>
+    <NewsRail items={slides.filter(item=>item.placement==='news')} title={content.newsTitle} kicker={content.newsKicker} intro={content.newsIntro}/>
 
     <section className="heritage-map heritage-map--top" id="nous-trouver">
       <div><p>{content.shopKicker}</p><h2>{content.shopTitle}</h2><span/><p>{content.shopIntro}</p><address>{content.address} · {content.city}<br/>{content.days} · {content.hours}<br/><a href={`tel:${content.phone.replace(/[^+0-9]/g, "")}`}>{content.phone}</a><br/><a href={`mailto:${content.email}`}>{content.email}</a></address><div className="heritage-map__social" aria-label="Réseaux sociaux"><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer" aria-label="Instagram"><svg className="social-icon social-icon--instagram" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg><span>Instagram</span></a><a href="https://www.facebook.com/chocolatier.auparraingenereux/?locale=fr_FR" target="_blank" rel="noreferrer" aria-label="Facebook"><svg className="social-icon social-icon--facebook" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.2 8.2h2.2V5.1c-.4-.1-1.5-.2-2.8-.2-2.8 0-4.7 1.7-4.7 4.8v2.7H6v3.5h2.9V22h3.6v-6.1h3l.5-3.5h-3.5V10c0-1 .3-1.8 1.7-1.8Z"/></svg><span>Facebook</span></a></div></div>

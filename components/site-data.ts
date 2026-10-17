@@ -1,3 +1,5 @@
+import { mergeHighlights } from '@/admin/highlights.mjs';
+import type { Highlight } from './highlights-types';
 import { cache } from 'react';
 import { env } from 'cloudflare:workers';
 import { contentValues, pageDefinition } from '@/admin/content.mjs';
@@ -14,3 +16,8 @@ const getReplacements=cache(async ()=>{
 });
 export const getImageSources=cache(async ():Promise<Record<string,string>>=>Object.fromEntries((await getReplacements()).map(row=>[row.original,`/media/${row.image_id}`])));
 export const getImageDescriptions=cache(async ():Promise<Record<string,string>>=>Object.fromEntries((await getReplacements()).map(row=>[row.original,row.alt])));
+
+export const getHighlights=cache(async ():Promise<Highlight[]>=>{
+  const rows=env.DB?(await env.DB.prepare('SELECT * FROM highlights ORDER BY placement,position,id LIMIT 500').all<Highlight>()).results:[];
+  return mergeHighlights(rows).filter(item=>item.published===1) as Highlight[];
+});

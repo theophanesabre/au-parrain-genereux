@@ -5,6 +5,26 @@ export const builtinPages = [
     "path": "/",
     "fields": [
       {
+        "key": "spotlightLabel",
+        "label": "Bandeau défilant — nom",
+        "value": "À la une"
+      },
+      {
+        "key": "newsKicker",
+        "label": "Nouveautés — surtitre",
+        "value": "La vie de la maison"
+      },
+      {
+        "key": "newsTitle",
+        "label": "Nouveautés — titre",
+        "value": "Nouveautés & découvertes"
+      },
+      {
+        "key": "newsIntro",
+        "label": "Nouveautés — présentation",
+        "value": "Recettes, créations et nouvelles de l’atelier : découvrez ce qui fait vivre la maison."
+      },
+      {
         "key": "shopKicker",
         "label": "Boutique — surtitre",
         "value": "La boutique au Havre"
