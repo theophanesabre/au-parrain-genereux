@@ -103,11 +103,11 @@ test('one-time activation requires both signed-in identity and private expiring 
  assert.equal((await claim('owner')).status,200);
  assert.equal((await claim('intruder')).status,409);
  assert.equal((await claim('owner')).status,200);
- assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products').get().n,16);
- assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products WHERE published=1').get().n,16);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products').get().n,17);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM products WHERE published=1').get().n,17);
  assert.equal((await call(env,'products')).status,200);
  assert.equal((await handleAdmin(req('/admin/api/products',{headers:{'oai-authenticated-user-id':'intruder'}}),env)).status,403);
- const rows=await (await call(env,'products')).json();assert.equal(rows.length,16);
+ const rows=await (await call(env,'products')).json();assert.equal(rows.length,17);
  assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'test',items:[{id:'bonbon-1',quantity:1}]})).status,400);
  env.sqlite.close();
 });
@@ -516,4 +516,9 @@ test('calendar thumbnail changes the product image only and preserves current pr
  const db=database();const calendar=defaultHighlights.find(item=>item.id==='calendrier-conte-avent');assert.equal(calendar.image,'/images/calendrier-conte-avent.png');
  const image='/images/calendrier-conte-avent-miniature.png';assert.ok(builtinImages.some(item=>item.url===image));const bytes=readFileSync(new URL('../public'+image,import.meta.url));assert.equal(bytes[25],6);assert.equal(bytes.readUInt32BE(16),bytes.readUInt32BE(20));
  db.prepare("UPDATE products SET image=?,price_cents=1900,stock=3,version=7 WHERE id='calendrier-conte-avent'").run(calendar.image);const migration=readFileSync(new URL('../drizzle/0015_calendar_product_thumbnail.sql',import.meta.url),'utf8');db.exec(migration);const product=db.prepare("SELECT * FROM products WHERE id='calendrier-conte-avent'").get();assert.equal(product.image,image);assert.equal(product.price_cents,1900);assert.equal(product.stock,3);assert.equal(product.published,1);assert.equal(product.version,8);db.exec(migration);assert.deepEqual(db.prepare("SELECT * FROM products WHERE id='calendrier-conte-avent'").get(),product);db.close();
+});
+
+test('discovery box is published with the supplied assortment, weight, price, stock and photograph',async()=>{
+ const {quoteCart}=await import('../commerce/cart.mjs');const env=bindings();const p=(await(await call(env,'products')).json()).find(item=>item.id==='boite-decouverte-maison');assert.equal(p.name,'Boîte Découverte de la Maison');assert.equal(p.price_cents,1500);assert.equal(p.stock,15);assert.equal(p.published,1);assert.equal(p.image,'/images/boite-decouverte-maison.jpg');for(const text of ['4 chocolats pralinés','4 pâtes de fruits','4 pommes calvados','2 calissons','pâte d’amande au calvados','raisin sec macéré au calvados','150 g'])assert.ok(p.description.includes(text));assert.equal(quoteCart([{id:p.id,quantity:1}],[p]).total_cents,1500);assert.equal(quoteCart([{id:p.id,quantity:16}],[p]).valid,false);assert.ok(builtinImages.some(item=>item.url===p.image));assert.ok(readFileSync(new URL('../public'+p.image,import.meta.url)).length>0);
+ const edited={...p,stock:9,price_cents:1600,published:false};assert.equal((await call(env,'products/'+p.id,'PUT',edited)).status,200);const saved=env.sqlite.prepare('SELECT * FROM products WHERE id=?').get(p.id);env.sqlite.exec(readFileSync(new URL('../drizzle/0016_boite_decouverte.sql',import.meta.url),'utf8'));assert.deepEqual(env.sqlite.prepare('SELECT * FROM products WHERE id=?').get(p.id),saved);env.sqlite.close();
 });
