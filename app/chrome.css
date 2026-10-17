@@ -32,3 +32,5 @@
 .apg-site .apg-catalog[data-layout=list] .apg-purchase{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);align-items:center}
 @media(max-width:1100px){.apg-site .apg-catalog[data-layout=grid] .apg-catalog-grid{grid-template-columns:repeat(var(--shop-tablet-columns),minmax(0,1fr))}}
 @media(max-width:620px){.apg-site .apg-catalog[data-layout=grid] .apg-catalog-grid{grid-template-columns:repeat(var(--shop-mobile-columns),minmax(0,1fr))}.apg-site .apg-catalog[data-layout=list] .apg-purchase{grid-template-columns:1fr}.apg-site .apg-catalog[data-layout] .apg-purchase :is(input,.apg-shop-primary){max-width:100%;box-sizing:border-box;white-space:normal}.apg-catalog-toolbar>label:first-child{min-width:0}}
+
+.apg-site .apg-spotlight[data-transparent-background=true],.apg-site .apg-spotlight[data-transparent-background=true] .apg-spotlight__visual{background:transparent!important}
