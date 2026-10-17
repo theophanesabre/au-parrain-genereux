@@ -261,7 +261,7 @@ test('appearance is protected, versioned, validates layout and restores defaults
  const initial=await (await call(env,'appearance')).json();assert.equal(typeof initial.footerDefaults.footerTitle,'string');assert.equal(initial.version,0);assert.deepEqual(initial.settings,defaultAppearance);
  const settings={...initial.settings,navigation:{groupLabel:'Notre maison',items:[{label:'Recettes maison',href:'/bonbons',group:true},{label:'Boutique en ligne',href:'/boutique',group:false}]},hero:'image-right',buttons:'outline',collectionLabel:'Tous les articles',collectionHref:'/boutique',sections:[...initial.settings.sections].reverse().map((section,index)=>({...section,visible:index!==0}))};
  let response=await call(env,'appearance','PUT',{settings,version:0});assert.equal(response.status,200);assert.equal((await response.json()).version,1);
- const stored=(await (await call(env,'appearance')).json()).settings;assert.equal(stored.sections[0].id,'collection');assert.deepEqual(stored.navigation,settings.navigation);
+ const stored=(await (await call(env,'appearance')).json()).settings;assert.equal(stored.sections[0].id,'collection');assert.deepEqual(stored.navigation,{...settings.navigation,items:settings.navigation.items.map(item=>({...item,href:item.href==='/bonbons'?'/maison#nos-recettes':item.href}))});
  assert.equal((await call(env,'appearance','PUT',{settings,version:0})).status,409);
  for(const bad of [{...settings,background:'url(evil)'},{...settings,sections:settings.sections.map(s=>({...s,visible:false}))},{...settings,sections:[...settings.sections.slice(1),settings.sections[1]]},{...settings,historyHref:'https://evil.example'},{...settings,collectionHref:'/admin'}])assert.equal((await call(env,'appearance','PUT',{settings:bad,version:1})).status,400);
  assert.equal((await handleAdmin(req('/admin/api/appearance',{method:'PUT',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.example','content-type':'application/json'},body:JSON.stringify({settings,version:1})}),env)).status,403);
@@ -282,7 +282,7 @@ test('appearance rendering falls back safely and applies section order, visibili
  assert.match(renderToStaticMarkup(createElement(AppearanceShell,{initial:undefined},'Contenu')),/data-background="cream"/);
  const chrome={...defaultAppearance.chrome,headerBackground:'#112233',headerColor:'#ffffff',logoWidth:140,menuGap:40,logoPosition:'center',footerColumns:2,overrideContent:true,footerTitle:'La maison havraise',footerText:'<script>texte</script>',address:'Le Havre',hours:'Du mardi au samedi',phone:'0235000000',email:'boutique@example.fr',legal:'Maison depuis 1890'};
  const chromeHtml=renderToStaticMarkup(createElement(AppearanceShell,{initial:{...defaultAppearance,chrome}},createElement(StoreHeader),createElement(StoreFooter,{title:'Ancien titre',text:'Ancien texte',address:'',hours:'',phone:'',email:''})));
- assert.match(chromeHtml,/class="apg-store-header"/);assert.match(chromeHtml,/data-logo-position="center"/);assert.match(chromeHtml,/--menu-gap:40px/);assert.match(chromeHtml,/width:140px/);assert.match(chromeHtml,/La maison havraise/);assert.match(chromeHtml,/&lt;script&gt;texte/);assert.doesNotMatch(chromeHtml,/Ancien titre|<script>texte/);assert.match(chromeHtml,/--footer-columns:2/);assert.match(chromeHtml,/Nos recettes/);assert.match(chromeHtml,/Boutique en ligne/);
+ assert.match(chromeHtml,/class="apg-store-header"/);assert.match(chromeHtml,/data-logo-position="center"/);assert.match(chromeHtml,/--menu-gap:40px/);assert.match(chromeHtml,/width:140px/);assert.match(chromeHtml,/La maison havraise/);assert.match(chromeHtml,/&lt;script&gt;texte/);assert.doesNotMatch(chromeHtml,/Ancien titre|<script>texte/);assert.match(chromeHtml,/--footer-columns:2/);assert.match(chromeHtml,/href="\/maison"/);assert.match(chromeHtml,/Boutique en ligne/);
 
  const custom={id:'custom-one',label:'Choisir mes chocolats',href:'/boutique',page:'/',location:'history',position:'before',align:'right',style:'outline',size:'large',visible:true};
  const settings={...defaultAppearance,customButtons:[custom,{...custom,id:'custom-two',label:'Ne pas afficher',location:'news'},{...custom,id:'custom-three',label:'Bouton masqué',visible:false},{...custom,id:'custom-four',label:'En haut',location:'page-top'}],background:'white',collectionLabel:'Acheter',collectionHref:'/boutique',sections:[...defaultAppearance.sections].reverse().map(section=>({...section,visible:section.id!=='news'}))};
@@ -347,18 +347,18 @@ test('Puck converts every existing page without writing and isolates drafts, pub
  const env=bindings();const {validatePuckData}=await import('../admin/puck-model.mjs');
  for(const path of ['/','/maison','/savoir-faire','/bonbons','/boutique','/panier']){const response=await call(env,'puck?path='+encodeURIComponent(path));assert.equal(response.status,200);const page=await response.json();assert.equal(page.version,0);assert.equal(page.published,false);assert.deepEqual(validatePuckData(page.data),page.data);assert.ok(page.data.content.length);}
  assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM puck_pages').get().n,0);
- const doc=(await(await call(env,'puck?path=/maison')).json()).data;doc.content[0].props.title='Une maison';
+ const doc=(await(await call(env,'puck?path=/maison')).json()).data;doc.content[0].props.children[0].props.title='Une maison';
  assert.equal((await call(env,'puck?path=/maison','PUT',{action:'draft',version:0,data:doc})).status,200);
  assert.equal(env.sqlite.prepare("SELECT published FROM puck_pages WHERE path='/maison'").get().published,null);
- assert.equal((await(await call(env,'puck?path=/maison')).json()).data.content[0].props.title,'Une maison');
+ assert.equal((await(await call(env,'puck?path=/maison')).json()).data.content[0].props.children[0].props.title,'Une maison');
  assert.equal((await call(env,'puck?path=/maison','PUT',{action:'publish',version:0,data:doc})).status,409);
  assert.equal((await call(env,'puck?path=/maison','PUT',{action:'publish',version:1,data:doc})).status,200);
- const published=env.sqlite.prepare("SELECT published FROM puck_pages WHERE path='/maison'").get().published;assert.equal(JSON.parse(published).content[0].props.title,'Une maison');
- doc.content[0].props.title='Brouillon suivant';assert.equal((await call(env,'puck?path=/maison','PUT',{action:'draft',version:2,data:doc})).status,200);
+ const published=env.sqlite.prepare("SELECT published FROM puck_pages WHERE path='/maison'").get().published;assert.equal(JSON.parse(published).content[0].props.children[0].props.title,'Une maison');
+ doc.content[0].props.children[0].props.title='Brouillon suivant';assert.equal((await call(env,'puck?path=/maison','PUT',{action:'draft',version:2,data:doc})).status,200);
  assert.equal(env.sqlite.prepare("SELECT published FROM puck_pages WHERE path='/maison'").get().published,published);
  assert.equal((await(await call(env,'puck?path=/')).json()).version,0);
  assert.equal((await call(env,'puck?path=/maison','PUT',{action:'restore',version:3})).status,200);
- const restored=await(await call(env,'puck?path=/maison')).json();assert.equal(restored.published,false);assert.notEqual(restored.data.content[0].props.title,'Brouillon suivant');assert.equal(restored.version,4);
+ const restored=await(await call(env,'puck?path=/maison')).json();assert.equal(restored.published,false);assert.notEqual(restored.data.content[0].props.children[0].props.title,'Brouillon suivant');assert.equal(restored.version,4);
  assert.ok(env.sqlite.prepare("SELECT COUNT(*) AS n FROM audit WHERE action='PUCK_PUBLISH'").get().n);env.sqlite.close();
 });
 test('Puck validates nested slots, links, styles and image references at the authenticated boundary',async()=>{
@@ -405,8 +405,8 @@ test('design controls persist stripes and block dimensions and accept older Puck
 test('shared navigation persists editable grouping and destinations while old settings receive the new menu',async()=>{
  const {defaultAppearance,validateAppearance}=await import('../admin/appearance.mjs');
  const previous=structuredClone(defaultAppearance);delete previous.navigation;
- const upgraded=validateAppearance(previous);assert.deepEqual(upgraded.navigation.items.filter(item=>item.group).map(item=>item.href),['/maison','/savoir-faire','/bonbons']);assert.equal(upgraded.navigation.items.find(item=>item.href==='/bonbons').label,'Nos recettes');assert.equal(upgraded.navigation.items.find(item=>item.href==='/boutique').label,'Boutique en ligne');
- const edited=structuredClone(upgraded);edited.navigation.groupLabel='Découvrir';edited.navigation.items=[{label:'Mes créations',href:'/boutique',group:false},{label:'Les recettes',href:'/bonbons',group:true}];assert.deepEqual(validateAppearance(JSON.parse(JSON.stringify(edited))).navigation,edited.navigation);
+ const upgraded=validateAppearance(previous);assert.equal(upgraded.navigation.items.filter(item=>item.href==='/maison').length,1);assert.equal(upgraded.navigation.items.some(item=>item.group),false);assert.equal(upgraded.navigation.items.find(item=>item.href==='/boutique').label,'Boutique en ligne');
+ const edited=structuredClone(upgraded);edited.navigation.groupLabel='Découvrir';edited.navigation.items=[{label:'Mes créations',href:'/boutique',group:false},{label:'Les recettes',href:'/bonbons',group:true}];assert.deepEqual(validateAppearance(JSON.parse(JSON.stringify(edited))).navigation,{...edited.navigation,items:edited.navigation.items.map(item=>({...item,href:item.href==='/bonbons'?'/maison#nos-recettes':item.href}))});
  for(const href of ['javascript:alert(1)','//evil.test','/admin']){const invalid=structuredClone(edited);invalid.navigation.items[0].href=href;assert.throws(()=>validateAppearance(invalid));}
  const invalid=structuredClone(edited);invalid.navigation.items[0].group='oui';assert.throws(()=>validateAppearance(invalid));
 });
@@ -428,4 +428,22 @@ test('Puck restores global stripes for earlier solid defaults and preserves expl
  const old={root:{props:{...puckRoot,pattern:'plain'}},content:[]};delete old.root.props.themeVersion;
  assert.equal(validatePuckData(old).root.props.pattern,'inherit');
  const current={root:{props:{...puckRoot,pattern:'plain'}},content:[]};assert.equal(validatePuckData(current).root.props.pattern,'plain');current.root.props.pattern='stripes';assert.equal(validatePuckData(current).root.props.pattern,'stripes');
+});
+
+test('one Maison page combines existing publications, keeps drafts private and publishes without duplicating sections',async()=>{
+ const {puckRoot,puckDefaults}=await import('../admin/puck-model.mjs');const {loadMaisonDocument}=await import('../admin/maison.mjs');const env=bindings();
+ const document=(title)=>({root:{props:{...puckRoot}},content:[{type:'Texte',props:{...structuredClone(puckDefaults.Texte),id:'same-id',title,body:'Contenu conservé',level:'h1'}}]});
+ for(const [path,title] of [['/maison','Notre histoire personnalisée'],['/savoir-faire','Nos gestes personnalisés'],['/bonbons','Nos recettes personnalisées']])assert.equal((await call(env,'puck?path='+path,'PUT',{action:'publish',version:0,data:document(title)})).status,200);
+ const draft=document('Gestes non publiés');assert.equal((await call(env,'puck?path=/savoir-faire','PUT',{action:'draft',version:1,data:draft})).status,200);
+ const combined=await loadMaisonDocument(env.DB);assert.equal(combined.root.props.maisonCombined,true);assert.deepEqual(combined.content.map(item=>item.props.id),['la-maison','savoir-faire','nos-recettes']);assert.deepEqual(combined.content.map(item=>item.props.children[0].props.title),['Notre histoire personnalisée','Nos gestes personnalisés','Nos recettes personnalisées']);assert.equal(combined.content[1].props.children[0].props.level,'h2');assert.equal(new Set(combined.content.map(item=>item.props.children[0].props.id)).size,3);
+ const editor=await(await call(env,'puck?path=/maison')).json();assert.deepEqual(editor.data,combined);const before=env.sqlite.prepare("SELECT published,draft FROM puck_pages WHERE path='/savoir-faire'").get();
+ editor.data.content[1].props.children[0].props.title='Savoir-faire de la page unique';assert.equal((await call(env,'puck?path=/maison','PUT',{action:'draft',version:1,data:editor.data})).status,200);assert.equal((await loadMaisonDocument(env.DB)).content[1].props.children[0].props.title,'Nos gestes personnalisés');
+ assert.equal((await call(env,'puck?path=/maison','PUT',{action:'publish',version:2,data:editor.data})).status,200);const published=await loadMaisonDocument(env.DB);assert.equal(published.content.length,3);assert.equal(published.content[1].props.children[0].props.title,'Savoir-faire de la page unique');assert.deepEqual(env.sqlite.prepare("SELECT published,draft FROM puck_pages WHERE path='/savoir-faire'").get(),before);env.sqlite.close();
+});
+
+test('the former three-link house menu becomes a single direct Maison link',async()=>{
+ const {defaultAppearance,validateAppearance}=await import('../admin/appearance.mjs');
+ const legacy={...structuredClone(defaultAppearance),navigation:{groupLabel:'La maison',items:[{label:'Maison',href:'/maison',group:true},{label:'Savoir-faire',href:'/savoir-faire',group:true},{label:'Nos recettes',href:'/bonbons',group:true},{label:'Boutique en ligne',href:'/boutique',group:false}]}};
+ assert.deepEqual(validateAppearance(legacy).navigation.items,[{label:'La maison',href:'/maison',group:false},{label:'Boutique en ligne',href:'/boutique',group:false}]);
+ const updated=validateAppearance(legacy);updated.navigation.items[0].label='Découvrir notre maison';assert.equal(validateAppearance(updated).navigation.items[0].label,'Découvrir notre maison');
 });

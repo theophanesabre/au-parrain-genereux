@@ -1,6 +1,7 @@
 import { paymentConfig, safeConfig, configurePayments } from '../commerce/stripe.mjs';
 import { reconcilePayments } from '../commerce/payments.mjs';
 import { paymentsHTML } from './payments-ui.mjs';
+import { loadMaisonDocument } from './maison.mjs';
 import { puckPaths, validatePuckData, puckImages } from './puck-model.mjs';
 import { puckContext, defaultPuckData } from './puck-defaults.mjs';
 import { visualHTML } from './visual-ui.mjs';
@@ -70,7 +71,7 @@ export async function handleAdmin(request, env) {
 
     if(path==='/admin/api/puck'){
       const page=url.searchParams.get('path')||'/';if(!puckPaths.includes(page))throw new HttpError(400,'Page inconnue');
-      if(request.method==='GET'){const [row,context]=await Promise.all([db.prepare('SELECT published,draft,version FROM puck_pages WHERE path=?').bind(page).first(),puckContext(db,page)]);const initial=validatePuckData(defaultPuckData(page,context));return json({data:row?.draft?validatePuckData(JSON.parse(row.draft)):row?.published?validatePuckData(JSON.parse(row.published)):initial,defaultData:initial,version:row?.version??0,published:Boolean(row?.published),storefront:context.storefront});}
+      if(request.method==='GET'){const [row,context]=await Promise.all([db.prepare('SELECT published,draft,version FROM puck_pages WHERE path=?').bind(page).first(),puckContext(db,page)]);const initial=page==='/maison'?await loadMaisonDocument(db,{defaults:true}):validatePuckData(defaultPuckData(page,context));return json({data:page==='/maison'?await loadMaisonDocument(db,{draft:true}):row?.draft?validatePuckData(JSON.parse(row.draft)):row?.published?validatePuckData(JSON.parse(row.published)):initial,defaultData:initial,version:row?.version??0,published:Boolean(row?.published),storefront:context.storefront});}
       if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const input=await body(request,262144),version=integer(input.version);if(!['draft','publish','restore'].includes(input.action))throw new HttpError(400,'Action inconnue');
       const data=input.action==='restore'?null:JSON.stringify(validatePuckData(input.data));
       const statement=version===0?db.prepare('INSERT OR IGNORE INTO puck_pages (path,published,draft) VALUES (?,?,?)').bind(page,input.action==='publish'?data:null,input.action==='restore'?null:data):input.action==='draft'?db.prepare('UPDATE puck_pages SET draft=?,version=version+1 WHERE path=? AND version=?').bind(data,page,version):db.prepare('UPDATE puck_pages SET published=?,draft=?,version=version+1 WHERE path=? AND version=?').bind(data,data,page,version);
