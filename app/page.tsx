@@ -7,9 +7,9 @@ import Image from "next/image";
 import { SiteFooter } from "@/components/site-chrome";
 
 const chapters = [
-  ["La collection", "Nos chocolats et confiseries maison", "/bonbons"],
+  ["La collection", "Nos chocolats et confiseries maison", "/maison#nos-recettes"],
   ["La Maison", "Une chocolaterie havraise depuis 1890", "/maison"],
-  ["Le savoir-faire", "Notre manière de travailler", "/savoir-faire"],
+  ["Le savoir-faire", "Notre manière de travailler", "/maison#savoir-faire"],
   ["Nous trouver", "123 rue Maréchal Joffre · Le Havre", "/#nous-trouver"],
 ] as const;
 
