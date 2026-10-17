@@ -1,3 +1,4 @@
+import { handlePayments } from '../commerce/payments.mjs';
 import { handlePrelaunch } from '../site/prelaunch.mjs';
 import { handleCommerce } from '../commerce/handler.mjs';
 import { handleAdmin } from "../admin/handler.mjs";
@@ -6,6 +7,7 @@ import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } fr
 import handler from "vinext/server/app-router-entry";
 
 interface Env {
+  PAYMENT_CONFIG_ENCRYPTION_KEY?: string;
   ADMIN_USER_IDS?: string;
   ADMIN_SETUP_TOKEN_HASH?: string;
   ADMIN_SETUP_EXPIRES_AT?: string;
@@ -34,6 +36,8 @@ interface ExecutionContext {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const paymentResponse = await handlePayments(request, env);
+    if (paymentResponse) return paymentResponse;
     const commerceResponse = await handleCommerce(request, env);
     if (commerceResponse) return commerceResponse;
     const adminResponse = await handleAdmin(request, env);

@@ -13,6 +13,7 @@ export const images = sqliteTable('images', {
   id: text('id').primaryKey(), alt: text('alt').notNull(), type: text('type').notNull(), size: integer('size').notNull(),
 });
 export const orders = sqliteTable('orders', {
+  paymentStatus:text('payment_status').notNull().default('unpaid'),stripeSessionId:text('stripe_session_id').unique(),stripePaymentIntent:text('stripe_payment_intent'),paymentMode:text('payment_mode'),delivery:text('delivery'),shippingAddress:text('shipping_address'),shippingCents:integer('shipping_cents').notNull().default(0),
   id: text('id').primaryKey(), customer: text('customer').notNull(), contact: text('contact').notNull(),
   items: text('items').notNull(), totalCents: integer('total_cents').notNull(),
   status: text('status').notNull().default('draft'), createdAt: text('created_at').notNull(),
@@ -46,4 +47,18 @@ export const siteSettings = sqliteTable('site_settings', {
 export const puckPages = sqliteTable('puck_pages', {
   path: text('path').primaryKey(), published: text('published'), draft: text('draft'),
   version: integer('version').notNull().default(1),
+});
+
+export const paymentSettings=sqliteTable('payment_settings',{
+ id:text('id').primaryKey(),secret:text('secret').notNull(),webhookSecret:text('webhook_secret').notNull(),
+ accountId:text('account_id').notNull(),endpointId:text('endpoint_id').notNull(),mode:text('mode').notNull(),
+ enabled:integer('enabled').notNull().default(0),shippingCents:integer('shipping_cents'),countries:text('countries').notNull().default('[]'),version:integer('version').notNull().default(1),
+});
+export const checkoutAttempts=sqliteTable('checkout_attempts',{
+ id:text('id').primaryKey(),params:text('params').notNull(),requester:text('requester').notNull(),sessionId:text('session_id').unique(),fingerprint:text('fingerprint').notNull(),items:text('items').notNull(),
+ totalCents:integer('total_cents').notNull(),shippingCents:integer('shipping_cents').notNull(),delivery:text('delivery').notNull(),mode:text('mode').notNull(),
+ status:text('status').notNull().default('creating'),createdAt:integer('created_at').notNull(),expiresAt:integer('expires_at').notNull(),
+});
+export const stripeRefunds=sqliteTable('stripe_refunds',{
+ paymentIntent:text('payment_intent').primaryKey(),createdAt:text('created_at').notNull(),
 });

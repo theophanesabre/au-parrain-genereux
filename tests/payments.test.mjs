@@ -1,0 +1,87 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+import {createHmac} from 'node:crypto';
+import {configurePayments,paymentConfig,safeConfig} from '../commerce/stripe.mjs';
+import {handlePayments} from '../commerce/payments.mjs';
+import {handleAdmin} from '../admin/handler.mjs';
+const origin='https://auparraingenereux.fr';
+const key='sk_test_'+'a'.repeat(32),whsec='whsec_unit_test_signature';
+function bindings(){const db=new DatabaseSync(':memory:');for(const entry of JSON.parse(readFileSync(new URL('../drizzle/meta/_journal.json',import.meta.url))).entries)db.exec(readFileSync(new URL('../drizzle/'+entry.tag+'.sql',import.meta.url),'utf8'));
+ function statement(sql,args=[]){return {bind(...values){return statement(sql,values);},async first(){return db.prepare(sql).get(...args)||null;},async all(){return {results:db.prepare(sql).all(...args)};},execute(){const result=db.prepare(sql).run(...args);return {success:true,meta:{changes:result.changes}};}};}
+ return {DB:{prepare:sql=>statement(sql),async batch(statements){db.exec('BEGIN');try{const result=statements.map(s=>s.execute());db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}}},BUCKET:{},ADMIN_USER_IDS:'owner',PAYMENT_CONFIG_ENCRYPTION_KEY:'ab'.repeat(32),db};}
+function provider(){const sessions=new Map(),calls=[],idempotent=new Map();let count=0;return {sessions,calls,client:{accounts:{retrieve:async()=>({id:'acct_apg',charges_enabled:true})},webhookEndpoints:{create:async()=>({id:'we_apg',secret:whsec})},checkout:{sessions:{create:async(params,options)=>{calls.push(params);if(idempotent.has(options.idempotencyKey))return idempotent.get(options.idempotencyKey);const subtotal=params.line_items.reduce((sum,line)=>sum+line.quantity*line.price_data.unit_amount,0);const session={id:'cs_test_abcdefghijklmnop'+(++count),url:'https://checkout.stripe.com/c/pay/test',metadata:params.metadata,amount_subtotal:subtotal,amount_total:subtotal+(params.shipping_options?.[0].shipping_rate_data.fixed_amount.amount||0),currency:'eur',mode:'payment',livemode:false,status:'open',payment_status:'unpaid',payment_intent:'pi_apg_'+count,customer_details:{name:'Client Test',email:'client@example.test'}};sessions.set(session.id,session);idempotent.set(options.idempotencyKey,session);return session;},expire:async id=>{const session=sessions.get(id);if(session.status!=='open')throw Error('Not open');session.status='expired';return session;},retrieve:async id=>{if(!sessions.has(id))throw Error('Unknown session');return sessions.get(id);}}}}};}
+async function setup({stock=5,shipping=null,countries=[]}={}){const env=bindings(),stripe=provider();await configurePayments({secret:key,enabled:true,shipping_cents:shipping,countries,version:0},env,'owner',()=>stripe.client);env.db.prepare('INSERT INTO products(id,name,description,price_cents,stock,published) VALUES (?,?,?,?,?,?)').run('coffret','Coffret maison','Maison',2500,stock,1);return {env,stripe};}
+function checkout(env,stripe,{id=crypto.randomUUID(),items=[{id:'coffret',quantity:1,price_cents:1}],delivery='pickup',actor='owner',from=origin}={}){const request=new Request(origin+'/api/paiement/checkout',{method:'POST',headers:{origin:from,'content-type':'application/json',...(actor?{'oai-authenticated-user-id':actor}:{})},body:JSON.stringify({items,delivery,key:id})});return handlePayments(request,env,()=>stripe.client);}
+async function webhook(env,stripe,session,type='checkout.session.completed',options={}){const raw=JSON.stringify({id:options.id||'evt_'+crypto.randomUUID(),type,livemode:false,data:{object:session}});const timestamp=options.timestamp??Math.floor(Date.now()/1000);const signature=createHmac('sha256',options.secret||whsec).update(timestamp+'.'+raw).digest('hex');return handlePayments(new Request(origin+'/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':`t=${timestamp},v1=${signature}`},body:raw}),env,()=>stripe.client);}
+function stock(env){return env.db.prepare("SELECT stock FROM products WHERE id='coffret'").get().stock;}
+function orders(env){return env.db.prepare('SELECT * FROM orders').all();}
+
+test('Stripe secrets are encrypted, never returned by admin configuration, and setup is protected',async()=>{
+ const {env,stripe}=await setup();const stored=env.db.prepare('SELECT * FROM payment_settings').get();assert.ok(!stored.secret.includes(key));assert.ok(!stored.webhook_secret.includes(whsec));assert.equal((await paymentConfig(env)).secret,key);assert.ok(!JSON.stringify(safeConfig(stored)).includes(key));
+ const get=await handleAdmin(new Request(origin+'/admin/api/stripe',{headers:{'oai-authenticated-user-id':'owner'}}),env);const data=await get.json();assert.equal(data.configured,true);assert.equal(data.mode,'test');assert.ok(!JSON.stringify(data).includes(key));assert.equal(data.pending,0);
+ assert.equal((await handleAdmin(new Request(origin+'/admin/api/stripe'),env)).status,401);assert.equal((await handleAdmin(new Request(origin+'/admin/paiements'),env)).status,302);
+ const denied=await handleAdmin(new Request(origin+'/admin/api/stripe',{method:'PUT',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.example','content-type':'application/json'},body:'{}'}),env);assert.equal(denied.status,403);
+ await assert.rejects(()=>configurePayments({secret:key,enabled:true,version:0,shipping_cents:null,countries:[]},env,'owner',()=>stripe.client),e=>e.status===409);
+ await assert.rejects(()=>configurePayments({secret:key,enabled:true,version:1,shipping_cents:100,countries:[]},env,'owner',()=>stripe.client),e=>e.status===400);
+ const page=await handleAdmin(new Request(origin+'/admin/paiements',{headers:{'oai-authenticated-user-id':'owner'}}),env);const html=await page.text();const {Script}=await import('node:vm');new Script(html.match(/<script[^>]*>([\s\S]*)<\/script>/)[1]);assert.ok(!html.includes(key));env.db.close();
+});
+test('checkout recomputes prices, reserves stock atomically, retries the same session and shows no unpaid order',async()=>{
+ const {env,stripe}=await setup({stock:2});const id=crypto.randomUUID();assert.equal((await checkout(env,stripe,{id})).status,200);assert.equal(stock(env),1);assert.equal(orders(env).length,0);assert.equal(stripe.calls[0].line_items[0].price_data.unit_amount,2500);assert.deepEqual(stripe.calls[0].payment_method_types,['card']);
+ assert.equal((await checkout(env,stripe,{id})).status,200);assert.equal(stock(env),1);assert.equal(stripe.sessions.size,1);
+ assert.equal((await checkout(env,stripe,{id,items:[{id:'coffret',quantity:2}]})).status,409);
+ assert.equal((await checkout(env,stripe,{items:[{id:'coffret',quantity:2}]})).status,409);assert.equal(stock(env),1);
+ const session=[...stripe.sessions.values()][0];const status=await handlePayments(new Request(origin+'/api/paiement/statut?session_id='+session.id),env,()=>stripe.client);assert.equal((await status.json()).state,'pending');assert.equal(orders(env).length,0);env.db.close();
+});
+test('signed paid webhook creates exactly one confirmed order and never deducts stock twice',async()=>{
+ const {env,stripe}=await setup({stock:2});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];session.status='complete';session.payment_status='paid';
+ assert.equal((await webhook(env,stripe,session)).status,200);assert.equal((await webhook(env,stripe,session)).status,200);assert.equal(orders(env).length,1);const order=orders(env)[0];assert.equal(order.status,'confirmed');assert.equal(order.payment_status,'paid');assert.equal(order.payment_mode,'test');assert.equal(order.total_cents,2500);assert.equal(order.delivery,'pickup');assert.equal(stock(env),1);
+ const cancelled=await handleAdmin(new Request(origin+'/admin/api/orders/'+order.id,{method:'PUT',headers:{'oai-authenticated-user-id':'owner',origin,'content-type':'application/json'},body:JSON.stringify({status:'cancelled',version:order.version})}),env);assert.equal(cancelled.status,409);assert.equal(stock(env),1);
+ assert.equal((await webhook(env,stripe,{id:'ch_apg',payment_intent:session.payment_intent,refunded:true,amount:2500,amount_refunded:2500},'charge.refunded')).status,200);assert.equal(stock(env),2);assert.equal(orders(env)[0].payment_status,'refunded');assert.equal(orders(env)[0].status,'cancelled');
+ await webhook(env,stripe,{id:'ch_apg',payment_intent:session.payment_intent,refunded:true,amount:2500,amount_refunded:2500},'charge.refunded');await webhook(env,stripe,session);assert.equal(stock(env),2);assert.equal(orders(env).length,1);env.db.close();
+});
+test('expiration restores stock once, ignores browser claims, and invalid signatures or timestamps cannot create orders',async()=>{
+ const {env,stripe}=await setup({stock:1});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];
+ assert.equal((await webhook(env,stripe,session)).status,200);assert.equal(stock(env),0);assert.equal(orders(env).length,0);
+ session.payment_status='paid';session.status='complete';assert.equal((await webhook(env,stripe,session,'checkout.session.completed',{secret:'wrong'})).status,400);assert.equal((await webhook(env,stripe,session,'checkout.session.completed',{timestamp:Math.floor(Date.now()/1000)-1000})).status,400);assert.equal(orders(env).length,0);
+ session.payment_status='unpaid';session.status='expired';await webhook(env,stripe,session,'checkout.session.expired');await webhook(env,stripe,session,'checkout.session.expired');assert.equal(stock(env),1);assert.equal(orders(env).length,0);env.db.close();
+});
+test('shipping uses configured fees and destination; forged totals or missing addresses cannot confirm an order',async()=>{
+ const {env,stripe}=await setup({stock:2,shipping:750,countries:['FR']});assert.equal((await checkout(env,stripe,{delivery:'shipping'})).status,200);const session=[...stripe.sessions.values()][0];assert.equal(session.amount_total,3250);assert.deepEqual(stripe.calls[0].shipping_address_collection.allowed_countries,['FR']);session.payment_status='paid';session.status='complete';
+ assert.equal((await webhook(env,stripe,session)).status,409);assert.equal(orders(env).length,0);
+ session.shipping_details={name:'Client Test',address:{line1:'1 rue du Test',postal_code:'76600',city:'Le Havre',country:'FR'}};session.amount_total=1;assert.equal((await webhook(env,stripe,session)).status,409);assert.equal(orders(env).length,0);
+ session.amount_total=3250;assert.equal((await webhook(env,stripe,session)).status,200);assert.equal(orders(env)[0].shipping_cents,750);assert.equal(JSON.parse(orders(env)[0].shipping_address).address.country,'FR');assert.equal(stock(env),1);env.db.close();
+});
+test('unconfigured shipping, foreign requests, hidden storefront and disabled payment fail closed',async()=>{
+ const {env,stripe}=await setup();assert.equal((await checkout(env,stripe,{delivery:'shipping'})).status,409);assert.equal((await checkout(env,stripe,{from:'https://evil.example'})).status,403);assert.equal((await checkout(env,stripe,{actor:null})).status,403);
+ const config=await handlePayments(new Request(origin+'/api/paiement/config'),env,()=>stripe.client);assert.equal((await config.json()).enabled,false);assert.equal(orders(env).length,0);assert.equal(stock(env),5);
+ env.db.exec('UPDATE payment_settings SET enabled=0');assert.equal((await checkout(env,stripe)).status,503);assert.equal((await handlePayments(new Request(origin+'/api/paiement/checkout'),env,()=>stripe.client)).status,405);env.db.close();
+});
+test('a full refund arriving before the paid event releases the hold and preserves a refunded order',async()=>{
+ const {env,stripe}=await setup({stock:1});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];session.status='complete';session.payment_status='paid';
+ await webhook(env,stripe,{id:'ch_apg',payment_intent:session.payment_intent,refunded:true,amount:2500,amount_refunded:2500},'charge.refunded');await webhook(env,stripe,session);assert.equal(stock(env),1);assert.equal(orders(env)[0].payment_status,'refunded');assert.equal(orders(env)[0].status,'cancelled');await webhook(env,stripe,session);assert.equal(stock(env),1);env.db.close();
+});
+
+test('returning from Stripe expires its session before releasing stock, even if new payments were disabled',async()=>{
+ const {env,stripe}=await setup({stock:1});const id=crypto.randomUUID();await checkout(env,stripe,{id});assert.equal(stock(env),0);env.db.exec('UPDATE payment_settings SET enabled=0');
+ const cancel=()=>handlePayments(new Request(origin+'/api/paiement/annuler',{method:'POST',headers:{origin,'content-type':'application/json','oai-authenticated-user-id':'owner'},body:JSON.stringify({key:id})}),env,()=>stripe.client);
+ const response=await cancel();assert.equal(response.status,200);assert.equal((await response.json()).state,'cancelled');assert.equal([...stripe.sessions.values()][0].status,'expired');assert.equal(stock(env),1);await cancel();assert.equal(stock(env),1);assert.equal(orders(env).length,0);env.db.close();
+});
+test('concurrent checkout attempts cannot oversell a single piece',async()=>{
+ const {env,stripe}=await setup({stock:1});const responses=await Promise.all([checkout(env,stripe),checkout(env,stripe)]);assert.deepEqual(responses.map(r=>r.status).sort(),[200,409]);assert.equal(stock(env),0);assert.equal(stripe.sessions.size,1);env.db.close();
+});
+
+test('uncertain network creation keeps the reservation and retry uses the same attempt, while definitive errors release it',async()=>{
+ const {env,stripe}=await setup({stock:1});const original=stripe.client.checkout.sessions.create;let fail=true;stripe.client.checkout.sessions.create=async(...args)=>{if(fail){fail=false;throw {type:'StripeConnectionError'};}return original(...args);};const id=crypto.randomUUID();
+ assert.equal((await checkout(env,stripe,{id})).status,503);assert.equal(stock(env),0);assert.equal(orders(env).length,0);assert.equal((await checkout(env,stripe,{id})).status,200);assert.equal(stock(env),0);assert.equal(stripe.sessions.size,1);env.db.close();
+ const second=await setup({stock:1});second.stripe.client.checkout.sessions.create=async()=>{throw {type:'StripeInvalidRequestError'};};assert.equal((await checkout(second.env,second.stripe)).status,503);assert.equal(stock(second.env),1);assert.equal(orders(second.env).length,0);second.env.db.close();
+});
+test('a refund after the order is ready does not put shipped or collected goods back in stock',async()=>{
+ const {env,stripe}=await setup({stock:1});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];session.status='complete';session.payment_status='paid';await webhook(env,stripe,session);env.db.exec("UPDATE orders SET status='ready'");
+ await webhook(env,stripe,{id:'ch_apg',payment_intent:session.payment_intent,refunded:true,amount:2500,amount_refunded:2500},'charge.refunded');assert.equal(stock(env),0);assert.equal(orders(env)[0].status,'ready');assert.equal(orders(env)[0].payment_status,'refunded');env.db.close();
+});
+
+test('retry after confirmed payment returns the existing receipt without creating a new checkout',async()=>{
+ const {env,stripe}=await setup({stock:1});const id=crypto.randomUUID();await checkout(env,stripe,{id});const session=[...stripe.sessions.values()][0];session.status='complete';session.payment_status='paid';await webhook(env,stripe,session);const retried=await checkout(env,stripe,{id});assert.equal(retried.status,200);assert.deepEqual(await retried.json(),{state:'paid',session_id:session.id});assert.equal(orders(env).length,1);assert.equal(stock(env),0);assert.equal(stripe.sessions.size,1);env.db.close();
+});
