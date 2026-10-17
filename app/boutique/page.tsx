@@ -1,3 +1,4 @@
+import { PageSections } from "@/components/appearance";
 import { env } from 'cloudflare:workers';
 import { SiteHeader, SiteFooter, PageIntro } from '@/components/site-chrome';
 import { Catalog } from '@/components/catalog';
@@ -9,6 +10,5 @@ export const metadata={title:'Tous les articles | Au Parrain Généreux',descrip
 export default async function Shop(){
   const [rows,sources]=await Promise.all([env.DB?env.DB.prepare('SELECT id,name,description,price_cents,stock,image FROM products WHERE published=1 AND price_cents>0 ORDER BY name LIMIT 500').all<SaleProduct>():Promise.resolve({results:[] as SaleProduct[]}),getImageSources()]);
   const products=rows.results.filter(product=>isSale(product.id));
-  return <main className="inner-page"><SiteHeader/><PageIntro index="05" kicker="La boutique" title="Tous les articles."><p>Découvrez les articles de la maison : boîtes, coffrets et créations préparées par nos soins. Retrait en boutique ou expédition : préparez votre sélection.</p></PageIntro>
-    <Catalog products={products.map(product=>({...product,image:sources[product.image]||product.image}))}/><SiteFooter/></main>;
+  return <main className="inner-page"><SiteHeader/><PageSections page="/boutique" items={[{id:"intro",content:<PageIntro index="05" kicker="La boutique" title="Tous les articles."><p>Découvrez les articles de la maison : boîtes, coffrets et créations préparées par nos soins. Retrait en boutique ou expédition : préparez votre sélection.</p></PageIntro>},{id:"catalog",content:<Catalog products={products.map(product=>({...product,image:sources[product.image]||product.image}))}/>}]} /><SiteFooter/></main>;
 }

@@ -24,7 +24,7 @@ export function PurchaseCard({product}:{product:SaleProduct}){
   const {add,items,ready}=useCart();const [quantity,setQuantity]=useState(1),[message,setMessage]=useState('');
   const inCart=items.find(item=>item.id===product.id)?.quantity||0;
   const valid=Number.isSafeInteger(quantity)&&quantity>0&&quantity<=MAX_QUANTITY&&quantity+inCart<=product.stock;
-  return <article className="apg-purchase">
+  return <article className="apg-purchase" data-ve-commerce="true">
     <img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/>
     <div><p className="apg-shop-kicker">La collection</p><h2>{product.name}</h2><p>{product.description}</p><p className="apg-shop-price">{money(product.price_cents)} <small>/ pièce</small></p>
       {product.stock>0?<form onSubmit={event=>{event.preventDefault();if(!valid||!ready)return;add(product.id,quantity);setMessage('Ajouté au panier.');}}>
@@ -46,7 +46,7 @@ export function CartPage(){
     return ()=>controller.abort();
   },[items,ready,retry]);
   if(!ready)return <p className="apg-cart-loading" role="status">Chargement du panier…</p>;
-  return <div className="apg-cart-content">
+  return <div className="apg-cart-content" data-ve-commerce="true">
     {storageError?<p role="alert">Votre navigateur ne permet pas de conserver ce panier après fermeture. Gardez cette page ouverte.</p>:null}
     {!items.length?<div className="apg-cart-empty"><h2>Votre panier attend ses chocolats.</h2><p>Découvrez les articles et les boîtes préparés par la maison.</p><a className="apg-shop-primary" href="/boutique">Découvrir la boutique</a></div>:<>
       <div className="apg-cart-lines" aria-busy={loading}>

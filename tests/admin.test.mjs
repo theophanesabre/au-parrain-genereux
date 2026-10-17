@@ -256,7 +256,7 @@ test('stock alerts include house articles at five pieces, exclude discovery and 
 
 test('appearance is protected, versioned, validates layout and restores defaults without deleting content',async()=>{
  const {defaultAppearance}=await import('../admin/appearance.mjs');const env=bindings();
- assert.equal((await handleAdmin(req('/admin/apparence'),env)).status,401);
+ assert.equal((await handleAdmin(req('/admin/apparence'),env)).status,302);
  assert.equal((await handleAdmin(req('/admin/api/appearance'),env)).status,401);
  const initial=await (await call(env,'appearance')).json();assert.equal(initial.version,0);assert.deepEqual(initial.settings,defaultAppearance);
  const settings={...initial.settings,hero:'image-right',buttons:'outline',collectionLabel:'Tous les articles',collectionHref:'/boutique',sections:[...initial.settings.sections].reverse().map((section,index)=>({...section,visible:index!==0}))};
@@ -277,12 +277,18 @@ test('appearance rendering falls back safely and applies section order, visibili
  for(const name of ['react/jsx-runtime','react'])code=code.replaceAll(`from "${name}"`,`from ${JSON.stringify(import.meta.resolve(name))}`).replaceAll(`from '${name}'`,`from ${JSON.stringify(import.meta.resolve(name))}`);
  code=code.replaceAll("'@/admin/appearance.mjs'",JSON.stringify(new URL('../admin/appearance.mjs',import.meta.url).href));
  code=code.replace("import { usePathname } from 'next/navigation';","const usePathname=()=>'/';");
- const {AppearanceShell,HomeSections,HomeButton,PageButtons}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+ const styleCode=ts.transpileModule(readFileSync(new URL('../components/visual-style.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;code=code.replace("import { VisualRuntime } from './visual-runtime';","const VisualRuntime=()=>null;").replace("'./visual-style'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(styleCode).toString('base64')));
+ const {AppearanceShell,HomeSections,HomeButton,PageButtons,PageSections}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  assert.match(renderToStaticMarkup(createElement(AppearanceShell,{initial:undefined},'Contenu')),/data-background="cream"/);
  const custom={id:'custom-one',label:'Choisir mes chocolats',href:'/boutique',page:'/',location:'history',position:'before',align:'right',style:'outline',size:'large',visible:true};
  const settings={...defaultAppearance,customButtons:[custom,{...custom,id:'custom-two',label:'Ne pas afficher',location:'news'},{...custom,id:'custom-three',label:'Bouton masqué',visible:false},{...custom,id:'custom-four',label:'En haut',location:'page-top'}],background:'white',collectionLabel:'Acheter',collectionHref:'/boutique',sections:[...defaultAppearance.sections].reverse().map(section=>({...section,visible:section.id!=='news'}))};
  const html=renderToStaticMarkup(createElement(AppearanceShell,{initial:settings},createElement(HomeSections,{sections:defaultAppearance.sections.map(section=>({id:section.id,content:section.id}))}),createElement(HomeButton,{kind:'collection'}),createElement(PageButtons,{location:'page-top'})));
  assert.match(html,/data-background="white"/);assert.ok(html.indexOf('data-home-section="collection"')<html.indexOf('data-home-section="spotlight"'));assert.doesNotMatch(html,/data-home-section="news"/);assert.match(html,/href="\/boutique">Acheter/);assert.ok(html.indexOf('Choisir mes chocolats')<html.indexOf('>history<'));assert.match(html,/data-align="right"/);assert.match(html,/data-style="outline"/);assert.match(html,/En haut/);assert.doesNotMatch(html,/Ne pas afficher|Bouton masqué/);
+ const added={id:'added-text',page:'/maison',anchor:'signature',position:'before',kind:'text',visible:true,title:'<script>intrus</script>',body:'Texte de la maison',image:'',alt:'',label:'',href:'',style:{paddingTop:40}};
+ const visual={...defaultAppearance.visual,layouts:{...defaultAppearance.visual.layouts,'/maison':[{id:'signature',visible:true},{id:'intro',visible:false}]},blocks:[added]};
+ const page=renderToStaticMarkup(createElement(AppearanceShell,{initial:{...defaultAppearance,visual}},createElement(PageSections,{page:'/maison',items:[{id:'intro',content:'INTRO-MASQUÉ'},{id:'signature',content:'SIGNATURE-VISIBLE'}]})));
+ assert.match(page,/data-ve-new="added-text"/);assert.match(page,/&lt;script&gt;intrus/);assert.doesNotMatch(page,/<script>intrus|INTRO-MASQUÉ/);assert.ok(page.indexOf('Texte de la maison')<page.indexOf('SIGNATURE-VISIBLE'));
+
 });
 
 
@@ -296,4 +302,36 @@ test('custom buttons persist with placement and reject unsafe links, invalid pag
  assert.throws(()=>validateAppearance({...settings,customButtons:[button,button]}));assert.throws(()=>validateAppearance({...settings,customButtons:Array.from({length:31},(_,i)=>({...button,id:'b-'+i}))}));
  const old={...defaultAppearance};delete old.customButtons;assert.deepEqual(validateAppearance(old).customButtons,[]);
  assert.equal((await call(env,'appearance','PUT',{settings:{...settings,customButtons:[]},version:1})).status,200);assert.deepEqual((await (await call(env,'appearance')).json()).settings.customButtons,[]);env.sqlite.close();
+});
+
+test('visual editor validates themes, styles, links, layouts and content before persisting',async()=>{
+ const {defaultAppearance}=await import('../admin/appearance.mjs');const {defaultVisual,validateVisual,validateVisualStyle,visualHref}=await import('../admin/visual.mjs');const env=bindings();
+ const block={id:'visual-one',page:'/maison',anchor:'signature',position:'before',kind:'text',visible:true,title:'Notre maison',body:'Un texte personnel',image:'',alt:'',label:'',href:'',style:{backgroundColor:'#fff0da',paddingTop:40,textAlign:'center'}};
+ const visual={...structuredClone(defaultVisual),accent:'#e25a13',blocks:[block],overrides:[{page:'/',id:'history/section:1/div:1/h2:1',text:'Une nouvelle histoire',style:{fontSize:48,color:'#30271f'}}]};const settings={...defaultAppearance,visual};
+ assert.equal((await call(env,'appearance','PUT',{settings,version:0})).status,200);const saved=await (await call(env,'appearance')).json();assert.deepEqual(saved.settings.visual,visual);
+ for(const style of [{position:'fixed'},{backgroundColor:'url(https://evil.example)'},{fontSize:999},{paddingLeft:-1},{columns:1.5},{layout:'<script>'},JSON.parse('{"__proto__":{"polluted":true}}')])assert.throws(()=>validateVisualStyle(style));
+ for(const href of ['javascript:alert(1)','data:text/html,<script>','//evil.example','/admin','https://name:password@example.org'])assert.throws(()=>visualHref(href));
+ assert.equal(visualHref('https://example.org/'), 'https://example.org/');assert.equal(visualHref('mailto:contact@example.org'),'mailto:contact@example.org');
+ for(const bad of [{...visual,blocks:[{...block,image:'https://evil.example/x.jpg',kind:'image',alt:'Image'}]},{...visual,blocks:[block,block]},{...visual,overrides:[{page:'/',id:'body<script>',style:{}}]},{...visual,layouts:{...visual.layouts,'/maison':[{id:'intro',visible:false},{id:'signature',visible:false}]}},{...visual,blocks:Array.from({length:61},(_,i)=>({...block,id:'b-'+i}))}])assert.throws(()=>validateVisual(bad));
+ const anonymous=await handleAdmin(req('/admin/editeur'),env);assert.equal(anonymous.status,302);const response=await handleAdmin(req('/admin/editeur',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(response.status,200);assert.match(response.headers.get('content-security-policy'),/frame-src 'self'/);const html=await response.text();assert.match(html,/Site à personnaliser/);const {Script}=await import('node:vm');new Script(html.match(/<script[^>]*>([\s\S]*)<\/script>/)[1]);env.sqlite.close();
+});
+
+test('visual editor client keeps changes in preview until save, supports undo and selection edits',async()=>{
+ const {visualEditorClient}=await import('../admin/visual-editor-client.mjs');const {visualPages,defaultVisual}=await import('../admin/visual.mjs');const {Script,createContext}=await import('node:vm');
+ class Node{constructor(tag){this.tagName=tag.toUpperCase();this.children=[];this.dataset={};this.textContent='';this.type='';this.value='';}append(...children){this.children.push(...children);}replaceChildren(...children){this.children=children;}setAttribute(key,value){this[key]=value;}click(){return this.onclick?.();}get valueAsNumber(){return this.value===''?NaN:Number(this.value);}}
+ const ids=['canvas','notice','save','undo','redo','state','mode','page','desktop','mobile','reload','layers','properties','theme','insert'];const nodes=new Map(ids.map(id=>['#'+id,new Node('div')]));const messages=[];nodes.get('#canvas').contentWindow={postMessage:data=>messages.push(structuredClone(data))};const panels=['properties','layers','theme','insert'].map(id=>{const button=new Node('button');button.dataset.panel=id;return button;});const inserts=['text','image','button','spacer'].map(kind=>{const button=new Node('button');button.dataset.add=kind;return button;});const events={};const env=bindings();
+ const document={createElement:tag=>new Node(tag),createTextNode:value=>Object.assign(new Node('text'),{textContent:value}),querySelector:selector=>selector==='[data-panel=properties]'?panels[0]:nodes.get(selector),querySelectorAll:selector=>selector==='[data-add]'?inserts:selector==='[data-panel]'?panels:selector==='.editor-panel'?['properties','layers','theme','insert'].map(id=>Object.assign(nodes.get('#'+id),{id})):[]};
+ const context=createContext({document,location:{origin},crypto,structuredClone,confirm:()=>false,window:{addEventListener:(type,fn)=>events[type]=fn},fetch:async(path,options={})=>handleAdmin(req(path,{...options,headers:{...options.headers,origin,'oai-authenticated-user-id':'owner'}}),env)});
+ new Script('('+visualEditorClient.toString()+')('+JSON.stringify(visualPages)+','+JSON.stringify(defaultVisual)+')').runInContext(context);const settle=async()=>{for(let i=0;i<8;i++)await new Promise(resolve=>setImmediate(resolve));};await settle();
+ inserts[0].click();assert.equal(messages.at(-1).settings.visual.blocks.length,1);assert.equal((await (await call(env,'appearance')).json()).version,0);nodes.get('#undo').click();assert.equal(messages.at(-1).settings.visual.blocks.length,0);nodes.get('#redo').click();assert.equal(messages.at(-1).settings.visual.blocks.length,1);
+ events.message({origin:'https://evil.example',source:nodes.get('#canvas').contentWindow,data:{type:'apg-visual-selection',selection:{id:'evil'}}});
+ events.message({origin,source:nodes.get('#canvas').contentWindow,data:{type:'apg-visual-selection',selection:{id:'history/section:1/h2:1',page:'/',tag:'h2',text:'Titre initial',canText:true,native:'history',computed:{}}}});
+ const find=(node,predicate)=>predicate(node)?node:node.children.map(child=>find(child,predicate)).find(Boolean);const label=find(nodes.get('#properties'),node=>node.tagName==='LABEL'&&node.textContent==='Texte');const input=label.children[0];input.value='Titre choisi dans l’aperçu';input.oninput();assert.equal(messages.at(-1).settings.visual.overrides[0].text,'Titre choisi dans l’aperçu');
+ await nodes.get('#save').click();const result=await (await call(env,'appearance')).json();assert.equal(result.version,1);assert.equal(result.settings.visual.blocks.length,1);assert.equal(result.settings.visual.overrides[0].text,'Titre choisi dans l’aperçu');env.sqlite.close();
+});
+
+
+test('images referenced by visual blocks cannot be deleted until the block is removed',async()=>{
+ const {defaultAppearance}=await import('../admin/appearance.mjs');const env=bindings();const upload=new FormData();upload.set('alt','Photo de la maison');upload.set('file',new Blob([new Uint8Array([137,80,78,71,13,10,26,10,0])],{type:'image/png'}),'photo.png');const response=await handleAdmin(req('/admin/api/images',{method:'POST',headers:{origin,'oai-authenticated-user-id':'owner'},body:upload}),env);assert.equal(response.status,201);const image=await response.json();
+ const visual={...structuredClone(defaultAppearance.visual),blocks:[{id:'photo-maison',page:'/',anchor:'history',position:'after',kind:'image',visible:true,title:'',body:'',image:image.url,alt:'Maison',label:'',href:'',style:{}}]};assert.equal((await call(env,'appearance','PUT',{settings:{...defaultAppearance,visual},version:0})).status,200);assert.equal((await call(env,'images/'+image.id,'DELETE')).status,409);assert.equal((await call(env,'appearance','PUT',{settings:defaultAppearance,version:1})).status,200);assert.equal((await call(env,'images/'+image.id,'DELETE')).status,200);env.sqlite.close();
 });

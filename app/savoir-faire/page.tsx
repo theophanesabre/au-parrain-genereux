@@ -1,3 +1,4 @@
+import { PageSections } from "@/components/appearance";
 import { getPageContent } from "@/components/site-data";
 import { getManagedPage, ManagedPage } from "@/components/managed-page";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -17,20 +18,20 @@ export default async function SavoirFaire() {
   if (managed) return <ManagedPage page={managed}/>;
   return <main className="inner-page craft-page">
     <SiteHeader />
-    <section className="craft-intro">
+    <PageSections page="/savoir-faire" items={[
+{id:'intro',content:(<><section className="craft-intro">
       <p className="section-index">{content.kicker}</p>
       <h1>{content.title}</h1>
       <div><p>{content.intro}</p></div>
-    </section>
-
-    <section className="craft-process" aria-labelledby="gestes-title">
+    </section></>)},
+{id:'process',content:(<><section className="craft-process" aria-labelledby="gestes-title">
       <header><p>{content.processKicker}</p><h2 id="gestes-title">{content.processTitle}</h2></header>
       <div>{gestes.map(([titre, texte], index) => <article key={titre}><h3>{content[`gesture${index+1}Title`] || titre}</h3><p>{content[`gesture${index+1}Text`] || texte}</p></article>)}</div>
-    </section>
-
-    <section className="craft-made">
+    </section></>)},
+{id:'workshop',content:(<><section className="craft-made">
       <p>{content.workshopKicker}</p><div><h2>{content.workshopTitle}</h2><p>{content.workshopText}</p><a href="/#nous-trouver">Venir nous rencontrer</a></div>
-    </section>
+    </section></>)}
+]}/>
     <SiteFooter />
   </main>;
 }

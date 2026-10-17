@@ -1,0 +1,4 @@
+export type VisualStyle=Partial<Record<'fontSize'|'lineHeight'|'paddingTop'|'paddingRight'|'paddingBottom'|'paddingLeft'|'marginTop'|'marginBottom'|'gap'|'borderRadius'|'maxWidth'|'minHeight'|'width'|'columns',number>>&Partial<Record<'color'|'backgroundColor'|'borderColor'|'textAlign'|'font'|'layout'|'objectFit'|'objectPosition',string>>;
+export type VisualBlock={id:string;page:string;anchor:string;position:string;kind:string;visible:boolean;title:string;body:string;image:string;alt:string;label:string;href:string;style:VisualStyle};
+export type VisualOverride={page:string;id:string;style:VisualStyle;text?:string;href?:string;image?:string;alt?:string;hidden?:boolean};
+export type VisualSettings={accent:string;surface:string;ink:string;font:string;scale:number;icons:boolean;layouts:Record<string,{id:string;visible:boolean}[]>;blocks:VisualBlock[];overrides:VisualOverride[]};
