@@ -4,7 +4,7 @@ import { defaultAppearance, validateAppearance } from '@/admin/appearance.mjs';
 export type Appearance={background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;sections:{id:string;visible:boolean}[]};
 const AppearanceContext=createContext<Appearance>(defaultAppearance);
 export function AppearanceShell({initial,children}:{initial:Appearance;children:ReactNode}){
- const [settings,setSettings]=useState(initial);
+ const [settings,setSettings]=useState(initial??defaultAppearance);
  useEffect(()=>{
   if(new URLSearchParams(window.location.search).get('apercu')!=='1'||window.parent===window)return;
   const receive=(event:MessageEvent)=>{if(event.origin!==window.location.origin||event.source!==window.parent||event.data?.type!=='apg-appearance')return;try{setSettings(validateAppearance(event.data.settings) as Appearance);}catch{/* Ignore invalid preview messages. */}};

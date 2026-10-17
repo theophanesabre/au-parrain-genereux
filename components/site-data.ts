@@ -1,3 +1,4 @@
+import { appearanceValues, defaultAppearance } from '@/admin/appearance.mjs';
 import { mergeHighlights } from '@/admin/highlights.mjs';
 import type { Highlight } from './highlights-types';
 import { cache } from 'react';
@@ -23,7 +24,6 @@ export const getHighlights=cache(async ():Promise<Highlight[]>=>{
 });
 
 export const getAppearance=cache(async()=>{
- const {appearanceValues,defaultAppearance}=await import('@/admin/appearance.mjs');
  const record=env.DB?await env.DB.prepare("SELECT body FROM site_settings WHERE id='appearance'").first<{body:string}>():null;
  return record?appearanceValues(record.body):defaultAppearance;
 });
