@@ -30,3 +30,11 @@ export const adminAccess = sqliteTable('admin_access', {
 export const imageReplacements = sqliteTable('image_replacements', {
   original: text('original').primaryKey(), imageId: text('image_id').notNull().references(() => images.id),
 });
+
+export const highlights = sqliteTable('highlights', {
+  id: text('id').primaryKey(), placement: text('placement').notNull(), kicker: text('kicker').notNull().default(''),
+  title: text('title').notNull(), description: text('description').notNull().default(''),
+  image: text('image').notNull(), alt: text('alt').notNull(), imageFit: text('image_fit').notNull().default('cover'),
+  buttonLabel: text('button_label').notNull(), href: text('href').notNull(), position: integer('position').notNull().default(0),
+  published: integer('published').notNull().default(0), version: integer('version').notNull().default(1),
+});

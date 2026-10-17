@@ -1,3 +1,4 @@
+import { defaultHighlights, isDefaultHighlight, mergeHighlights, validateHighlight } from './highlights.mjs';
 import { builtinPages } from '../data/site-content.mjs';
 import { builtinImages } from '../data/site-assets.mjs';
 import { adminPage, pageDefinition, validatePageBody } from './content.mjs';
@@ -57,12 +58,13 @@ export async function handleAdmin(request, env) {
       await db.batch([db.prepare('DELETE FROM image_replacements WHERE original=?').bind(asset.url),db.prepare('INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),actor,'RESTORE_IMAGE',asset.id,new Date().toISOString())]);
       return json({ok:true});
     }
-    const match=path.match(/^\/admin\/api\/(products|pages|images|orders|audit)(?:\/([a-z0-9-]+))?$/);
+    const match=path.match(/^\/admin\/api\/(products|pages|images|orders|audit|highlights)(?:\/([a-z0-9-]+))?$/);
     if(!match) return json({error:'Introuvable'},404);
     const [,resource,id]=match;
     if(request.method==='GET') {
       if(id) throw new HttpError(405,'Utiliser la liste');
       const result=await db.prepare(`SELECT * FROM ${resource} ORDER BY ${resource==='orders'||resource==='audit'?'created_at DESC':'id'} LIMIT 500`).all();
+      if(resource==='highlights')return json(mergeHighlights(result.results));
       if(resource==='pages') {
         const rows=result.results;
         return json([...builtinPages.map(page=>adminPage(page,rows.find(row=>row.id===page.id))),...rows.filter(row=>!pageDefinition(row.id))]);
@@ -110,7 +112,36 @@ export async function handleAdmin(request, env) {
       if(used) throw new HttpError(409,'Cette image est utilisée par un produit');
       const replacement=await db.prepare('SELECT original FROM image_replacements WHERE image_id=? LIMIT 1').bind(id).first();
       if(replacement)throw new HttpError(409,'Cette image est actuellement utilisée sur le site ; restaurez ou remplacez-la avant suppression');
+      const highlight=await db.prepare('SELECT id FROM highlights WHERE image=? LIMIT 1').bind(`/media/${id}`).first();
+      if(highlight)throw new HttpError(409,'Cette image est utilisée par une mise à la une ou une nouveauté');
       await db.batch([db.prepare('DELETE FROM images WHERE id=?').bind(id),log()]); await env.BUCKET.delete(id); return json({ok:true});
+    }
+    if(resource==='highlights') {
+      if(request.method==='DELETE'){
+        if(!id)throw new HttpError(405,'Choisissez une nouveauté');const data=await body(request),version=integer(data.version);
+        if(isDefaultHighlight(id)){
+          if(version===0){
+            const item=defaultHighlights.find(item=>item.id===id),fields=['id','placement','kicker','title','description','image','alt','image_fit','button_label','href','position'];
+            await db.batch([db.prepare(`INSERT INTO highlights (${fields.join(',')},published) VALUES (${fields.map(()=>'?').join(',')},0)`).bind(...fields.map(field=>item[field])),log()]);
+          }else{
+            const result=await db.batch([db.prepare('UPDATE highlights SET published=0,version=version+1 WHERE id=? AND version=?').bind(id,version),log()]);
+            if(!result[0].meta.changes)throw new HttpError(409,'Contenu modifié ailleurs : rechargez');
+          }
+        }else{
+          const result=await db.batch([db.prepare('DELETE FROM highlights WHERE id=? AND version=?').bind(id,version),log()]);
+          if(!result[0].meta.changes)throw new HttpError(409,'Contenu modifié ailleurs : rechargez');
+        }
+        return json({ok:true});
+      }
+      if((request.method==='PUT')!==Boolean(id))throw new HttpError(405,'Méthode refusée');
+      const data=await body(request),item=validateHighlight(data),key=id||(data.id?slug(data.id):crypto.randomUUID());
+      if(!id && isDefaultHighlight(key))throw new HttpError(409,'Modifiez le contenu existant');
+      const fields=Object.keys(item),firstSave=id && isDefaultHighlight(id) && data.version===0,updating=id&&!firstSave;
+      const sql=updating?`UPDATE highlights SET ${fields.map(field=>field+'=?').join(',')},version=version+1 WHERE id=? AND version=?`:`INSERT INTO highlights (${fields.join(',')},id) VALUES (${fields.map(()=>'?').join(',')},?)`;
+      const values=updating?[...Object.values(item),key,integer(data.version)]:[...Object.values(item),key];
+      const result=await db.batch([db.prepare(sql).bind(...values),log()]);
+      if(updating&&!result[0].meta.changes)throw new HttpError(409,'Contenu modifié ailleurs : rechargez');
+      return json({id:key},id?200:201);
     }
     if(request.method==='DELETE') {
       if(!id || !['products','pages'].includes(resource)) throw new HttpError(405,'Suppression refusée');

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./gallery.css";
 import "./multipage.css";
+import "./highlights.css";
 
 export const metadata: Metadata = {
   title: "Au Parrain Généreux | Chocolaterie artisanale au Havre",

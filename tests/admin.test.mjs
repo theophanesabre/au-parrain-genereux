@@ -195,7 +195,7 @@ test('admin interface exposes edit controls for the four existing pages and repl
   showModal(){this.open=true;}
   close(){this.open=false;}
  }
- const env=bindings();const tabs=['products','recipes','pages','images','orders','audit'].map(tab=>{const b=new Element('button');b.dataset.tab=tab;return b;});
+ const env=bindings();const tabs=['products','recipes','highlights','pages','images','orders','audit'].map(tab=>{const b=new Element('button');b.dataset.tab=tab;return b;});
  const nodes=new Map(['title','help','stats','add','reload','search','message','list','dialog','form','form-title','fields','form-error','save','close'].map(id=>['#'+id,new Element(id)]));
  const document={createElement:tag=>new Element(tag),querySelector:selector=>selector==='[data-tab]'?tabs[0]:nodes.get(selector),querySelectorAll:()=>tabs};
  const context=createContext({document,FormData,confirm:()=>false,fetch:async(path,options={})=>handleAdmin(req(path,{...options,headers:{...options.headers,'oai-authenticated-user-id':'owner',...(options.method&&options.method!=='GET'?{origin}:{})}}),env)});
@@ -208,5 +208,61 @@ test('admin interface exposes edit controls for the four existing pages and repl
  assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='content_heroTitle'&&input.value.includes('Le chocolat artisanal'))));
  tabs.find(b=>b.dataset.tab==='images').onclick();await settle();cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,21);
  assert.ok(cards[0].children.some(node=>node.tag==='button'&&node.textContent==='Remplacer'));
+ tabs.find(b=>b.dataset.tab==='highlights').onclick();await settle();cards=nodes.get('#list').children.filter(n=>n.tag==='article');assert.equal(cards.length,5);
+ await cards[0].children.find(node=>node.tag==='button'&&node.textContent==='Modifier').onclick();
+ assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='placement'&&input.tag==='select')));
+ assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='image'&&input.tag==='select'&&input.children.length>20)));
  env.sqlite.close();
+});
+
+test('highlights can be ordered, published and hidden permanently without modifying source defaults',async()=>{
+ const {mergeHighlights,defaultHighlights}=await import('../admin/highlights.mjs');const env=bindings();
+ const initial=await (await call(env,'highlights')).json();assert.equal(initial.length,5);assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM highlights').get().n,0);
+ const hero=initial.find(item=>item.placement==='hero');
+ assert.equal((await call(env,'highlights/'+hero.id,'DELETE',{version:0})).status,200);
+ let all=await (await call(env,'highlights')).json();assert.equal(all.find(item=>item.id===hero.id).published,0);
+ let publicRows=mergeHighlights(env.sqlite.prepare('SELECT * FROM highlights').all()).filter(item=>item.published===1);
+ assert.ok(!publicRows.some(item=>item.id===hero.id));assert.equal(defaultHighlights.find(item=>item.id===hero.id).published,1);
+ const data={placement:'news',kicker:'La maison',title:'Notre collection',description:'Une découverte',image:'/images/bonbons-ia-basse-def/1.png',alt:'Chocolat',image_fit:'contain',button_label:'Découvrir',href:'/bonbons#bonbon-1',position:0,published:false};
+ const created=await call(env,'highlights','POST',data);assert.equal(created.status,201);const {id}=await created.json();
+ publicRows=mergeHighlights(env.sqlite.prepare('SELECT * FROM highlights').all()).filter(item=>item.published===1);assert.ok(!publicRows.some(item=>item.id===id));
+ assert.equal((await call(env,'highlights/'+id,'PUT',{...data,published:true,version:1})).status,200);
+ assert.equal((await call(env,'highlights/'+id,'PUT',{...data,version:1})).status,409);
+ publicRows=mergeHighlights(env.sqlite.prepare('SELECT * FROM highlights').all()).filter(item=>item.published===1&&item.placement==='news');assert.equal(publicRows[0].id,id);
+ assert.equal((await call(env,'highlights/'+id,'DELETE',{version:2})).status,200);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM highlights WHERE id=?').get(id).n,0);env.sqlite.close();
+});
+
+test('highlights reject unsafe links, invalid fields and unauthorized modifications',async()=>{
+ const env=bindings();const item={placement:'hero',kicker:'',title:'La maison',description:'',image:'/images/bonbons-ia-basse-def/1.png',alt:'Chocolat',image_fit:'cover',button_label:'Découvrir',href:'/maison',position:1,published:true};
+ for(const href of ['https://evil.example','//evil.example','javascript:alert(1)','/\\evil.example','/admin','/signin-with-chatgpt','/callback','/bonbons\n'])assert.equal((await call(env,'highlights','POST',{...item,href})).status,400,href);
+ for(const patch of [{placement:'unknown'},{image:'https://evil.example/a.png'},{image_fit:'unknown'},{position:-1},{position:1.5},{title:''},{alt:''},{published:'true'}])assert.equal((await call(env,'highlights','POST',{...item,...patch})).status,400);
+ assert.equal((await handleAdmin(req('/admin/api/highlights',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(item)}),env)).status,401);
+ assert.equal((await handleAdmin(req('/admin/api/highlights',{method:'POST',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.example','content-type':'application/json'},body:JSON.stringify(item)}),env)).status,403);env.sqlite.close();
+});
+
+test('uploaded images referenced by highlights are protected from deletion',async()=>{
+ const env=bindings(),form=new FormData();form.set('alt','Chocolat');form.set('file',new File([new Uint8Array([137,80,78,71,13,10,26,10])],'chocolat.png',{type:'image/png'}));
+ const uploaded=await (await handleAdmin(req('/admin/api/images',{method:'POST',headers:{'oai-authenticated-user-id':'owner',origin},body:form}),env)).json();
+ const highlight=await (await call(env,'highlights','POST',{placement:'hero',kicker:'',title:'La maison',description:'',image:uploaded.url,alt:'Chocolat',image_fit:'cover',button_label:'Découvrir',href:'/bonbons',position:1,published:false})).json();
+ assert.equal((await call(env,'images/'+uploaded.id,'DELETE')).status,409);
+ assert.equal((await call(env,'highlights/'+highlight.id,'DELETE',{version:1})).status,200);
+ assert.equal((await call(env,'images/'+uploaded.id,'DELETE')).status,200);env.sqlite.close();
+});
+
+test('carousel server rendering keeps accessible controls, inert hidden slides and a usable card rail',async()=>{
+ const ts=await import('typescript');const {createElement}=await import('react');const {renderToStaticMarkup}=await import('react-dom/server');const {defaultHighlights}=await import('../admin/highlights.mjs');
+ const input=readFileSync(new URL('../components/home-highlights.tsx',import.meta.url),'utf8');
+ let code=ts.transpileModule(input,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ code=code.replace(/from (['"])(react(?:\/jsx-runtime)?)\1/g,(_,quote,name)=>'from '+JSON.stringify(import.meta.resolve(name)));
+ const imageModule='data:text/javascript;base64,'+Buffer.from('import {createElement} from '+JSON.stringify(import.meta.resolve('react'))+';export default function Image({src,alt}){return createElement("img",{src,alt,loading:"lazy"});}').toString('base64');
+ code=code.replace(/from (['"])next\/image\1/g,'from '+JSON.stringify(imageModule));
+ const {SpotlightCarousel,NewsRail}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+ const heroes=defaultHighlights.filter(item=>item.placement==='hero');const hero=renderToStaticMarkup(createElement(SpotlightCarousel,{items:heroes}));
+ assert.match(hero,/aria-roledescription="carrousel"/);assert.match(hero,/Diapositive suivante/);assert.match(hero,/hidden=""/);assert.match(hero,/inert=""/);assert.match(hero,/aria-current="true"/);
+ const single=renderToStaticMarkup(createElement(SpotlightCarousel,{items:heroes.slice(0,1)}));assert.doesNotMatch(single,/Diapositive suivante/);
+ assert.equal(renderToStaticMarkup(createElement(SpotlightCarousel,{items:[]})),'');
+ const rail=renderToStaticMarkup(createElement(NewsRail,{items:defaultHighlights.filter(item=>item.placement==='news'),title:'Nouveautés',intro:'Les recettes de la maison',kicker:'À découvrir'}));
+ assert.match(rail,/apg-news__rail/);assert.match(rail,/\/bonbons#bonbon-1/);assert.match(rail,/Faire défiler les nouveautés vers la droite/);
+ const escaped=renderToStaticMarkup(createElement(SpotlightCarousel,{items:[{...heroes[0],title:'<script>alert(1)</script>'}]}));assert.ok(!escaped.includes('<script>'));assert.match(escaped,/&lt;script&gt;/);
 });

@@ -35,14 +35,14 @@ export default async function Bonbons() {
   const [commonProduct] = env.DB ? await getDb().select().from(products).where(eq(products.id, BONBON_ID)).limit(1) : [];
   const pricePerKg = ((commonProduct?.priceCents ?? BONBON_PRICE_CENTS_PER_KG) / 100).toLocaleString("fr-FR", {maximumFractionDigits:2});
   const recipes = stored?.filter(product => isRecipe(product.id));
-  const collection = recipes && (recipes.length > 0 || initialized) ? recipes : bonbons.map((name, index) => ({id: String(index), name, description: descriptions[index], image: `/images/bonbons-ia-basse-def/${index + 1}.png`}));
+  const collection = recipes && (recipes.length > 0 || initialized) ? recipes : bonbons.map((name, index) => ({id: `bonbon-${index + 1}`, name, description: descriptions[index], image: `/images/bonbons-ia-basse-def/${index + 1}.png`}));
   return <main className="inner-page">
     <SiteHeader />
     <PageIntro index="04" kicker={content.kicker} title={content.title}>
       <p>Nos bonbons de chocolat sont tous proposés au même tarif : <strong>{pricePerKg} € le kilo</strong>. {content.intro} <a className="inline-text-link" href="/#nous-trouver">Consulter nos informations pratiques</a>.</p>
     </PageIntro>
     <section className="bonbon-grid standalone bonbon-collection">
-      {collection.map((product) => <figure key={product.id}>
+      {collection.map((product) => <figure key={product.id} id={product.id}>
         <div className="bonbon-card__visual">
           <Image src={imageSources[product.image] || product.image || imageSources["/logo-au-parrain-genereux.png"] || "/logo-au-parrain-genereux.png"} alt={imageAlts[product.image] || `${product.name}, bonbon de chocolat maison`} width={768} height={768} quality={84} sizes="(max-width: 620px) 90vw, (max-width: 980px) 45vw, 30vw" />
         </div>
