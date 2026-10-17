@@ -41,6 +41,7 @@ export default async function Bonbons() {
     <PageIntro index="04" kicker={content.kicker} title={content.title}>
       <p>Nos bonbons de chocolat sont tous proposés au même tarif : <strong>{pricePerKg} € le kilo</strong>. {content.intro} <a className="inline-text-link" href="/#nous-trouver">Consulter nos informations pratiques</a>.</p>
     </PageIntro>
+    <div className="apg-discovery-shop"><p>Envie de déguster nos recettes ? Retrouvez notre assortiment de bonbons, vendu au poids.</p><a className="apg-shop-primary" href="/boutique">Composer mon assortiment</a></div>
     <section className="bonbon-grid standalone bonbon-collection">
       {collection.map((product) => <figure key={product.id} id={product.id}>
         <div className="bonbon-card__visual">
