@@ -1,4 +1,5 @@
 export const builtinImages = [
+  {"id": "asset-calendrier-avent-miniature", "alt": "Le Conte de l’Avent fermé avec trois petites boîtes intérieures numérotées à côté", "url": "/images/calendrier-conte-avent-miniature.png", "static": true},
   {"id": "asset-calendrier-avent", "alt": "Le Conte de l’Avent du Parrain Généreux, calendrier et ses 24 cases de chocolats", "url": "/images/calendrier-conte-avent.png", "static": true},
   {
     "id": "asset-logo",
