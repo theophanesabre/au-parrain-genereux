@@ -285,3 +285,15 @@ test('appearance is protected, versioned, validates layout and restores defaults
  const html=await (await handleAdmin(req('/admin/apparence',{headers:{'oai-authenticated-user-id':'owner'}}),env)).text();assert.match(html,/Sections de l’accueil/);assert.match(html,/Aperçu de la mise en page/);
  env.sqlite.close();
 });
+
+test('appearance rendering falls back safely and applies section order, visibility and button destinations',async()=>{
+ const ts=await import('typescript');const {createElement}=await import('react');const {renderToStaticMarkup}=await import('react-dom/server');const {defaultAppearance}=await import('../admin/appearance.mjs');
+ let code=ts.transpileModule(readFileSync(new URL('../components/appearance.tsx',import.meta.url),'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;
+ for(const name of ['react/jsx-runtime','react'])code=code.replaceAll(`from "${name}"`,`from ${JSON.stringify(import.meta.resolve(name))}`).replaceAll(`from '${name}'`,`from ${JSON.stringify(import.meta.resolve(name))}`);
+ code=code.replaceAll("'@/admin/appearance.mjs'",JSON.stringify(new URL('../admin/appearance.mjs',import.meta.url).href));
+ const {AppearanceShell,HomeSections,HomeButton}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+ assert.match(renderToStaticMarkup(createElement(AppearanceShell,{initial:undefined},'Contenu')),/data-background="cream"/);
+ const settings={...defaultAppearance,background:'white',collectionLabel:'Acheter',collectionHref:'/boutique',sections:[...defaultAppearance.sections].reverse().map(section=>({...section,visible:section.id!=='news'}))};
+ const html=renderToStaticMarkup(createElement(AppearanceShell,{initial:settings},createElement(HomeSections,{sections:defaultAppearance.sections.map(section=>({id:section.id,content:section.id}))}),createElement(HomeButton,{kind:'collection'})));
+ assert.match(html,/data-background="white"/);assert.ok(html.indexOf('data-home-section="collection"')<html.indexOf('data-home-section="spotlight"'));assert.doesNotMatch(html,/data-home-section="news"/);assert.match(html,/href="\/boutique">Acheter/);
+});
