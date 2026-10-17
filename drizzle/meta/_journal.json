@@ -113,6 +113,13 @@
       "when": 1792268845753,
       "tag": "0015_calendar_product_thumbnail",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1792273913470,
+      "tag": "0016_boite_decouverte",
+      "breakpoints": true
     }
   ]
 }
