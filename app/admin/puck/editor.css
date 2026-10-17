@@ -1,0 +1,10 @@
+.apg-puck-editor{font-family:Arial,Helvetica,sans-serif;color:#30271f;background:#f7f4ed;min-height:100dvh;--puck-color-azure-04:#FF6A00;--puck-color-azure-03:#c64e00}
+.apg-puck-toolbar{display:flex;align-items:center;gap:14px;min-height:86px;padding:10px 18px;flex-wrap:wrap;background:#fffaf3;border-bottom:1px solid #dfd3c4;font-size:14px}
+.apg-puck-toolbar>a:first-child img{width:64px;height:56px;object-fit:contain}
+.apg-puck-toolbar label{display:flex;align-items:center;gap:8px}.apg-puck-toolbar select{max-width:200px;padding:9px;border:1px solid #c8b9aa;border-radius:6px;background:white}
+.apg-puck-toolbar a{color:inherit;text-decoration:underline}.apg-puck-toolbar details{position:relative}.apg-puck-toolbar details[open]{z-index:50}.apg-puck-toolbar details button{display:block;margin:8px 0;padding:8px;background:#fff;border:1px solid #c8b9aa;border-radius:5px}
+.apg-puck-status{font-size:12px;flex:1;min-width:220px;color:#68594c}.apg-puck-error{padding:14px;background:#fff0ec;border:1px solid #c64027}.apg-puck-error button{margin-left:12px;text-decoration:underline}.apg-puck-loading{padding:48px}
+.apg-puck-actions{display:flex;gap:8px}.apg-puck-actions button{padding:10px 12px;background:white;border:1px solid #aa9480;border-radius:6px;color:#30271f;font-size:13px;font-weight:600;cursor:pointer}.apg-puck-actions .apg-puck-publish{background:#FF6A00;border-color:#d75b00;color:#24170d}.apg-puck-editor button:disabled{opacity:.55;cursor:wait}
+.puck-color-field{display:flex;gap:6px;align-items:center}.puck-color-field input[type=color]{width:38px;height:34px;padding:0;border:0;background:none}.puck-color-field input:not([type=color]){min-width:0;width:100%;border:1px solid #ccc;border-radius:4px;padding:7px}
+.puck-image-field{display:grid;gap:8px}.puck-image-field select,.puck-image-field input{max-width:100%;width:100%;font-size:12px}.puck-image-field label{display:grid;gap:6px;font-size:12px}
+@media(max-width:600px){.apg-puck-toolbar{gap:10px;padding:8px 12px}.apg-puck-toolbar>a:first-child img{width:46px;height:42px}.apg-puck-status{flex-basis:100%}.apg-puck-actions{gap:4px}.apg-puck-actions button{padding:8px;font-size:11px}}

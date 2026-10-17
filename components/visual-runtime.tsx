@@ -13,7 +13,7 @@ function keyFor(node:Element,root:Element){
 export function VisualRuntime({settings,page}:{settings:VisualSettings;page:string}){
  const selected=useRef<string|null>(null);
  useEffect(()=>{
-  const root=document.querySelector('.apg-site');if(!root||!settings)return;
+  const root=document.querySelector('.apg-site');if(!root||!settings||root.querySelector('[data-puck-page]'))return;
   const editing=new URLSearchParams(location.search).get('edition')==='1'&&window.parent!==window;if(!editing&&!settings.overrides.some(item=>item.page===page))return;
   const originals=new Map<HTMLElement,{style:string|null;hidden:boolean;text?:string;textTarget?:HTMLElement;src?:string|null;srcset?:string|null;href?:string|null;alt?:string|null}>();
   const nodes=new Map<string,HTMLElement>();let frame=0;

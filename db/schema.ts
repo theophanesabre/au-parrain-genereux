@@ -42,3 +42,8 @@ export const highlights = sqliteTable('highlights', {
 export const siteSettings = sqliteTable('site_settings', {
   id: text('id').primaryKey(), body: text('body').notNull(), version: integer('version').notNull().default(1),
 });
+
+export const puckPages = sqliteTable('puck_pages', {
+  path: text('path').primaryKey(), published: text('published'), draft: text('draft'),
+  version: integer('version').notNull().default(1),
+});

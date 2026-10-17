@@ -1,3 +1,4 @@
+import { publishedPuckPage } from "@/components/puck/published";
 import { PageSections } from "@/components/appearance";
 import { getPageContent, getImageSources, getImageDescriptions } from "@/components/site-data";
 import { getManagedPage, ManagedPage } from "@/components/managed-page";
@@ -6,6 +7,8 @@ import { PageIntro, SiteFooter, SiteHeader } from "@/components/site-chrome";
 
 export const dynamic = "force-dynamic";
 export default async function Maison() {
+  const puck=await publishedPuckPage("/maison");if(puck)return puck;
+
   const [managed,content,imageSources,imageAlts] = await Promise.all([getManagedPage("maison"),getPageContent("maison"),getImageSources(),getImageDescriptions()]);
   if (managed) return <ManagedPage page={managed}/>;
   return <main className="inner-page maison-page">
