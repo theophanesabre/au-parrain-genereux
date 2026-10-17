@@ -20,10 +20,14 @@ export function CartProvider({children}:{children:ReactNode}){
 }
 export function useCart(){const value=useContext(CartContext);if(!value)throw new Error('Panier absent');return value;}
 export function CartLink(){const {items,ready}=useCart();return <a className="apg-cart-link" href="/panier" aria-label={`Panier${ready?`, ${items.length} article${items.length>1?'s':''}`:''}`}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span>Panier</span>{ready&&items.length>0?<b>{items.length}</b>:null}</a>;}
-export function PurchaseCard({product,preview=false}:{product:SaleProduct;preview?:boolean}){
+export function PurchaseCard({product,preview=false,compact=false}:{product:SaleProduct;preview?:boolean;compact?:boolean}){
   const {add,items,ready}=useCart();const [quantity,setQuantity]=useState(1),[message,setMessage]=useState('');
   const inCart=items.find(item=>item.id===product.id)?.quantity||0;
   const valid=Number.isSafeInteger(quantity)&&quantity>0&&quantity<=MAX_QUANTITY&&quantity+inCart<=product.stock;
+  if(compact)return <article id={product.id} className="apg-purchase apg-product-square" data-ve-commerce="true">
+    <img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/>
+    <div><h2>{product.name}</h2><button type="button" className="apg-shop-primary apg-product-add" aria-label={`Ajouter ${product.name} au panier — ${money(product.price_cents)}`} disabled={preview||!ready||product.stock<=0||inCart>=product.stock||inCart>=MAX_QUANTITY} onClick={()=>{if(preview||!ready||inCart>=product.stock||inCart>=MAX_QUANTITY)return;add(product.id,1);setMessage('Ajouté au panier.');}}><span>{product.stock<=0?'Épuisé':inCart>=product.stock?'Stock atteint':'Ajouter'}</span><span>{money(product.price_cents)}</span></button><p className="apg-product-status" role="status">{message}</p><details className="apg-product-description"><summary>Détails</summary><p>{product.description}</p></details></div>
+  </article>;
   return <article className="apg-purchase" data-ve-commerce="true">
     <img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/>
     <div><p className="apg-shop-kicker">La collection</p><h2>{product.name}</h2><p>{product.description}</p><p className="apg-shop-price">{money(product.price_cents)} <small>/ pièce</small></p>

@@ -99,6 +99,13 @@
       "when": 1792266895837,
       "tag": "0013_calendar_product",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1792267807688,
+      "tag": "0014_square_product_cards",
+      "breakpoints": true
     }
   ]
 }
