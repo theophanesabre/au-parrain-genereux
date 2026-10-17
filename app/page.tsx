@@ -1,4 +1,4 @@
-import { HomeSections, HomeButton } from "@/components/appearance";
+import { HomeSections, HomeButton, PageButtons } from "@/components/appearance";
 import { CartLink } from "@/components/cart";
 import { SpotlightCarousel, NewsRail } from "@/components/home-highlights";
 import { getPageContent, getImageSources, getImageDescriptions, getHighlights } from "@/components/site-data";
@@ -39,6 +39,7 @@ export default async function Home() {
       </details>
     </header>
 
+    <PageButtons location="page-top"/>
     <HomeSections sections={[
 {id:'spotlight',content:(<><SpotlightCarousel items={slides.filter(item=>item.placement==='hero')} label={content.spotlightLabel}/></>)},
 {id:'news',content:(<><NewsRail items={slides.filter(item=>item.placement==='news')} title={content.newsTitle} kicker={content.newsKicker} intro={content.newsIntro}/></>)},

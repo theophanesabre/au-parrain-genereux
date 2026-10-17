@@ -1,7 +1,9 @@
 'use client';
+import { usePathname } from 'next/navigation';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { defaultAppearance, validateAppearance } from '@/admin/appearance.mjs';
-export type Appearance={background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;sections:{id:string;visible:boolean}[]};
+export type CustomButton={id:string;label:string;href:string;page:string;location:string;position:string;align:string;style:string;size:string;visible:boolean};
+export type Appearance={background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];sections:{id:string;visible:boolean}[]};
 const AppearanceContext=createContext<Appearance>(defaultAppearance);
 export function AppearanceShell({initial,children}:{initial:Appearance;children:ReactNode}){
  const [settings,setSettings]=useState(initial??defaultAppearance);
@@ -17,7 +19,15 @@ export function AppearanceShell({initial,children}:{initial:Appearance;children:
 }
 export function HomeSections({sections}:{sections:{id:string;content:ReactNode}[]}){
  const settings=useContext(AppearanceContext);
- return <>{settings.sections.filter(section=>section.visible).map(section=><div className="apg-home-section" key={section.id} data-home-section={section.id}>{sections.find(item=>item.id===section.id)?.content}</div>)}</>;
+ return <>{settings.sections.filter(section=>section.visible).map(section=><div className="apg-home-section" key={section.id} data-home-section={section.id}><AppearanceButtons page="/" location={section.id} position="before"/>{sections.find(item=>item.id===section.id)?.content}<AppearanceButtons page="/" location={section.id} position="after"/></div>)}</>;
 }
 
 export function HomeButton({kind}:{kind:'history'|'collection'}){const settings=useContext(AppearanceContext);return <a href={kind==='history'?settings.historyHref:settings.collectionHref}>{kind==='history'?settings.historyLabel:settings.collectionLabel}</a>;}
+
+export function AppearanceButtons({page,location,position='after'}:{page:string;location:string;position?:string}){
+ const settings=useContext(AppearanceContext);
+ const buttons=(settings.customButtons||[]).filter(button=>button.visible&&button.page===page&&button.location===location&&(location.startsWith('page-')||button.position===position));
+ if(!buttons.length)return null;
+ return <div className="apg-custom-buttons" aria-label="Liens proposés par la maison">{buttons.map(button=><div key={button.id} className="apg-custom-buttons__row" data-align={button.align}><a className="apg-custom-button" data-style={button.style} data-size={button.size} href={button.href}>{button.label}<span aria-hidden="true"> ↗</span></a></div>)}</div>;
+}
+export function PageButtons({location}:{location:'page-top'|'page-bottom'}){const path=usePathname();return <AppearanceButtons page={path||'/'} location={location}/>;}

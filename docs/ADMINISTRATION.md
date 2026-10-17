@@ -109,3 +109,11 @@ L’aperçu ordinateur/téléphone reçoit les réglages uniquement dans son ifr
 La migration `0005_pretty_thena.sql` ajoute `site_settings`. Les écritures de l’API `/admin/api/appearance` sont authentifiées, vérifient l’origine et la version et sont consignées dans l’historique. Les valeurs sont limitées aux options prévues et les destinations aux pages publiques internes. Aucun HTML, JavaScript ou CSS arbitraire n’est accepté. L’aperçu utilise les réglages uniquement dans la page affichée : il ne modifie pas les stocks, produits ou commandes.
 
 Vérification : les tests couvrent l’autorisation, l’origine, les valeurs invalides, les conflits de version et la restauration. L’aperçu et les déplacements n’ont pas pu être essayés visuellement dans un navigateur.
+
+## Boutons personnalisés
+
+Dans **Apparence → Ajouter vos boutons**, créer jusqu’à 30 boutons. Chaque bouton possède un texte, une destination publique interne, une page, un emplacement, un alignement, une taille, un style (plein orange, contour ou lien texte) et une visibilité. Les flèches règlent l’ordre des boutons à un même emplacement ; la suppression reste dans l’aperçu jusqu’à l’enregistrement.
+
+Sur les six pages principales (Accueil, Chocolats, Boutique, Maison, Savoir-faire et Panier), placer un bouton après l’en-tête ou avant le pied de page. L’accueil permet aussi de choisir avant/après chacune de ses six sections. Un bouton lié à une section masquée est masqué avec elle. Les pages libres personnalisées n’ont pas encore d’emplacements configurables.
+
+L’aperçu reflète les changements sans les publier. Cliquer sur **Enregistrer sur le site** applique les réglages. Les boutons historiques Histoire/Collection et ceux de Nouveautés restent éditables à leurs emplacements habituels. Les couleurs orange et les protections de l’API sont conservées. Les réglages existants sans boutons personnalisés restent compatibles ; aucune migration supplémentaire ni bouton automatique n’est ajouté.

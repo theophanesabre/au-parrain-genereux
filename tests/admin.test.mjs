@@ -291,9 +291,24 @@ test('appearance rendering falls back safely and applies section order, visibili
  let code=ts.transpileModule(readFileSync(new URL('../components/appearance.tsx',import.meta.url),'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;
  for(const name of ['react/jsx-runtime','react'])code=code.replaceAll(`from "${name}"`,`from ${JSON.stringify(import.meta.resolve(name))}`).replaceAll(`from '${name}'`,`from ${JSON.stringify(import.meta.resolve(name))}`);
  code=code.replaceAll("'@/admin/appearance.mjs'",JSON.stringify(new URL('../admin/appearance.mjs',import.meta.url).href));
- const {AppearanceShell,HomeSections,HomeButton}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+ code=code.replace("import { usePathname } from 'next/navigation';","const usePathname=()=>'/';");
+ const {AppearanceShell,HomeSections,HomeButton,PageButtons}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  assert.match(renderToStaticMarkup(createElement(AppearanceShell,{initial:undefined},'Contenu')),/data-background="cream"/);
- const settings={...defaultAppearance,background:'white',collectionLabel:'Acheter',collectionHref:'/boutique',sections:[...defaultAppearance.sections].reverse().map(section=>({...section,visible:section.id!=='news'}))};
- const html=renderToStaticMarkup(createElement(AppearanceShell,{initial:settings},createElement(HomeSections,{sections:defaultAppearance.sections.map(section=>({id:section.id,content:section.id}))}),createElement(HomeButton,{kind:'collection'})));
- assert.match(html,/data-background="white"/);assert.ok(html.indexOf('data-home-section="collection"')<html.indexOf('data-home-section="spotlight"'));assert.doesNotMatch(html,/data-home-section="news"/);assert.match(html,/href="\/boutique">Acheter/);
+ const custom={id:'custom-one',label:'Choisir mes chocolats',href:'/boutique',page:'/',location:'history',position:'before',align:'right',style:'outline',size:'large',visible:true};
+ const settings={...defaultAppearance,customButtons:[custom,{...custom,id:'custom-two',label:'Ne pas afficher',location:'news'},{...custom,id:'custom-three',label:'Bouton masqué',visible:false},{...custom,id:'custom-four',label:'En haut',location:'page-top'}],background:'white',collectionLabel:'Acheter',collectionHref:'/boutique',sections:[...defaultAppearance.sections].reverse().map(section=>({...section,visible:section.id!=='news'}))};
+ const html=renderToStaticMarkup(createElement(AppearanceShell,{initial:settings},createElement(HomeSections,{sections:defaultAppearance.sections.map(section=>({id:section.id,content:section.id}))}),createElement(HomeButton,{kind:'collection'}),createElement(PageButtons,{location:'page-top'})));
+ assert.match(html,/data-background="white"/);assert.ok(html.indexOf('data-home-section="collection"')<html.indexOf('data-home-section="spotlight"'));assert.doesNotMatch(html,/data-home-section="news"/);assert.match(html,/href="\/boutique">Acheter/);assert.ok(html.indexOf('Choisir mes chocolats')<html.indexOf('>history<'));assert.match(html,/data-align="right"/);assert.match(html,/data-style="outline"/);assert.match(html,/En haut/);assert.doesNotMatch(html,/Ne pas afficher|Bouton masqué/);
+});
+
+
+test('custom buttons persist with placement and reject unsafe links, invalid pages, duplicates and excessive counts',async()=>{
+ const {defaultAppearance,validateAppearance}=await import('../admin/appearance.mjs');const env=bindings();
+ const button={id:'button-1',label:'Voir les articles',href:'/boutique',page:'/',location:'collection',position:'after',align:'center',style:'filled',size:'regular',visible:true};
+ const settings={...defaultAppearance,customButtons:[button]};
+ assert.equal((await call(env,'appearance','PUT',{settings,version:0})).status,200);
+ assert.deepEqual((await (await call(env,'appearance')).json()).settings.customButtons,[button]);
+ for(const change of [{href:'javascript:alert(1)'},{href:'//evil.example'},{href:'/admin'},{page:'/admin'},{page:'/boutique',location:'collection'},{align:'position:absolute'},{style:'<script>'},{visible:'true'}])assert.equal((await call(env,'appearance','PUT',{settings:{...settings,customButtons:[{...button,...change}]},version:1})).status,400);
+ assert.throws(()=>validateAppearance({...settings,customButtons:[button,button]}));assert.throws(()=>validateAppearance({...settings,customButtons:Array.from({length:31},(_,i)=>({...button,id:'b-'+i}))}));
+ const old={...defaultAppearance};delete old.customButtons;assert.deepEqual(validateAppearance(old).customButtons,[]);
+ assert.equal((await call(env,'appearance','PUT',{settings:{...settings,customButtons:[]},version:1})).status,200);assert.deepEqual((await (await call(env,'appearance')).json()).settings.customButtons,[]);env.sqlite.close();
 });
