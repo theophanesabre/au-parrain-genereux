@@ -1,4 +1,5 @@
 export const builtinImages = [
+  {"id": "asset-calendrier-avent", "alt": "Le Conte de l’Avent du Parrain Généreux, calendrier et ses 24 cases de chocolats", "url": "/images/calendrier-conte-avent.jpg", "static": true},
   {
     "id": "asset-logo",
     "alt": "Enseigne de la boutique",
