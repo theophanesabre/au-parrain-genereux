@@ -59,7 +59,6 @@ export function SpotlightCarousel({items,label='À la une'}:{items:Highlight[];l
         inert={index!==current} aria-hidden={index!==current} role="group" aria-roledescription="diapositive" aria-label={`${index+1} sur ${items.length} : ${item.title}`}>
         <div className="apg-spotlight__visual" data-fit={item.image_fit}>
           <Image src={item.image} alt={item.alt} fill priority={index===0} sizes="(max-width: 760px) 100vw, 58vw" style={{objectFit:item.image_fit}}/>
-        <a className="apg-editorial-image-link" href={item.href}>{item.button_label}</a>
         </div>
         <div className="apg-spotlight__copy">
           {item.kicker?<p className="apg-spotlight__kicker">{item.kicker}</p>:null}

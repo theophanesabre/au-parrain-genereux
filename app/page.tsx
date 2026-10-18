@@ -25,7 +25,6 @@ export default async function Home() {
 
 
     <PageButtons location="page-top"/>
-    <section className="apg-editorial-intro"><h1>Au Parrain Généreux</h1><p>La plus ancienne chocolaterie du Havre depuis 1890.</p></section>
     <HomeSections sections={[
 {id:'spotlight',content:(<><SpotlightCarousel items={slides.filter(item=>item.placement==='hero')} label={content.spotlightLabel}/></>)},
 {id:'news',content:(<><NewsRail items={slides.filter(item=>item.placement==='news')} title={content.newsTitle} kicker={content.newsKicker} intro={content.newsIntro}/></>)},
@@ -35,7 +34,7 @@ export default async function Home() {
     </section></>)},
 {id:'history',content:(<><section className="heritage-intro">
       <p>{content.heroKicker}</p>
-      <h2 style={{whiteSpace:"pre-line"}}>{content.heroTitle}</h2>
+      <h1 style={{whiteSpace:"pre-line"}}>{content.heroTitle}</h1>
       <div className="heritage-intro__story">
         <figure><Image src={imageSources["/images/boutique-historique.jpeg"] || "/images/boutique-historique.jpeg"} alt={imageAlts["/images/boutique-historique.jpeg"] || "La boutique historique Au Parrain Généreux"} fill priority sizes="(max-width: 760px) 82vw, 390px" /></figure>
         <div><p>{content.historyKicker}</p><h2>{content.historyTitle}</h2><span/>

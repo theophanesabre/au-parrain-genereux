@@ -141,6 +141,13 @@
       "when": 1792277399726,
       "tag": "0019_editorial_layout",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792279380507,
+      "tag": "0020_restore_previous_layout",
+      "breakpoints": true
     }
   ]
 }
