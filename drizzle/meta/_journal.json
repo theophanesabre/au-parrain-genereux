@@ -169,6 +169,13 @@
       "when": 1792314106987,
       "tag": "0023_product_photo_crops",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1792343997511,
+      "tag": "0024_whole_product_photos",
+      "breakpoints": true
     }
   ]
 }

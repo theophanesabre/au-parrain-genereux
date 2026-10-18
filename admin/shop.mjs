@@ -1,5 +1,5 @@
 import { HttpError } from './core.mjs';
-export const defaultShop={presentation:'square',layout:'grid',columns:3,tabletColumns:2,mobileColumns:2,imageHeight:300,imageFit:'cover',gap:26,cardPadding:24,radius:0,maxWidth:1440,titleSize:28,textSize:14,align:'left',cardBackground:'#fffdf8'};
+export const defaultShop={presentation:'square',layout:'grid',columns:3,tabletColumns:2,mobileColumns:2,imageHeight:300,imageFit:'contain',gap:26,cardPadding:24,radius:0,maxWidth:1440,titleSize:28,textSize:14,align:'left',cardBackground:'#fffdf8'};
 export function validateShop(value){
  if(value!==undefined&&(!value||typeof value!=='object'||Array.isArray(value)))throw new HttpError(400,'Présentation de la boutique invalide');
  const source={...defaultShop,...value},result={...defaultShop};
