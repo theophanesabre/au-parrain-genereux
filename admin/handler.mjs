@@ -1,3 +1,4 @@
+import { mediaInfo, mediaSnapshot, mediaUsages, deleteMedia, replaceMedia } from './media.mjs';
 import { paymentConfig, safeConfig, configurePayments } from '../commerce/stripe.mjs';
 import { reconcilePayments } from '../commerce/payments.mjs';
 import { paymentsHTML } from './payments-ui.mjs';
@@ -83,6 +84,9 @@ export async function handleAdmin(request, env) {
       if(result.meta.changes!==1)throw new HttpError(409,'Les réglages ont changé dans une autre session. Rechargez la page avant de modifier à nouveau.');
       return json({settings,version:version+1});
     }
+    if(path==='/admin/api/media/usage'){if(request.method!=='GET')throw new HttpError(405,'Méthode refusée');const image=await mediaInfo(db,url.searchParams.get('id'));const snapshot=await mediaSnapshot(db),uses=[...mediaUsages(snapshot,image.url),...(image.static&&image.original!==image.url?mediaUsages(snapshot,image.original):[])];return json({...image,usages:[...new Map(uses.map(use=>[use.label+'|'+use.href,use])).values()]});}
+    if(path==='/admin/api/media/delete'){if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const data=await body(request);if(!Array.isArray(data.ids)||!data.ids.length||data.ids.length>100||data.ids.some(id=>typeof id!=='string'))throw new HttpError(400,'Sélectionnez entre 1 et 100 photos');const results=[];for(const id of new Set(data.ids)){try{results.push(await deleteMedia(env,id,actor));}catch(error){results.push({id,ok:false,error:error.status?error.message:'Suppression impossible. Réessayez.'});}}return json({results});}
+    if(path==='/admin/api/media/replace'){if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const data=await body(request);return json(await replaceMedia(env,data.id,data.replacement,actor));}
     const resetImage=path.match(/^\/admin\/api\/image-replacements\/(asset-[a-z0-9-]+)$/);
     if(resetImage){
       if(request.method!=='DELETE')throw new HttpError(405,'Méthode refusée');checkOrigin(request);
@@ -102,8 +106,8 @@ export async function handleAdmin(request, env) {
         return json([...builtinPages.map(page=>adminPage(page,rows.find(row=>row.id===page.id))),...rows.filter(row=>!pageDefinition(row.id))]);
       }
       if(resource==='images') {
-        const mappings=(await db.prepare('SELECT original,image_id FROM image_replacements').all()).results;
-        return json([...builtinImages.map(image=>{const mapping=mappings.find(row=>row.original===image.url);const upload=mapping && result.results.find(row=>row.id===mapping.image_id);return {...image,url:mapping?`/media/${mapping.image_id}`:image.url,original:image.url,replaced:Boolean(mapping),alt:upload?.alt||image.alt};}),...result.results]);
+        const mappings=(await db.prepare('SELECT original,image_id FROM image_replacements').all()).results;const hidden=new Set((await db.prepare('SELECT id FROM media_library_hidden').all()).results.map(row=>row.id));
+        return json([...builtinImages.filter(image=>!hidden.has(image.id)).map(image=>{const mapping=mappings.find(row=>row.original===image.url);const upload=mapping && result.results.find(row=>row.id===mapping.image_id);return {...image,url:mapping?`/media/${mapping.image_id}`:image.url,original:image.url,replaced:Boolean(mapping),alt:upload?.alt||image.alt};}),...result.results]);
       }
       if(resource==='products') {
         const rows=result.results;
@@ -136,17 +140,7 @@ export async function handleAdmin(request, env) {
       return json({id:key,url:`/media/${key}`},201);
     }
     if(resource==='images' && request.method==='DELETE' && id) {
-      const used=await db.prepare('SELECT id FROM products WHERE (image=? OR EXISTS(SELECT 1 FROM json_each(products.images) WHERE value=?)) LIMIT 1').bind(`/media/${id}`,`/media/${id}`).first();
-      if(used) throw new HttpError(409,'Cette image est utilisée par un produit');
-      const replacement=await db.prepare('SELECT original FROM image_replacements WHERE image_id=? LIMIT 1').bind(id).first();
-      if(replacement)throw new HttpError(409,'Cette image est actuellement utilisée sur le site ; restaurez ou remplacez-la avant suppression');
-      const highlight=await db.prepare('SELECT id FROM highlights WHERE image=? AND deleted=0 LIMIT 1').bind(`/media/${id}`).first();
-      if(highlight)throw new HttpError(409,'Cette image est utilisée par une mise à la une ou une nouveauté');
-      const appearance=await db.prepare("SELECT body FROM site_settings WHERE id='appearance'").first();
-      if(appearance){const settings=appearanceValues(appearance.body);if(settings.chrome.logo===`/media/${id}`)throw new HttpError(409,'Cette image est utilisée par le logo du site');const visual=settings.visual;if([...visual.blocks,...visual.overrides].some(item=>item.image===`/media/${id}`))throw new HttpError(409,'Cette image est utilisée dans l’éditeur visuel');}
-      const puckPages=await db.prepare('SELECT published,draft FROM puck_pages').all();
-      if(puckPages.results.some(row=>[row.published,row.draft].filter(Boolean).some(body=>puckImages(JSON.parse(body)).includes(`/media/${id}`))))throw new HttpError(409,'Cette image est utilisée dans une page ou un brouillon Puck');
-      await db.batch([db.prepare('DELETE FROM images WHERE id=?').bind(id),log()]); await env.BUCKET.delete(id); return json({ok:true});
+      const result=await deleteMedia(env,id,actor);if(!result.ok)return json({error:result.error,usages:result.usages},409);return json({ok:true});
     }
     if(resource==='highlights') {
       const data=await body(request),state=await db.prepare('SELECT version FROM highlights_state WHERE id=1').first();
