@@ -36,6 +36,7 @@ export const imageReplacements = sqliteTable('image_replacements', {
 });
 
 export const highlights = sqliteTable('highlights', {
+  deleted: integer('deleted').notNull().default(0),
   id: text('id').primaryKey(), placement: text('placement').notNull(), kicker: text('kicker').notNull().default(''),
   title: text('title').notNull(), description: text('description').notNull().default(''),
   image: text('image').notNull(), alt: text('alt').notNull(), imageFit: text('image_fit').notNull().default('cover'),
@@ -65,3 +66,5 @@ export const checkoutAttempts=sqliteTable('checkout_attempts',{
 export const stripeRefunds=sqliteTable('stripe_refunds',{
  paymentIntent:text('payment_intent').primaryKey(),createdAt:text('created_at').notNull(),
 });
+
+export const highlightsState = sqliteTable('highlights_state', {id:integer('id').primaryKey(),version:integer('version').notNull().default(0)});

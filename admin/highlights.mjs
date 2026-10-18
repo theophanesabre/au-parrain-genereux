@@ -11,7 +11,8 @@ export const isDefaultHighlight=id=>defaultHighlights.some(item=>item.id===id);
 export function mergeHighlights(rows) {
   const merged=new Map(defaultHighlights.map(item=>[item.id,{...item,builtin:true}]));
   for(const row of rows)merged.set(row.id,{...row,builtin:isDefaultHighlight(row.id)});
-  return [...merged.values()].sort((a,b)=>a.placement.localeCompare(b.placement)||a.position-b.position||a.id.localeCompare(b.id));
+  const positions={hero:0,news:0};
+  return [...merged.values()].filter(item=>!item.deleted).sort((a,b)=>a.placement.localeCompare(b.placement)||a.position-b.position||a.id.localeCompare(b.id)).map(item=>({...item,position:++positions[item.placement]}));
 }
 export function highlightHref(value) {
   if(typeof value!=='string'||value.length>500||!value.startsWith('/')||/[\\\u0000-\u0020]/.test(value))throw new HttpError(400,'Lien interne attendu, par exemple /bonbons');
@@ -26,4 +27,15 @@ export function validateHighlight(data) {
   const optional=(value,max)=>{if(typeof value!=='string'||value.length>max)throw new HttpError(400,'Texte invalide');return value.trim();};
   const image=imagePath(data.image);if(!image)throw new HttpError(400,'Choisissez une image');
   return {placement:data.placement,kicker:optional(data.kicker,100),title:text(data.title,160),description:optional(data.description,1200),image,alt:text(data.alt,300),image_fit:data.image_fit,button_label:text(data.button_label,60),href:highlightHref(data.href),position:integer(data.position,9999),published:data.published?1:0};
+}
+
+export function highlightChanges(rows,id,item=null){
+ const original=new Map(rows.map(row=>[row.id,row])),all=mergeHighlights(rows),current=all.find(row=>row.id===id);
+ const remaining=all.filter(row=>row.id!==id),groups={hero:remaining.filter(row=>row.placement==='hero'),news:remaining.filter(row=>row.placement==='news')};
+ if(item){const group=groups[item.placement];group.splice(Math.max(0,Math.min(item.position-1,group.length)),0,{...item,id});}
+ const result=[];
+ for(const [placement,group] of Object.entries(groups))group.forEach((row,index)=>result.push({...row,placement,position:index+1,deleted:0}));
+ if(!item&&current)result.push({...current,published:0,deleted:1});
+ const fields=['placement','kicker','title','description','image','alt','image_fit','button_label','href','position','published','deleted'];
+ return result.filter(row=>{const before=original.get(row.id);return !before||fields.some(field=>(before[field]??0)!==row[field]);}).map(row=>({id:row.id,...Object.fromEntries(fields.map(field=>[field,row[field]])),version:(original.get(row.id)?.version||0)+1}));
 }
