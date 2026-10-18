@@ -2,7 +2,7 @@ import { puckDefaults, puckRoot, blockStyle } from './puck-model.mjs';
 import { pageDefinition, contentValues } from './content.mjs';
 import { appearanceValues, defaultAppearance } from './appearance.mjs';
 import { mergeHighlights } from './highlights.mjs';
-import { isSale, isRecipe, productGallery } from './products.mjs';
+import { isSale, isRecipe, productGallery, productPhotoCrops } from './products.mjs';
 import { bonbons } from '../data/bonbons.ts';
 import { bonbonDescriptions } from '../data/bonbon-descriptions.mjs';
 export async function puckContext(db,path){
@@ -11,7 +11,7 @@ export async function puckContext(db,path){
   db.prepare("SELECT id,body FROM pages WHERE published=1 AND (id=? OR id='accueil')").bind(pageId).all(),
   db.prepare('SELECT r.original,r.image_id FROM image_replacements r').all(),
   db.prepare('SELECT * FROM highlights ORDER BY position LIMIT 500').all(),
-  db.prepare('SELECT id,name,description,price_cents,stock,image,images,published FROM products WHERE archived=0 AND published=1 ORDER BY name LIMIT 500').all(),
+  db.prepare('SELECT id,name,description,price_cents,stock,image,images,photo_crops,published FROM products WHERE archived=0 AND published=1 ORDER BY name LIMIT 500').all(),
   db.prepare("SELECT body FROM site_settings WHERE id='appearance'").first(),
  ]);
  const images=Object.fromEntries(replacements.results.map(item=>[item.original,'/media/'+item.image_id]));
@@ -19,7 +19,7 @@ export async function puckContext(db,path){
  const content=definition?contentValues(definition,pages.results.find(item=>item.id===pageId)?.body):{};
  const recipes=products.results.filter(item=>isRecipe(item.id)).map(item=>({...item,image:images[item.image]||item.image}));
  const initialized=await db.prepare('SELECT slot FROM admin_access WHERE slot=1').first();
- return {content,home,images,appearance:appearance?appearanceValues(appearance.body):defaultAppearance,highlights:mergeHighlights(highlights.results).filter(item=>item.published===1).map(item=>({...item,image:images[item.image]||item.image})),storefront:{products:products.results.filter(item=>isSale(item.id)&&item.price_cents>0).map(item=>({...item,image:images[item.image]||item.image,images:productGallery(item).map(src=>images[src]||src)})),recipes:recipes.length||initialized?recipes:bonbons.map((name,index)=>({id:'bonbon-'+(index+1),name,description:bonbonDescriptions[index],image:images['/images/bonbons-ia-basse-def/'+(index+1)+'.png']||'/images/bonbons-ia-basse-def/'+(index+1)+'.png'}))}};
+ return {content,home,images,appearance:appearance?appearanceValues(appearance.body):defaultAppearance,highlights:mergeHighlights(highlights.results).filter(item=>item.published===1).map(item=>({...item,image:images[item.image]||item.image})),storefront:{products:products.results.filter(item=>isSale(item.id)&&item.price_cents>0).map(item=>({...item,image:images[item.image]||item.image,images:productGallery(item).map(src=>images[src]||src),photo_crops:productPhotoCrops(item,src=>images[src]||src)})),recipes:recipes.length||initialized?recipes:bonbons.map((name,index)=>({id:'bonbon-'+(index+1),name,description:bonbonDescriptions[index],image:images['/images/bonbons-ia-basse-def/'+(index+1)+'.png']||'/images/bonbons-ia-basse-def/'+(index+1)+'.png'}))}};
 }
 export function defaultPuckData(path,context){
  const {content:c,home,images,appearance:a,highlights}=context;let counter=0;const block=(type,props={})=>({type,props:{...structuredClone(puckDefaults[type]),id:type+'-initial-'+(++counter),...props}});const img=src=>images[src]||src;

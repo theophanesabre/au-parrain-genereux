@@ -26,7 +26,7 @@ export function PurchaseCard({product,preview=false,compact=false}:{product:Sale
   const inCart=items.find(item=>item.id===product.id)?.quantity||0;
   const href='/boutique/'+encodeURIComponent(product.id);
   const photos=[product.image,...(product.images||[])].filter(Boolean);
-  const visual=<figure className="apg-product-photo"><ProductGallery images={photos} name={product.name} href={preview?undefined:href}/></figure>;
+  const visual=<figure className="apg-product-photo"><ProductGallery crops={product.photo_crops} images={photos} name={product.name} href={preview?undefined:href}/></figure>;
   const title=preview?product.name:<a href={href}>{product.name}</a>;
   const valid=Number.isSafeInteger(quantity)&&quantity>0&&quantity<=MAX_QUANTITY&&quantity+inCart<=product.stock;
   if(compact)return <article id={product.id} className="apg-purchase apg-product-square" data-ve-commerce="true">
