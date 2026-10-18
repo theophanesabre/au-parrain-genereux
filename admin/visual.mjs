@@ -4,6 +4,7 @@ export const visualPages={
  '/maison':[['intro','Présentation'],['signature','Signature de la maison']],
  '/savoir-faire':[['intro','Présentation'],['process','Les gestes'],['workshop','L’atelier']],
  '/bonbons':[['intro','Présentation'],['shop','Lien boutique'],['recipes','Recettes']],
+ '/chocolats':[['intro','Présentation'],['recipes','Recettes']],
  '/boutique':[['intro','Présentation'],['catalog','Articles']],
  '/panier':[['intro','Présentation'],['cart','Panier']],
 };
