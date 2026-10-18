@@ -4,12 +4,13 @@ export const puckPaths=['/','/maison','/savoir-faire','/bonbons','/chocolats','/
 export const blockStyle={background:'',color:'',padding:32,paddingX:28,margin:0,radius:0,maxWidth:1200,align:'left',font:'inherit',size:18,gap:24,width:100,minHeight:0,visualHeight:0,visualBackground:''};
 export const puckDefaults={
  CompositionLibre:{height:560,items:[],style:{...blockStyle,padding:0,paddingX:0}},
+ Galerie:{images:[],columns:3,mobileColumns:1,height:280,style:{...blockStyle}},
  Texte:{title:'Votre titre',body:'Votre texte de présentation.',level:'h2',style:{...blockStyle}},
  Image:{src:'/images/boutique-historique.jpeg',alt:'La maison Au Parrain Généreux',caption:'',fit:'contain',height:420,style:{...blockStyle}},
  Bouton:{label:'Découvrir',href:'/boutique',variant:'filled',style:{...blockStyle}},
  Espace:{height:48,style:{...blockStyle,padding:0}},
  Section:{children:[],style:{...blockStyle}},
- Colonnes:{columns:2,children:[],style:{...blockStyle}},
+ Colonnes:{columns:2,mobileColumns:1,children:[],style:{...blockStyle}},
  Bandeau:{source:'manual',items:[],style:{...blockStyle,padding:0,paddingX:0,maxWidth:2000}},
  Nouveautes:{source:'manual',title:'Nouveautés & découvertes',intro:'Les créations de la maison.',kicker:'À découvrir',items:[],style:{...blockStyle,padding:0,paddingX:0}},
  Liens:{title:'Découvrir la maison',items:[{label:'La boutique',text:'Nos articles maison',href:'/boutique'}],style:{...blockStyle}},
@@ -23,7 +24,7 @@ const string=(v,max=6000)=>{if(typeof v!=='string'||v.length>max)fail('Texte Puc
 const choice=(v,allowed)=>{if(!allowed.includes(v))fail('Option Puck invalide');return v;};
 const number=(v,min,max)=>{if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)fail('Dimension Puck invalide');return v;};
 const color=(v,optional=false)=>{if(optional&&v==='')return v;if(typeof v!=='string'||!/^#[a-fA-F0-9]{6}$/.test(v))fail('Couleur Puck invalide');return v;};
-function style(value){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!Object.hasOwn(blockStyle,key)))fail('Style Puck invalide');value={...blockStyle,...value};return {width:number(value.width,5,100),minHeight:number(value.minHeight,0,1600),visualHeight:number(value.visualHeight,0,1200),visualBackground:color(value.visualBackground,true),background:color(value.background,true),color:color(value.color,true),padding:number(value.padding,0,200),paddingX:number(value.paddingX,0,200),margin:number(value.margin,0,200),radius:number(value.radius,0,120),maxWidth:number(value.maxWidth,320,2400),align:choice(value.align,['left','center','right']),font:choice(value.font,['inherit','classic','modern','editorial']),size:number(value.size,10,100),gap:number(value.gap,0,120)};}
+function style(value){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!Object.hasOwn(blockStyle,key)&&key!=='mobile'))fail('Style Puck invalide');value={...blockStyle,...value};const mobile=value.mobile??{};if(!mobile||typeof mobile!=='object'||Array.isArray(mobile))fail('Réglages mobiles invalides');const mobileResult={};for(const [key,v] of Object.entries(mobile)){const ranges={width:[5,100],minHeight:[0,1600],padding:[0,200],paddingX:[0,200],margin:[0,200],gap:[0,120],radius:[0,120],size:[10,100],imageHeight:[80,1200]};if(key==='align')mobileResult[key]=choice(v,['left','center','right']);else if(['background','color'].includes(key))mobileResult[key]=color(v,true);else if(Object.hasOwn(ranges,key))mobileResult[key]=number(v,...ranges[key]);else fail('Réglage mobile inconnu');}return {...(Object.keys(mobileResult).length?{mobile:mobileResult}:{}),width:number(value.width,5,100),minHeight:number(value.minHeight,0,1600),visualHeight:number(value.visualHeight,0,1200),visualBackground:color(value.visualBackground,true),background:color(value.background,true),color:color(value.color,true),padding:number(value.padding,0,200),paddingX:number(value.paddingX,0,200),margin:number(value.margin,0,200),radius:number(value.radius,0,120),maxWidth:number(value.maxWidth,320,2400),align:choice(value.align,['left','center','right']),font:choice(value.font,['inherit','classic','modern','editorial']),size:number(value.size,10,100),gap:number(value.gap,0,120)};}
 function links(items){if(!Array.isArray(items)||items.length>30)fail('Liste de liens invalide');return items.map(item=>({label:string(item.label,100),text:item.text===undefined?'':string(item.text,1200),href:visualHref(item.href)}));}
 function slides(items){if(!Array.isArray(items)||items.length>30)fail('Liste de visuels invalide');return items.map(item=>({title:string(item.title,160),description:string(item.description,1200),kicker:string(item.kicker,100),image:imagePath(item.image),alt:string(item.alt,300),href:visualHref(item.href),button_label:string(item.button_label,80),image_fit:choice(item.image_fit,['cover','contain'])}));}
 export function validatePuckData(data){
@@ -32,6 +33,7 @@ export function validatePuckData(data){
  const ids=new Set();let total=0;
  function content(items,depth=0){if(!Array.isArray(items)||depth>8)fail('Imbrication de blocs trop importante');return items.map(item=>{if(++total>200||!item||!Object.hasOwn(puckDefaults,item.type))fail('Bloc Puck inconnu ou limite de 200 blocs atteinte');const p=item.props;if(!p||typeof p.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(p.id)||ids.has(p.id))fail('Identifiant de bloc Puck invalide');ids.add(p.id);if(Object.keys(p).some(key=>key!=='id'&&!Object.hasOwn(puckDefaults[item.type],key)))fail('Propriété de bloc non autorisée');const result={id:p.id,style:style(p.style)};
   if(item.type==='Texte'){result.title=string(p.title,300);result.body=string(p.body,12000);result.level=choice(p.level,['h1','h2','h3']);}
+  if(item.type==='Galerie'){if(!Array.isArray(p.images)||p.images.length>30)fail('30 photos maximum par galerie');result.images=p.images.map(photo=>({image:imagePath(photo.image),alt:string(photo.alt,300)}));result.columns=number(p.columns,1,4);result.mobileColumns=number(p.mobileColumns,1,2);if(!Number.isInteger(result.columns)||!Number.isInteger(result.mobileColumns))fail('Nombre de colonnes invalide');result.height=number(p.height,80,1200);}
   if(item.type==='Image'){result.src=imagePath(p.src);result.alt=string(p.alt,300);result.caption=string(p.caption,2000);result.fit=choice(p.fit,['cover','contain']);result.height=number(p.height,80,1200);}
   if(item.type==='Bouton'){result.label=string(p.label,100);result.href=visualHref(p.href);result.variant=choice(p.variant,['filled','outline','text']);}
   if(item.type==='CompositionLibre'){
@@ -40,7 +42,7 @@ export function validatePuckData(data){
   }
   if(item.type==='Espace')result.height=number(p.height,0,600);
   if(item.type==='Section'||item.type==='Colonnes')result.children=content(p.children,depth+1);
-  if(item.type==='Colonnes'){if(!Number.isInteger(p.columns))fail('Nombre de colonnes invalide');result.columns=number(p.columns,1,4);}
+  if(item.type==='Colonnes'){if(!Number.isInteger(p.columns))fail('Nombre de colonnes invalide');result.columns=number(p.columns,1,4);result.mobileColumns=number(p.mobileColumns??1,1,2);if(!Number.isInteger(result.mobileColumns))fail('Nombre de colonnes mobiles invalide');}
   if(item.type==='Bandeau'||item.type==='Nouveautes'){result.items=slides(p.items);result.source=choice(p.source??'manual',['manual','managed']);}
   if(['Nouveautes','Liens','Catalogue','Recettes'].includes(item.type))result.title=string(p.title,300);
   if(item.type==='Nouveautes'){result.intro=string(p.intro,2000);result.kicker=string(p.kicker,100);}
@@ -48,4 +50,4 @@ export function validatePuckData(data){
   return {type:item.type,props:result};});}
  const result={root:{props:root},content:content(data.content)};if(JSON.stringify(result).length>240000)fail('La page dépasse la taille autorisée');return result;
 }
-export function puckImages(data){const result=[];if(!data)return result;if(data.root?.props?.logo)result.push(data.root.props.logo);function scan(items){for(const item of items||[]){if(item.type==='Image')result.push(item.props.src);for(const slide of item.props.items||[])if(slide.image)result.push(slide.image);scan(item.props.children);}}scan(data.content);return result;}
+export function puckImages(data){const result=[];if(!data)return result;if(data.root?.props?.logo)result.push(data.root.props.logo);function scan(items){for(const item of items||[]){if(item.type==='Image')result.push(item.props.src);for(const photo of item.props.images||[])if(photo.image)result.push(photo.image);for(const slide of item.props.items||[])if(slide.image)result.push(slide.image);scan(item.props.children);}}scan(data.content);return result;}
