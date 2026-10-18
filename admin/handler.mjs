@@ -11,7 +11,7 @@ import { defaultHighlights, isDefaultHighlight, mergeHighlights, validateHighlig
 import { builtinPages } from '../data/site-content.mjs';
 import { builtinImages } from '../data/site-assets.mjs';
 import { adminPage, pageDefinition, contentValues, validatePageBody } from './content.mjs';
-import { BONBON_ID, isSale, isRecipe, productProfile, lineTotal } from './products.mjs';
+import { validateProductImages, BONBON_ID, isSale, isRecipe, productProfile, lineTotal } from './products.mjs';
 import { claimAdmin, setupHTML } from './setup.mjs';
 import { authorize, checkOrigin, text, integer, slug, imagePath, transition, imageType, HttpError } from './core.mjs';
 import { adminHTML } from './ui.mjs';
@@ -97,7 +97,7 @@ export async function handleAdmin(request, env) {
     const [,resource,id]=match;
     if(request.method==='GET') {
       if(id) throw new HttpError(405,'Utiliser la liste');
-      const result=await db.prepare(`SELECT * FROM ${resource} ORDER BY ${resource==='orders'||resource==='audit'?'created_at DESC':'id'} LIMIT 500`).all();
+      const result=await db.prepare(`SELECT * FROM ${resource}${resource==='products'?' WHERE archived=0':''} ORDER BY ${resource==='orders'||resource==='audit'?'created_at DESC':'id'} LIMIT 500`).all();
       if(resource==='highlights')return json(mergeHighlights(result.results));
       if(resource==='pages') {
         const rows=result.results;
@@ -138,7 +138,7 @@ export async function handleAdmin(request, env) {
       return json({id:key,url:`/media/${key}`},201);
     }
     if(resource==='images' && request.method==='DELETE' && id) {
-      const used=await db.prepare('SELECT id FROM products WHERE image=? LIMIT 1').bind(`/media/${id}`).first();
+      const used=await db.prepare('SELECT id FROM products WHERE (image=? OR EXISTS(SELECT 1 FROM json_each(products.images) WHERE value=?)) LIMIT 1').bind(`/media/${id}`,`/media/${id}`).first();
       if(used) throw new HttpError(409,'Cette image est utilisée par un produit');
       const replacement=await db.prepare('SELECT original FROM image_replacements WHERE image_id=? LIMIT 1').bind(id).first();
       if(replacement)throw new HttpError(409,'Cette image est actuellement utilisée sur le site ; restaurez ou remplacez-la avant suppression');
@@ -180,7 +180,13 @@ export async function handleAdmin(request, env) {
     if(request.method==='DELETE') {
       if(!id || !['products','pages'].includes(resource)) throw new HttpError(405,'Suppression refusée');
       const b=await body(request), version=integer(b.version);
-      const result=await db.batch([db.prepare(`DELETE FROM ${resource} WHERE id=? AND version=?`).bind(id,version),log()]);
+      if(resource==='products'){
+        const reserved=`EXISTS(SELECT 1 FROM orders,json_each(orders.items) line WHERE orders.status IN ('confirmed','preparing','ready') AND json_extract(line.value,'$.id')=products.id) OR EXISTS(SELECT 1 FROM checkout_attempts,json_each(checkout_attempts.items) line WHERE checkout_attempts.status IN ('creating','open') AND json_extract(line.value,'$.id')=products.id)`;
+        const results=await db.batch([db.prepare(`UPDATE products SET archived=1,published=0,version=version+1 WHERE id=? AND version=? AND archived=0 AND (${reserved})`).bind(id,version),db.prepare('DELETE FROM products WHERE id=? AND version=? AND archived=0').bind(id,version),log()]);
+        if(!results[0].meta.changes&&!results[1].meta.changes)throw new HttpError(409,'Article modifié ailleurs : actualisez puis réessayez');
+        return json({ok:true,archived:Boolean(results[0].meta.changes)});
+      }
+      const result=await db.batch([db.prepare('DELETE FROM pages WHERE id=? AND version=?').bind(id,version),log()]);
       if(!result[0].meta.changes) throw new HttpError(409,'Données modifiées ailleurs : rechargez');
       return json({ok:true});
     }
@@ -197,13 +203,14 @@ export async function handleAdmin(request, env) {
         } else {
           if(key===BONBON_ID)throw new HttpError(400,'La vente au kilo est retirée. Créez un article maison avec une nouvelle référence.');
           fields=['name','description','price_cents','stock','image','published'];values=[text(b.name),text(b.description,4000),integer(b.price_cents),integer(b.stock,1000000),imagePath(b.image),published];
+          if(b.images!==undefined){const images=validateProductImages(b.images);values[fields.indexOf('image')]=images[0]||'';fields.push('images');values.push(JSON.stringify(images));}
           for(const field of ['weight','conservation','ingredients','allergens']){if(b[field]!==undefined){fields.push(field);values.push(b[field]===''?'':text(b[field],field==='weight'?100:8000));}}
         }
       }
       else {fields=['title','body','published'];values=[text(b.title),validatePageBody(key,text(b.body,60000)),published];}
       const firstBuiltinPageSave=resource==='pages' && pageDefinition(key) && id && b.version===0;
       const updating=id && !firstBuiltinPageSave;
-      const sql=updating?`UPDATE ${resource} SET ${fields.map(f=>f+'=?').join(',')},version=version+1 WHERE id=? AND version=?`:`INSERT INTO ${resource} (${fields.join(',')},id) VALUES (${fields.map(()=>'?').join(',')},?)`;
+      const sql=updating?`UPDATE ${resource} SET ${fields.map(f=>f+'=?').join(',')},version=version+1 WHERE id=? AND version=?${resource==='products'?' AND archived=0':''}`:`INSERT INTO ${resource} (${fields.join(',')},id) VALUES (${fields.map(()=>'?').join(',')},?)`;
       const bindings=updating?[...values,key,integer(b.version)]:[...values,key];
       const result=await db.batch([db.prepare(sql).bind(...bindings),log()]);
       if(updating&&!result[0].meta.changes) throw new HttpError(409,'Données modifiées ailleurs : rechargez');
@@ -213,7 +220,7 @@ export async function handleAdmin(request, env) {
       if(!Array.isArray(b.items)||!b.items.length||b.items.length>50) throw new HttpError(400,'Articles requis (50 maximum)');
       const seen=new Set(),items=[];let total=0;
       for(const line of b.items){const productId=slug(line.id),qty=integer(line.quantity,1000);if(!qty||seen.has(productId))throw new HttpError(400,'Quantité ou doublon invalide');seen.add(productId);
-        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p)throw new HttpError(400,'Enregistrez d’abord le produit et son stock');if(!isSale(p.id))throw new HttpError(400,'Choisissez un article maison vendu à la pièce.');if(p.price_cents<=0)throw new HttpError(400,'Renseignez le prix du produit avant de créer une commande');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty,unit:'piece',line_total_cents:lineTotal(p,qty)});total+=lineTotal(p,qty);}
+        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p||p.archived)throw new HttpError(400,'Choisissez un article actif dans le catalogue');if(!isSale(p.id))throw new HttpError(400,'Choisissez un article maison vendu à la pièce.');if(p.price_cents<=0)throw new HttpError(400,'Renseignez le prix du produit avant de créer une commande');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty,unit:'piece',line_total_cents:lineTotal(p,qty)});total+=lineTotal(p,qty);}
       integer(total);const key=crypto.randomUUID();
       await db.batch([db.prepare('INSERT INTO orders (id,customer,contact,items,total_cents,status,created_at) VALUES (?,?,?,?,?,?,?)').bind(key,text(b.customer),text(b.contact),JSON.stringify(items),total,'draft',new Date().toISOString()),log()]);
       return json({id:key},201);
