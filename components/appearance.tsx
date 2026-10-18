@@ -17,7 +17,7 @@ export function AppearanceShell({initial,children}:{initial:Appearance;children:
   if(new URLSearchParams(window.location.search).get('apercu')!=='1')return;
   const embedded=window.parent!==window;
   const receive=(event:MessageEvent)=>{if(!embedded||event.origin!==window.location.origin||event.source!==window.parent||event.data?.type!=='apg-appearance')return;try{setSettings(validateAppearance(event.data.settings) as Appearance);}catch{/* Ignore invalid preview messages. */}};
-  const navigate=(event:MouseEvent)=>{const anchor=(event.target as Element).closest('a');if(!anchor||anchor.target==='_blank')return;const url=new URL(anchor.href,location.href);if(url.origin!==location.origin||!url.pathname.startsWith('/boutique/')&&!['/','/maison','/savoir-faire','/bonbons','/boutique','/panier','/paiement'].includes(url.pathname.replace(/\/+$/,'')||'/'))return;url.searchParams.set('apercu','1');anchor.href=url.href;};
+  const navigate=(event:MouseEvent)=>{const anchor=(event.target as Element).closest('a');if(!anchor||anchor.target==='_blank')return;const url=new URL(anchor.href,location.href);if(url.origin!==location.origin||!url.pathname.startsWith('/boutique/')&&!['/','/maison','/savoir-faire','/bonbons','/chocolats','/boutique','/panier','/paiement'].includes(url.pathname.replace(/\/+$/,'')||'/'))return;url.searchParams.set('apercu','1');anchor.href=url.href;};
   document.addEventListener('click',navigate,true);
   window.addEventListener('message',receive);if(embedded)window.parent.postMessage({type:'apg-preview-ready'},window.location.origin);
   return ()=>{window.removeEventListener('message',receive);document.removeEventListener('click',navigate,true);};

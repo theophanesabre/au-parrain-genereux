@@ -1,6 +1,6 @@
 import { HttpError, imagePath } from './core.mjs';
 import { visualHref } from './visual.mjs';
-export const puckPaths=['/','/maison','/savoir-faire','/bonbons','/boutique','/panier'];
+export const puckPaths=['/','/maison','/savoir-faire','/bonbons','/chocolats','/boutique','/panier'];
 export const blockStyle={background:'',color:'',padding:32,paddingX:28,margin:0,radius:0,maxWidth:1200,align:'left',font:'inherit',size:18,gap:24,width:100,minHeight:0,visualHeight:0,visualBackground:''};
 export const puckDefaults={
  Texte:{title:'Votre titre',body:'Votre texte de présentation.',level:'h2',style:{...blockStyle}},

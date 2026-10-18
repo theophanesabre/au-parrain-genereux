@@ -176,6 +176,13 @@
       "when": 1792343997511,
       "tag": "0024_whole_product_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1792350137202,
+      "tag": "0025_chocolate_discovery_page",
+      "breakpoints": true
     }
   ]
 }
