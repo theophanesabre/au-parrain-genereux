@@ -162,6 +162,13 @@
       "when": 1792312552353,
       "tag": "0022_fill_product_photo_frames",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1792314106987,
+      "tag": "0023_product_photo_crops",
+      "breakpoints": true
     }
   ]
 }

@@ -11,7 +11,7 @@ import { defaultHighlights, isDefaultHighlight, mergeHighlights, validateHighlig
 import { builtinPages } from '../data/site-content.mjs';
 import { builtinImages } from '../data/site-assets.mjs';
 import { adminPage, pageDefinition, contentValues, validatePageBody } from './content.mjs';
-import { validateProductImages, BONBON_ID, isSale, isRecipe, productProfile, lineTotal } from './products.mjs';
+import { validatePhotoCrops, validateProductImages, BONBON_ID, isSale, isRecipe, productProfile, lineTotal } from './products.mjs';
 import { claimAdmin, setupHTML } from './setup.mjs';
 import { authorize, checkOrigin, text, integer, slug, imagePath, transition, imageType, HttpError } from './core.mjs';
 import { adminHTML } from './ui.mjs';
@@ -61,7 +61,7 @@ export async function handleAdmin(request, env) {
     }
     if(path==='/admin' && request.method==='GET') {
       const nonce=crypto.randomUUID();
-      return new Response(adminHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
+      return new Response(adminHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' blob:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
     }
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
@@ -203,6 +203,7 @@ export async function handleAdmin(request, env) {
         } else {
           if(key===BONBON_ID)throw new HttpError(400,'La vente au kilo est retirée. Créez un article maison avec une nouvelle référence.');
           fields=['name','description','price_cents','stock','image','published'];values=[text(b.name),text(b.description,4000),integer(b.price_cents),integer(b.stock,1000000),imagePath(b.image),published];
+          if(b.photo_crops!==undefined){fields.push('photo_crops');values.push(JSON.stringify(validatePhotoCrops(b.photo_crops)));}
           if(b.images!==undefined){const images=validateProductImages(b.images);values[fields.indexOf('image')]=images[0]||'';fields.push('images');values.push(JSON.stringify(images));}
           for(const field of ['weight','conservation','ingredients','allergens']){if(b[field]!==undefined){fields.push(field);values.push(b[field]===''?'':text(b[field],field==='weight'?100:8000));}}
         }

@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 export const products = sqliteTable('products', {
   id: text('id').primaryKey(), name: text('name').notNull(), description: text('description').notNull(),
-  images: text('images').notNull().default('[]'), archived: integer('archived').notNull().default(0),
+  photoCrops: text('photo_crops').notNull().default('{}'), images: text('images').notNull().default('[]'), archived: integer('archived').notNull().default(0),
   weight: text('weight').notNull().default(''), conservation: text('conservation').notNull().default(''),
   ingredients: text('ingredients').notNull().default(''), allergens: text('allergens').notNull().default(''),
   priceCents: integer('price_cents').notNull(), stock: integer('stock').notNull().default(0),

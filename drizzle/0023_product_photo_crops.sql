@@ -1,0 +1,1 @@
+ALTER TABLE products ADD COLUMN photo_crops TEXT NOT NULL DEFAULT '{}';
