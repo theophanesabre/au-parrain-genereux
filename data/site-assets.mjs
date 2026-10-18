@@ -1,4 +1,5 @@
 export const builtinImages = [
+  {id:"asset-calendrier-detoure",alt:"Calendrier Le Conte de l’Avent fermé, sans fond",url:"/images/calendrier-conte-avent-detoure.png",static:true},
   {"id": "asset-boite-decouverte-maison", "alt": "Boîte Découverte de la Maison avec son ruban orange", "url": "/images/boite-decouverte-maison.jpg", "static": true},
   {"id": "asset-boite-decouverte-maison-vues", "alt": "Boîte Découverte de la Maison présentée sans ruban et avec son ruban orange", "url": "/images/boite-decouverte-maison-vues.jpg", "static": true},
   {"id": "asset-calendrier-avent-miniature", "alt": "Le Conte de l’Avent fermé avec trois petites boîtes intérieures numérotées à côté", "url": "/images/calendrier-conte-avent-miniature.png", "static": true},

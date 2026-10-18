@@ -1,9 +1,9 @@
-.apg-spotlight{background:#fff5df;color:#2c1b12;border-bottom:1px solid #d8c6ad;touch-action:pan-y}
+.apg-spotlight{background:transparent;color:#2c1b12;border-bottom:1px solid #d8c6ad;touch-action:pan-y}
 .apg-spotlight__slides{display:grid}
 .apg-spotlight__slide{grid-area:1 / 1;display:grid;grid-template-columns:58% 42%;min-height:clamp(440px,43vw,690px);animation:apg-reveal .45s ease-out}
 .apg-spotlight__slide[hidden]{display:grid;visibility:hidden;pointer-events:none;animation:none}
-.apg-spotlight__visual{position:relative;min-height:420px;overflow:hidden;background:#eee0c8}
-.apg-spotlight__visual[data-fit=contain]{background:#fff5df}
+.apg-spotlight__visual{position:relative;min-height:420px;overflow:hidden;background:transparent}
+.apg-spotlight__visual[data-fit=contain]{background:transparent}
 .apg-spotlight__copy{display:flex;align-items:flex-start;justify-content:center;flex-direction:column;padding:60px clamp(28px,5vw,90px)}
 .apg-spotlight .apg-spotlight__kicker,.apg-news .apg-news__kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#85400c;margin:0 0 22px}
 .apg-spotlight .apg-spotlight__title{font-family:var(--font-serif),serif;font-size:clamp(40px,4.5vw,76px);font-weight:500;line-height:1.02;letter-spacing:-.045em;margin:0 0 24px}
@@ -27,7 +27,7 @@
 .apg-news__rail{display:flex;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:1px;overscroll-behavior-x:contain;padding:0 0 24px;scrollbar-color:#FF6A00 #ede1cf;scrollbar-width:thin}
 .apg-news__card{flex:0 0 calc((100% - 44px)/3);min-width:0;scroll-snap-align:start;scroll-margin:1px}
 .apg-news__card>a{display:block;height:100%}
-.apg-news__visual{position:relative;aspect-ratio:4/5;overflow:hidden;background:#f4eddf}
+.apg-news__visual{position:relative;aspect-ratio:4/5;overflow:hidden;background:transparent}
 .apg-news__visual img{transition:transform .3s ease}
 .apg-news__card>a:hover .apg-news__visual img{transform:scale(1.025)}
 .apg-news__badge{position:absolute;right:0;top:16px;max-width:90%;padding:10px 15px;background:#fffdf8;color:#8a3b00;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
