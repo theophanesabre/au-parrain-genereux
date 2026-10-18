@@ -5,3 +5,5 @@
 .apg-purchase>figure.apg-product-photo{margin:0}.apg-site .apg-catalog[data-presentation=square] .apg-product-square>.apg-product-photo{padding:0}.apg-product-square .apg-product-gallery-track{aspect-ratio:1}.apg-product-square .apg-product-gallery-slide{padding:0;box-sizing:border-box}
 
 .apg-site .apg-catalog[data-layout] .apg-purchase>.apg-product-photo,.apg-site .apg-catalog[data-presentation=square] .apg-product-square>.apg-product-photo{background:transparent;border:0;border-radius:0;box-shadow:none}
+
+.apg-product-gallery:not(.apg-product-gallery--detail)>.apg-product-gallery-navigation{display:none}
