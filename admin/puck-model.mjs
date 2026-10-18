@@ -9,8 +9,8 @@ export const puckDefaults={
  Espace:{height:48,style:{...blockStyle,padding:0}},
  Section:{children:[],style:{...blockStyle}},
  Colonnes:{columns:2,children:[],style:{...blockStyle}},
- Bandeau:{items:[],style:{...blockStyle,padding:0,paddingX:0,maxWidth:2000}},
- Nouveautes:{title:'Nouveautés & découvertes',intro:'Les créations de la maison.',kicker:'À découvrir',items:[],style:{...blockStyle,padding:0,paddingX:0}},
+ Bandeau:{source:'manual',items:[],style:{...blockStyle,padding:0,paddingX:0,maxWidth:2000}},
+ Nouveautes:{source:'manual',title:'Nouveautés & découvertes',intro:'Les créations de la maison.',kicker:'À découvrir',items:[],style:{...blockStyle,padding:0,paddingX:0}},
  Liens:{title:'Découvrir la maison',items:[{label:'La boutique',text:'Nos articles maison',href:'/boutique'}],style:{...blockStyle}},
  Catalogue:{title:'Les articles de la maison',style:{...blockStyle,padding:0,paddingX:0,maxWidth:2000}},
  Recettes:{title:'Nos recettes',style:{...blockStyle,padding:0,paddingX:0,maxWidth:2000}},
@@ -36,7 +36,7 @@ export function validatePuckData(data){
   if(item.type==='Espace')result.height=number(p.height,0,600);
   if(item.type==='Section'||item.type==='Colonnes')result.children=content(p.children,depth+1);
   if(item.type==='Colonnes'){if(!Number.isInteger(p.columns))fail('Nombre de colonnes invalide');result.columns=number(p.columns,1,4);}
-  if(item.type==='Bandeau'||item.type==='Nouveautes')result.items=slides(p.items);
+  if(item.type==='Bandeau'||item.type==='Nouveautes'){result.items=slides(p.items);result.source=choice(p.source??'manual',['manual','managed']);}
   if(['Nouveautes','Liens','Catalogue','Recettes'].includes(item.type))result.title=string(p.title,300);
   if(item.type==='Nouveautes'){result.intro=string(p.intro,2000);result.kicker=string(p.kicker,100);}
   if(item.type==='Liens')result.items=links(p.items);

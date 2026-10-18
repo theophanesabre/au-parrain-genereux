@@ -13,6 +13,7 @@ const AppearanceContext=createContext<Appearance>(defaultAppearance);
 export function AppearanceShell({initial,children}:{initial:Appearance;children:ReactNode}){
  const [settings,setSettings]=useState<Appearance>(initial??defaultAppearance);
  const path=usePathname()||'/';
+ useEffect(()=>{const update=(event:Event)=>{try{setSettings(validateAppearance((event as CustomEvent).detail) as Appearance);}catch{}};window.addEventListener('apg-settings-updated',update);return()=>window.removeEventListener('apg-settings-updated',update);},[]);
  useEffect(()=>{
   if(new URLSearchParams(window.location.search).get('apercu')!=='1')return;
   const embedded=window.parent!==window;

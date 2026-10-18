@@ -31,7 +31,7 @@ test('HTTP boundary protects all admin routes, preserves public routes, returns 
  assert.equal((await handleAdmin(req('/admin/api/products'),env)).status,401);
  assert.equal((await handleAdmin(req('/admin/nested',{headers:{'oai-authenticated-user-id':'other'}}),env)).status,403);
  const response=await handleAdmin(req('/admin',{headers:{'oai-authenticated-user-id':'owner'}}),env);
- assert.equal(response.status,200);assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'none'/);assert.match(response.headers.get('cache-control'),/no-store/);
+ assert.equal(response.status,302);assert.equal(response.headers.get('location'),'/admin/puck');assert.match(response.headers.get('cache-control'),/no-store/);
 });
 function database(){const db=new DatabaseSync(':memory:');for(const p of JSON.parse(readFileSync(new URL('../drizzle/meta/_journal.json',import.meta.url),'utf8')).entries.map(entry=>entry.tag+'.sql'))db.exec(readFileSync(new URL('../drizzle/'+p,import.meta.url),'utf8'));return db;}
 test('migrations reserve, prevent overselling, roll back failed confirmation, and release stock once',()=>{
@@ -178,6 +178,7 @@ test('admin interface exposes edit controls for the four existing pages and repl
   append(child){this.children.push(child);}
   replaceChildren(...children){this.children=children;}
   setAttribute(key,value){this[key]=value;}
+  addEventListener(){}
   click(){return this.onclick?.();}
   showModal(){this.open=true;}
   close(){this.open=false;}
@@ -185,7 +186,7 @@ test('admin interface exposes edit controls for the four existing pages and repl
  const env=bindings();const tabs=['products','recipes','highlights','pages','images','orders','audit'].map(tab=>{const b=new Element('button');b.dataset.tab=tab;return b;});
  const nodes=new Map(['stock-alerts','title','help','stats','add','reload','search','message','list','dialog','form','form-title','fields','form-error','save','close'].map(id=>['#'+id,new Element(id)]));
  const document={createElement:tag=>new Element(tag),querySelector:selector=>selector==='[data-tab]'?tabs[0]:nodes.get(selector),querySelectorAll:()=>tabs};
- const context=createContext({document,FormData,AbortController,setTimeout,clearTimeout,confirm:()=>false,fetch:async(path,options={})=>handleAdmin(req(path,{...options,headers:{...options.headers,'oai-authenticated-user-id':'owner',...(options.method&&options.method!=='GET'?{origin}:{})}}),env)});
+ const context=createContext({document,URLSearchParams,location:{search:"",origin},FormData,AbortController,setTimeout,clearTimeout,confirm:()=>false,fetch:async(path,options={})=>handleAdmin(req(path,{...options,headers:{...options.headers,'oai-authenticated-user-id':'owner',...(options.method&&options.method!=='GET'?{origin}:{})}}),env)});
  new Script(adminHTML('test').match(/<script[^>]*>([\s\S]*)<\/script>/)[1]).runInContext(context);
  const settle=async()=>{for(let i=0;i<5;i++)await new Promise(resolve=>setImmediate(resolve));};
  await settle();assert.equal(nodes.get('#stock-alerts').hidden,false);assert.ok(nodes.get('#stock-alerts').children.some(node=>node.textContent.includes('Le Conte de l’Avent')));await call(env,'products','POST',{id:'coffret-alerte',name:'Coffret',description:'Maison',price_cents:1800,stock:0,image:'',published:true});await tabs.find(b=>b.dataset.tab==='products').onclick();await settle();assert.equal(nodes.get('#stock-alerts').hidden,false);assert.ok(nodes.get('#stock-alerts').children.some(node=>node.textContent.includes('rupture de stock')));tabs.find(b=>b.dataset.tab==='pages').onclick();await settle();
@@ -207,7 +208,7 @@ test('highlights can be ordered, published and hidden permanently without modify
  const initial=await (await call(env,'highlights')).json();assert.equal(initial.length,defaultHighlights.length);assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM highlights').get().n,0);
  const hero=initial.find(item=>item.placement==='hero');
  assert.equal((await call(env,'highlights/'+hero.id,'DELETE',{version:0})).status,200);
- let all=await (await call(env,'highlights')).json();assert.equal(all.find(item=>item.id===hero.id).published,0);
+ let all=await (await call(env,'highlights')).json();assert.ok(!all.some(item=>item.id===hero.id));
  let publicRows=mergeHighlights(env.sqlite.prepare('SELECT * FROM highlights').all()).filter(item=>item.published===1);
  assert.ok(!publicRows.some(item=>item.id===hero.id));assert.equal(defaultHighlights.find(item=>item.id===hero.id).published,1);
  const data={placement:'news',kicker:'La maison',title:'Notre collection',description:'Une découverte',image:'/images/bonbons-ia-basse-def/1.png',alt:'Chocolat',image_fit:'contain',button_label:'Découvrir',href:'/bonbons#bonbon-1',position:0,published:false};
@@ -217,7 +218,7 @@ test('highlights can be ordered, published and hidden permanently without modify
  assert.equal((await call(env,'highlights/'+id,'PUT',{...data,version:1})).status,409);
  publicRows=mergeHighlights(env.sqlite.prepare('SELECT * FROM highlights').all()).filter(item=>item.published===1&&item.placement==='news');assert.equal(publicRows[0].id,id);
  assert.equal((await call(env,'highlights/'+id,'DELETE',{version:2})).status,200);
- assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM highlights WHERE id=?').get(id).n,0);env.sqlite.close();
+ assert.equal(env.sqlite.prepare('SELECT deleted FROM highlights WHERE id=?').get(id).deleted,1);env.sqlite.close();
 });
 
 test('highlights reject unsafe links, invalid fields and unauthorized modifications',async()=>{
@@ -269,7 +270,7 @@ test('appearance is protected, versioned, validates layout and restores defaults
  assert.equal((await handleAdmin(req('/admin/api/appearance',{method:'PUT',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.example','content-type':'application/json'},body:JSON.stringify({settings,version:1})}),env)).status,403);
  assert.equal((await call(env,'appearance','PUT',{settings:defaultAppearance,version:1})).status,200);
  const restored=await (await call(env,'appearance')).json();assert.equal(restored.version,2);assert.deepEqual(restored.settings,defaultAppearance);
- const html=await (await handleAdmin(req('/admin/apparence',{headers:{'oai-authenticated-user-id':'owner'}}),env)).text();assert.match(html,/Sections de l’accueil/);assert.match(html,/Aperçu de la mise en page/);
+ const redirected=await handleAdmin(req('/admin/apparence',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(redirected.status,302);assert.equal(redirected.headers.get('location'),'/admin/puck?section=theme');
  env.sqlite.close();
 });
 
@@ -582,4 +583,37 @@ test('chocolate discovery is editable in Puck and uses the current published rec
 });
 test('chocolate menu migration preserves custom links and does not duplicate the new page',async()=>{
  const {defaultAppearance,validateAppearance}=await import('../admin/appearance.mjs');const db=database();const settings={...structuredClone(defaultAppearance),collectionHref:'/bonbons',navigation:{groupLabel:'La maison',items:[{label:'Notre maison',href:'/maison',group:false},{label:'Nous écrire',href:'/contenu/contact',group:false}]}};db.prepare("INSERT INTO site_settings(id,body,version) VALUES ('appearance',?,3)").run(JSON.stringify(settings));const sql=readFileSync(new URL('../drizzle/0025_chocolate_discovery_page.sql',import.meta.url),'utf8');const products=db.prepare('SELECT * FROM products ORDER BY id').all();db.exec(sql);const row=db.prepare("SELECT * FROM site_settings WHERE id='appearance'").get();const saved=validateAppearance(JSON.parse(row.body));assert.equal(saved.navigation.items.filter(item=>item.href==='/chocolats').length,1);assert.ok(saved.navigation.items.some(item=>item.label==='Nous écrire'&&item.href==='/contenu/contact'));assert.equal(saved.collectionHref,'/chocolats');assert.deepEqual(db.prepare('SELECT * FROM products ORDER BY id').all(),products);db.exec(sql);assert.deepEqual(db.prepare("SELECT * FROM site_settings WHERE id='appearance'").get(),row);db.close();
+});
+
+test('highlight insertion shifts siblings, moves compact both groups and deletion stays deleted',async()=>{
+ const env=bindings();
+ const list=async()=> (await (await call(env,'highlights')).json());
+ const move=async(id,position,placement)=>{const row=(await list()).find(item=>item.id===id);const response=await call(env,'highlights/'+id,'PUT',{...row,position,placement:placement||row.placement,published:Boolean(row.published)});assert.equal(response.status,200);};
+ const initial=await list(),news=initial.filter(item=>item.placement==='news').map(item=>item.id),hero=initial.filter(item=>item.placement==='hero').map(item=>item.id);
+ await move(news[0],2);assert.deepEqual((await list()).filter(item=>item.placement==='news').map(item=>item.id),[news[1],news[0],news[2]]);
+ await move(news[2],1);assert.deepEqual((await list()).filter(item=>item.placement==='news').map(item=>item.id),[news[2],news[1],news[0]]);
+ await move(news[1],2,'hero');let all=await list();assert.deepEqual(all.filter(item=>item.placement==='hero').map(item=>item.id),[hero[0],news[1],...hero.slice(1)]);
+ assert.deepEqual(all.filter(item=>item.placement==='news').map(item=>item.position),[1,2]);
+ const row=all.find(item=>item.id===news[1]);assert.equal((await call(env,'highlights/'+row.id,'DELETE',{version:row.version})).status,200);
+ all=await list();assert.deepEqual(all.filter(item=>item.placement==='hero').map(item=>item.id),hero);assert.deepEqual(all.filter(item=>item.placement==='hero').map(item=>item.position),[1,2,3]);assert.ok(!(await list()).some(item=>item.id===row.id));
+ assert.equal((await call(env,'highlights/'+row.id,'PUT',{...row,published:true})).status,409);env.sqlite.close();
+});
+
+test('concurrent highlight writes roll back atomically and embedded management stays authenticated and same-origin',async()=>{
+ const env=bindings();
+ await env.DB.batch([env.DB.prepare('UPDATE highlights_state SET version=1 WHERE id=1')]);
+ await assert.rejects(()=>env.DB.batch([env.DB.prepare('UPDATE highlights_state SET version=1 WHERE id=1'),env.DB.prepare("UPDATE products SET stock=99")]),/highlight version conflict/);
+ assert.equal(env.sqlite.prepare('SELECT version FROM highlights_state').get().version,1);assert.ok(!env.sqlite.prepare('SELECT 1 FROM products WHERE stock=99').get());
+ assert.equal((await handleAdmin(req('/admin?workspace=1'),env)).status,302);
+ const response=await handleAdmin(req('/admin?workspace=1',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(response.status,200);assert.equal(response.headers.get('x-frame-options'),'SAMEORIGIN');assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'self'/);
+ env.sqlite.close();
+});
+
+test('homepage migration links banners to managed highlights and preserves original slides and styles',()=>{
+ const db=new DatabaseSync(':memory:');const entries=JSON.parse(readFileSync(new URL('../drizzle/meta/_journal.json',import.meta.url),'utf8')).entries;
+ for(const entry of entries.filter(item=>item.idx<26))db.exec(readFileSync(new URL('../drizzle/'+entry.tag+'.sql',import.meta.url),'utf8'));
+ const data={content:[{type:'Bandeau',props:{id:'banner',items:[{title:'Texte conservé'}],style:{padding:42}}},{type:'Nouveautes',props:{id:'news',items:[],title:'Notre collection'}},{type:'Texte',props:{id:'text',text:'Maison'}}],root:{props:{}}};
+ db.prepare('INSERT INTO puck_pages(path,draft,published,version) VALUES (?,?,?,?)').run('/',JSON.stringify(data),JSON.stringify(data),3);
+ db.exec(readFileSync(new URL('../drizzle/0026_highlight_management.sql',import.meta.url),'utf8'));const row=db.prepare("SELECT * FROM puck_pages WHERE path='/'").get();
+ for(const field of ['draft','published']){const updated=JSON.parse(row[field]);assert.equal(updated.content[0].props.source,'managed');assert.equal(updated.content[1].props.source,'managed');assert.deepEqual(updated.content[0].props.items,data.content[0].props.items);assert.deepEqual(updated.content[0].props.style,data.content[0].props.style);assert.deepEqual(updated.content[2],data.content[2]);}assert.equal(row.version,4);db.close();
 });

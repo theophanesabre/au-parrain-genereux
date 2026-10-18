@@ -4,10 +4,8 @@ import { paymentsHTML } from './payments-ui.mjs';
 import { loadMaisonDocument } from './maison.mjs';
 import { puckPaths, validatePuckData, puckImages } from './puck-model.mjs';
 import { puckContext, defaultPuckData } from './puck-defaults.mjs';
-import { visualHTML } from './visual-ui.mjs';
 import { defaultAppearance, appearanceValues, validateAppearance } from './appearance.mjs';
-import { appearanceHTML } from './appearance-ui.mjs';
-import { defaultHighlights, isDefaultHighlight, mergeHighlights, validateHighlight } from './highlights.mjs';
+import { isDefaultHighlight, mergeHighlights, validateHighlight, highlightChanges } from './highlights.mjs';
 import { builtinPages } from '../data/site-content.mjs';
 import { builtinImages } from '../data/site-assets.mjs';
 import { adminPage, pageDefinition, contentValues, validatePageBody } from './content.mjs';
@@ -56,12 +54,12 @@ export async function handleAdmin(request, env) {
     if(path==='/admin/paiements'&&request.method==='GET'){const nonce=crypto.randomUUID();return new Response(paymentsHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});}
     if(path==='/admin/puck'&&request.method==='GET')return null;
     if(path==='/admin/editeur'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck'}});
-    if((path==='/admin/apparence'||path==='/admin/editeur') && request.method==='GET') {
-      const nonce=crypto.randomUUID();return new Response(path==='/admin/editeur'?visualHTML(nonce):appearanceHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; frame-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
-    }
+    if(path==='/admin/apparence'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck?section=theme'}});
     if(path==='/admin' && request.method==='GET') {
+      const embedded=url.searchParams.get('workspace')==='1';
+      if(!embedded)return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck'}});
       const nonce=crypto.randomUUID();
-      return new Response(adminHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' blob:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});
+      return new Response(adminHTML(nonce),{headers:{...headers,'X-Frame-Options':embedded?'SAMEORIGIN':'DENY','Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' blob:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors ${embedded?"'self'":"'none'"}`}});
     }
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
@@ -142,7 +140,7 @@ export async function handleAdmin(request, env) {
       if(used) throw new HttpError(409,'Cette image est utilisée par un produit');
       const replacement=await db.prepare('SELECT original FROM image_replacements WHERE image_id=? LIMIT 1').bind(id).first();
       if(replacement)throw new HttpError(409,'Cette image est actuellement utilisée sur le site ; restaurez ou remplacez-la avant suppression');
-      const highlight=await db.prepare('SELECT id FROM highlights WHERE image=? LIMIT 1').bind(`/media/${id}`).first();
+      const highlight=await db.prepare('SELECT id FROM highlights WHERE image=? AND deleted=0 LIMIT 1').bind(`/media/${id}`).first();
       if(highlight)throw new HttpError(409,'Cette image est utilisée par une mise à la une ou une nouveauté');
       const appearance=await db.prepare("SELECT body FROM site_settings WHERE id='appearance'").first();
       if(appearance){const settings=appearanceValues(appearance.body);if(settings.chrome.logo===`/media/${id}`)throw new HttpError(409,'Cette image est utilisée par le logo du site');const visual=settings.visual;if([...visual.blocks,...visual.overrides].some(item=>item.image===`/media/${id}`))throw new HttpError(409,'Cette image est utilisée dans l’éditeur visuel');}
@@ -151,31 +149,17 @@ export async function handleAdmin(request, env) {
       await db.batch([db.prepare('DELETE FROM images WHERE id=?').bind(id),log()]); await env.BUCKET.delete(id); return json({ok:true});
     }
     if(resource==='highlights') {
-      if(request.method==='DELETE'){
-        if(!id)throw new HttpError(405,'Choisissez une nouveauté');const data=await body(request),version=integer(data.version);
-        if(isDefaultHighlight(id)){
-          if(version===0){
-            const item=defaultHighlights.find(item=>item.id===id),fields=['id','placement','kicker','title','description','image','alt','image_fit','button_label','href','position'];
-            await db.batch([db.prepare(`INSERT INTO highlights (${fields.join(',')},published) VALUES (${fields.map(()=>'?').join(',')},0)`).bind(...fields.map(field=>item[field])),log()]);
-          }else{
-            const result=await db.batch([db.prepare('UPDATE highlights SET published=0,version=version+1 WHERE id=? AND version=?').bind(id,version),log()]);
-            if(!result[0].meta.changes)throw new HttpError(409,'Contenu modifié ailleurs : rechargez');
-          }
-        }else{
-          const result=await db.batch([db.prepare('DELETE FROM highlights WHERE id=? AND version=?').bind(id,version),log()]);
-          if(!result[0].meta.changes)throw new HttpError(409,'Contenu modifié ailleurs : rechargez');
-        }
-        return json({ok:true});
-      }
-      if((request.method==='PUT')!==Boolean(id))throw new HttpError(405,'Méthode refusée');
-      const data=await body(request),item=validateHighlight(data),key=id||(data.id?slug(data.id):crypto.randomUUID());
-      if(!id && isDefaultHighlight(key))throw new HttpError(409,'Modifiez le contenu existant');
-      const fields=Object.keys(item),firstSave=id && isDefaultHighlight(id) && data.version===0,updating=id&&!firstSave;
-      const sql=updating?`UPDATE highlights SET ${fields.map(field=>field+'=?').join(',')},version=version+1 WHERE id=? AND version=?`:`INSERT INTO highlights (${fields.join(',')},id) VALUES (${fields.map(()=>'?').join(',')},?)`;
-      const values=updating?[...Object.values(item),key,integer(data.version)]:[...Object.values(item),key];
-      const result=await db.batch([db.prepare(sql).bind(...values),log()]);
-      if(updating&&!result[0].meta.changes)throw new HttpError(409,'Contenu modifié ailleurs : rechargez');
-      return json({id:key},id?200:201);
+      const data=await body(request),state=await db.prepare('SELECT version FROM highlights_state WHERE id=1').first();
+      const rows=(await db.prepare('SELECT * FROM highlights ORDER BY position,id LIMIT 500').all()).results;
+      const current=id?mergeHighlights(rows).find(item=>item.id===id):null;
+      if(id&&(!current||integer(data.version)!==current.version))throw new HttpError(409,'Nouveauté modifiée ailleurs : actualisez puis réessayez');
+      if((request.method==='PUT'||request.method==='DELETE')!==Boolean(id))throw new HttpError(405,'Méthode refusée');
+      const key=id||(data.id?slug(data.id):crypto.randomUUID());
+      if(!id&&(isDefaultHighlight(key)||rows.some(row=>row.id===key)))throw new HttpError(409,'Référence déjà utilisée');
+      const item=request.method==='DELETE'?null:validateHighlight(data),changes=highlightChanges(rows,key,item);
+      const statements=changes.map(row=>{const fields=Object.keys(row);return db.prepare(`INSERT INTO highlights (${fields.join(',')}) VALUES (${fields.map(()=>'?').join(',')}) ON CONFLICT(id) DO UPDATE SET ${fields.filter(field=>field!=='id').map(field=>field+'=excluded.'+field).join(',')}`).bind(...Object.values(row));});
+      await db.batch([db.prepare('UPDATE highlights_state SET version=? WHERE id=1').bind(state.version+1),...statements,log()]);
+      return json({ok:true,id:key},id?200:201);
     }
     if(request.method==='DELETE') {
       if(!id || !['products','pages'].includes(resource)) throw new HttpError(405,'Suppression refusée');
@@ -236,6 +220,7 @@ export async function handleAdmin(request, env) {
     throw new HttpError(405,'Méthode refusée');
   } catch(error) {
     if(error instanceof HttpError) return json({error:error.message},error.status);
+    if(/highlight version conflict/.test(String(error)))return json({error:'Les nouveautés ont changé. Actualisez puis réessayez.'},409);
     if(/UNIQUE constraint/.test(String(error)))return json({error:'Identifiant déjà utilisé'},409);
     if(/stock|product unavailable/.test(String(error)))return json({error:'Stock insuffisant ou produit supprimé'},409);
     return json({error:'Opération impossible. Vérifiez la configuration et réessayez.'},500);
