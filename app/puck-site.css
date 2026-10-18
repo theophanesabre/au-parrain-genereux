@@ -20,3 +20,5 @@
 .puck-block .apg-news :is(.apg-news__intro,.apg-news__copy p,.apg-news__hint),.puck-block :is(.apg-news__kicker,.apg-spotlight__kicker){color:inherit}
 @media(max-width:760px){.puck-block .apg-spotlight__slide{min-height:0}.puck-block .apg-spotlight__visual{min-height:0;height:var(--puck-visual-height,clamp(280px,86vw,430px));max-height:1200px}}
 @media(max-width:720px){.puck-columns{grid-template-columns:repeat(var(--puck-mobile-columns,1),minmax(0,1fr))!important}}
+
+.puck-block .apg-spotlight__visual,.puck-block .apg-spotlight__visual[data-fit=contain],.puck-block .apg-news__visual{background:transparent!important}
