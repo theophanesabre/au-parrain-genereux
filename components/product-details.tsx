@@ -1,4 +1,5 @@
 'use client';
+import { ProductGallery } from './product-gallery';
 import { useRef, useState } from 'react';
 import { useCart } from './cart';
 import { MAX_QUANTITY } from '@/commerce/cart.mjs';
@@ -15,7 +16,7 @@ export function ProductDetails({product}:{product:ProductDetail}){
  return <div className="apg-product-page" data-ve-commerce="true">
   <nav aria-label="Fil d’Ariane"><a href="/boutique">Boutique en ligne</a><span aria-hidden="true"> / </span><span>{product.name}</span></nav>
   <article className="apg-product-detail">
-   <div className="apg-product-detail-photo"><img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/></div>
+   <div className="apg-product-detail-photo"><ProductGallery name={product.name} images={[product.image,...(product.images||[])].filter(Boolean)} detail/></div>
    <div className="apg-product-detail-body"><h1>{product.name}</h1>{product.weight?<p className="apg-product-weight">{product.weight}</p>:null}
     <div className="apg-product-tabs" role="tablist" aria-label="Informations sur l’article">{sections.map(([key,label],index)=><button type="button" key={key} ref={node=>{tabs.current[index]=node;}} id={'tab-'+key} role="tab" aria-selected={tab===index} aria-controls={'panel-'+key} tabIndex={tab===index?0:-1} onClick={()=>setTab(index)} onKeyDown={event=>{let next=index;if(event.key==='ArrowRight')next=(index+1)%sections.length;else if(event.key==='ArrowLeft')next=(index+sections.length-1)%sections.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=sections.length-1;else return;event.preventDefault();setTab(next);tabs.current[next]?.focus();}}>{label}</button>)}</div>
     {sections.map(([key,label],index)=><div key={key} id={'panel-'+key} role="tabpanel" aria-labelledby={'tab-'+key} hidden={tab!==index} tabIndex={0} className="apg-product-panel"><p>{product[key]||`${label} : informations à venir. Contactez la boutique pour plus de précisions.`}</p></div>)}

@@ -1,4 +1,5 @@
 'use client';
+import { ProductGallery } from './product-gallery';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { CART_KEY, MAX_QUANTITY, normalizeCart } from '@/commerce/cart.mjs';
 import type { CartLine, Quote, SaleProduct } from './cart-types';
@@ -24,8 +25,8 @@ export function PurchaseCard({product,preview=false,compact=false}:{product:Sale
   const {add,items,ready}=useCart();const [quantity,setQuantity]=useState(1),[message,setMessage]=useState('');
   const inCart=items.find(item=>item.id===product.id)?.quantity||0;
   const href='/boutique/'+encodeURIComponent(product.id);
-  const photo=<img src={product.image||'/images/bonbons-editorial-deep.webp'} alt={product.name}/>;
-  const visual=preview?<span className="apg-product-photo">{photo}</span>:<a className="apg-product-photo" href={href} aria-label={`Découvrir ${product.name}`}>{photo}</a>;
+  const photos=[product.image,...(product.images||[])].filter(Boolean);
+  const visual=<figure className="apg-product-photo"><ProductGallery images={photos} name={product.name} href={preview?undefined:href}/></figure>;
   const title=preview?product.name:<a href={href}>{product.name}</a>;
   const valid=Number.isSafeInteger(quantity)&&quantity>0&&quantity<=MAX_QUANTITY&&quantity+inCart<=product.stock;
   if(compact)return <article id={product.id} className="apg-purchase apg-product-square" data-ve-commerce="true">
