@@ -10,6 +10,12 @@ import { defaultChrome, defaultAppearance, validateAppearance } from '@/admin/ap
 export type CustomButton={id:string;label:string;href:string;page:string;location:string;position:string;align:string;style:string;size:string;visible:boolean};
 export type Appearance={shop:typeof defaultShop;stripedEverywhere:boolean;chrome:typeof defaultChrome;navigation:{groupLabel:string;items:{label:string;href:string;group:boolean}[]};background:string;spacing:string;buttons:string;corners:string;hero:string;columns:string;historyLabel:string;historyHref:string;collectionLabel:string;collectionHref:string;customButtons:CustomButton[];visual:VisualSettings;sections:{id:string;visible:boolean}[]};
 const AppearanceContext=createContext<Appearance>(defaultAppearance);
+function SiteEditShortcut({path}:{path:string}){
+ const [visible,setVisible]=useState(false);
+ useEffect(()=>{setVisible(window.parent===window&&new URLSearchParams(location.search).get('apercu')==='1');},[]);
+ if(!visible||!['/','/maison','/chocolats','/boutique','/panier'].includes(path))return null;
+ return <a className="apg-site-edit-shortcut" data-ve-ignore="true" href={'/admin/puck?section=pages&path='+encodeURIComponent(path)}>Modifier cette page</a>;
+}
 export function AppearanceShell({initial,children}:{initial:Appearance;children:ReactNode}){
  const [settings,setSettings]=useState<Appearance>(initial??defaultAppearance);
  const path=usePathname()||'/';
@@ -24,7 +30,7 @@ export function AppearanceShell({initial,children}:{initial:Appearance;children:
   return ()=>{window.removeEventListener('message',receive);document.removeEventListener('click',navigate,true);};
  },[]);
  if(path.startsWith('/admin/'))return <AppearanceContext.Provider value={settings}>{children}</AppearanceContext.Provider>;
- return <AppearanceContext.Provider value={settings}><div className="apg-site" data-background={settings.background} data-pattern={settings.stripedEverywhere&&settings.visual.pattern!=='stripes'?'inherit':settings.visual.pattern||'inherit'} data-striped-everywhere={settings.stripedEverywhere} data-spacing={settings.spacing} data-buttons={settings.buttons} data-corners={settings.corners} data-hero={settings.hero} data-columns={settings.columns} data-visual-font={settings.visual.font} data-link-icons={settings.visual.icons?'show':'hide'} style={{'--apg-site-surface':settings.visual.surface,'--apg-stripe-color':settings.visual.stripeColor||'#f5e6da','--apg-stripe-width':`${settings.visual.stripeWidth??38}px`,'--apg-stripe-period':`${(settings.visual.stripeWidth??38)*2}px`,'--apg-stripe-angle':`${settings.visual.stripeAngle??90}deg`,'--apg-accent':settings.visual.accent,'--apg-surface':settings.visual.surface,'--apg-ink':settings.visual.ink,'--apg-scale':String(settings.visual.scale/100)} as React.CSSProperties}><VisualRuntime settings={settings.visual} page={path}/>{children}</div></AppearanceContext.Provider>;
+ return <AppearanceContext.Provider value={settings}><div className="apg-site" data-background={settings.background} data-pattern={settings.stripedEverywhere&&settings.visual.pattern!=='stripes'?'inherit':settings.visual.pattern||'inherit'} data-striped-everywhere={settings.stripedEverywhere} data-spacing={settings.spacing} data-buttons={settings.buttons} data-corners={settings.corners} data-hero={settings.hero} data-columns={settings.columns} data-visual-font={settings.visual.font} data-link-icons={settings.visual.icons?'show':'hide'} style={{'--apg-site-surface':settings.visual.surface,'--apg-stripe-color':settings.visual.stripeColor||'#f5e6da','--apg-stripe-width':`${settings.visual.stripeWidth??38}px`,'--apg-stripe-period':`${(settings.visual.stripeWidth??38)*2}px`,'--apg-stripe-angle':`${settings.visual.stripeAngle??90}deg`,'--apg-accent':settings.visual.accent,'--apg-surface':settings.visual.surface,'--apg-ink':settings.visual.ink,'--apg-scale':String(settings.visual.scale/100)} as React.CSSProperties}><VisualRuntime settings={settings.visual} page={path}/>{children}<SiteEditShortcut path={path}/></div></AppearanceContext.Provider>;
 }
 export function HomeSections({sections}:{sections:{id:string;content:ReactNode}[]}){
  const settings=useContext(AppearanceContext);
