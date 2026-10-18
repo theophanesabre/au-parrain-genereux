@@ -3,6 +3,7 @@ import { visualHref } from './visual.mjs';
 export const puckPaths=['/','/maison','/savoir-faire','/bonbons','/chocolats','/boutique','/panier'];
 export const blockStyle={background:'',color:'',padding:32,paddingX:28,margin:0,radius:0,maxWidth:1200,align:'left',font:'inherit',size:18,gap:24,width:100,minHeight:0,visualHeight:0,visualBackground:''};
 export const puckDefaults={
+ CompositionLibre:{height:560,items:[],style:{...blockStyle,padding:0,paddingX:0}},
  Texte:{title:'Votre titre',body:'Votre texte de présentation.',level:'h2',style:{...blockStyle}},
  Image:{src:'/images/boutique-historique.jpeg',alt:'La maison Au Parrain Généreux',caption:'',fit:'contain',height:420,style:{...blockStyle}},
  Bouton:{label:'Découvrir',href:'/boutique',variant:'filled',style:{...blockStyle}},
@@ -33,6 +34,10 @@ export function validatePuckData(data){
   if(item.type==='Texte'){result.title=string(p.title,300);result.body=string(p.body,12000);result.level=choice(p.level,['h1','h2','h3']);}
   if(item.type==='Image'){result.src=imagePath(p.src);result.alt=string(p.alt,300);result.caption=string(p.caption,2000);result.fit=choice(p.fit,['cover','contain']);result.height=number(p.height,80,1200);}
   if(item.type==='Bouton'){result.label=string(p.label,100);result.href=visualHref(p.href);result.variant=choice(p.variant,['filled','outline','text']);}
+  if(item.type==='CompositionLibre'){
+   result.height=number(p.height,200,1600);if(!Array.isArray(p.items)||p.items.length>30)fail('30 éléments maximum par composition');const elementIds=new Set();
+   result.items=p.items.map(entry=>{if(!entry||typeof entry.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(entry.id)||elementIds.has(entry.id))fail('Identifiant de composition invalide');elementIds.add(entry.id);const x=number(entry.x,0,95),y=number(entry.y,0,95),width=number(entry.width,5,100-x),height=number(entry.height,5,100-y);return {id:entry.id,kind:choice(entry.kind,['text','image','button']),text:string(entry.text,6000),image:imagePath(entry.image),alt:string(entry.alt,300),href:visualHref(entry.href),x,y,width,height,size:number(entry.size,10,120),color:color(entry.color),background:color(entry.background,true),align:choice(entry.align,['left','center','right'])};});
+  }
   if(item.type==='Espace')result.height=number(p.height,0,600);
   if(item.type==='Section'||item.type==='Colonnes')result.children=content(p.children,depth+1);
   if(item.type==='Colonnes'){if(!Number.isInteger(p.columns))fail('Nombre de colonnes invalide');result.columns=number(p.columns,1,4);}
