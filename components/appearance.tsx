@@ -1,4 +1,5 @@
 'use client';
+import { legalLinks } from '@/site/legal.mjs';
 import { visualStyle } from './visual-style';
 import type { VisualSettings } from './visual-types';
 import { usePathname } from 'next/navigation';
@@ -86,7 +87,7 @@ export function StoreFooter(props:FooterFallback){
  return <footer id={props.anchor} className="apg-store-footer" style={{background:chrome.footerBackground||props.background||'#fffdf9',color:chrome.footerColor||'var(--apg-ink,#30271f)',padding:`${chrome.footerPadding}px clamp(20px,5vw,80px)`,'--footer-columns':chrome.footerColumns} as React.CSSProperties}>
  <div className="apg-store-footer__grid"><div>{chrome.showFooterLogo?<img className="apg-store-footer__logo" src={chrome.logo||props.logo||'/images/logo-boutique-neon.webp'} alt="Au Parrain Généreux"/>:null}{content.title?<h2>{content.title}</h2>:null}{content.text?<p>{content.text}</p>:null}</div>
  {chrome.showFooterLinks?<nav aria-label="Liens de bas de page"><h3>Liens utiles</h3><MenuLinks flat/></nav>:null}
- <ContactCard address={content.address} hours={content.hours} phone={content.phone} email={content.email}/></div><p className="apg-store-footer__legal">{chrome.legal||'© 2026 Au Parrain Généreux'}</p>
+ <ContactCard address={content.address} hours={content.hours} phone={content.phone} email={content.email}/></div><nav className="apg-legal-links" aria-label="Informations légales">{legalLinks.map(([label,href])=><a key={href} href={href}>{label}</a>)}<a href="/cookies#preferences">Gérer les cookies</a></nav><p className="apg-store-footer__legal">{chrome.legal||'© 2026 Au Parrain Généreux'}</p>
  </footer>;
 }
 

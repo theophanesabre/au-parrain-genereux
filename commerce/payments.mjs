@@ -1,3 +1,4 @@
+import { LEGAL_VERSION } from '../site/legal.mjs';
 import { shippingConfiguration, shippingPrice } from './shipping.mjs';
 import { buildCheckoutParams } from './stripe-params.ts';
 import { normalizeCart,quoteCart } from './cart.mjs';
@@ -92,6 +93,7 @@ export async function handlePayments(request,env,makeClient=stripeClient){
   const fingerprint=JSON.stringify({items:[...lines].sort((a,b)=>a.id.localeCompare(b.id)),delivery:body.delivery,mode:config.mode});let attempt=await env.DB.prepare('SELECT * FROM checkout_attempts WHERE id=?').bind(body.key).first();const stripe=makeClient(config.secret);
   if(attempt&&attempt.fingerprint!==fingerprint)throw new HttpError(409,'Le panier a changé : recommencez le paiement.');
   if(!attempt){
+   if(body.terms_accepted!==true||body.terms_version!==LEGAL_VERSION)throw new HttpError(400,'Veuillez lire et accepter la version actuelle des conditions générales de vente.');
    await reconcilePayments(env,config,makeClient);
    const rows=(await env.DB.prepare(`SELECT id,name,price_cents,stock,published FROM products WHERE id IN (${lines.map(()=>'?').join(',')})`).bind(...lines.map(line=>line.id)).all()).results;const quote=quoteCart(lines,rows);
    if(!quote.valid||quote.total_cents>99999999)throw new HttpError(409,'Les prix ou stocks ont changé. Actualisez le panier.');
@@ -100,7 +102,7 @@ export async function handlePayments(request,env,makeClient=stripeClient){
    attempt.params=JSON.stringify(checkoutParams(attempt,items,deliveryConfig.countries));
    const requester=await requesterHash(request,env);
    const active=await env.DB.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE requester=? AND status IN ('creating','open')").bind(requester).first();if(active.count>=5)throw new HttpError(429,'Plusieurs paiements sont déjà en cours. Patientez avant de recommencer.');
-   try{await env.DB.batch([env.DB.prepare('INSERT INTO checkout_attempts(id,params,requester,fingerprint,items,total_cents,shipping_cents,delivery,mode,status,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').bind(attempt.id,attempt.params,requester,fingerprint,JSON.stringify(items),attempt.total_cents,attempt.shipping_cents,body.delivery,config.mode,'creating',createdAt,expiresAt)]);}catch(error){
+   try{await env.DB.batch([env.DB.prepare('INSERT INTO checkout_attempts(id,params,requester,fingerprint,items,total_cents,shipping_cents,delivery,mode,status,created_at,expires_at,terms_version,terms_accepted_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(attempt.id,attempt.params,requester,fingerprint,JSON.stringify(items),attempt.total_cents,attempt.shipping_cents,body.delivery,config.mode,'creating',createdAt,expiresAt,LEGAL_VERSION,createdAt)]);}catch(error){
     const existing=await env.DB.prepare('SELECT * FROM checkout_attempts WHERE id=?').bind(body.key).first();if(existing&&existing.fingerprint===fingerprint)attempt=existing;else if(/checkout rate limit/.test(String(error)))throw new HttpError(429,'Plusieurs paiements sont déjà en cours. Patientez avant de recommencer.');else if(/stock|product unavailable/.test(String(error)))throw new HttpError(409,'Le stock vient de changer. Actualisez le panier.');else throw error;
    }
   }
