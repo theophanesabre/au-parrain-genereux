@@ -1,3 +1,5 @@
+import {inventoryActor, inventoryAPI} from './inventory/service.mjs';
+import {inventoryHTML} from './inventory/ui.mjs';
 import { defaultShipping, readShipping, saveShipping } from '../commerce/shipping.mjs';
 import { mediaInfo, mediaSnapshot, mediaUsages, deleteMedia, replaceMedia } from './media.mjs';
 import { paymentConfig, safeConfig, configurePayments } from '../commerce/stripe.mjs';
@@ -42,6 +44,17 @@ export async function handleAdmin(request, env) {
       if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');
       return json(await claimAdmin(request,env));
     }
+    if(path==='/admin/stocks'||path==='/admin/api/inventory'||path.startsWith('/admin/api/inventory/')) {
+      let inventoryUser;
+      try {inventoryUser=await inventoryActor(request,env);} catch(error) {
+        if(error.status===401&&path==='/admin/stocks'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to=%2Fadmin%2Fstocks'}});
+        throw error;
+      }
+      if(path==='/admin/stocks'&&request.method==='GET'){
+        const nonce=crypto.randomUUID();return new Response(inventoryHTML(nonce),{headers:{...headers,'X-Frame-Options':'SAMEORIGIN','Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'self'`}});
+      }
+      return await inventoryAPI(request,env,inventoryUser,body);
+    }
     let actor;
     try {
       try {actor=authorize(request,env);} catch(error) {
@@ -50,6 +63,9 @@ export async function handleAdmin(request, env) {
         if(!grant)throw error;actor=user;
       }
     } catch(error) {
+      if(error.status===403&&request.method==='GET'&&['/admin','/admin/puck'].includes(path)){
+        try{await inventoryActor(request,env);return new Response(null,{status:302,headers:{...headers,Location:'/admin/stocks'}});}catch{/* Staff have no access to the other administration modules. */}
+      }
       if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck','/admin/paiements'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
       throw error;
     }
@@ -71,7 +87,7 @@ export async function handleAdmin(request, env) {
       if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const data=await body(request);if(typeof data.id!=='string'||!['pending','processed'].includes(data.status))throw new HttpError(400,'Demande invalide');const version=integer(data.version);const result=await db.batch([db.prepare('UPDATE consumer_requests SET status=?,version=version+1 WHERE id=? AND version=?').bind(data.status,data.id,version),db.prepare("INSERT INTO audit(id,actor,action,target,created_at) SELECT ?,?,'WITHDRAWAL_STATUS',?,? WHERE changes()=1").bind(crypto.randomUUID(),actor,data.id,new Date().toISOString())]);if(result[0].meta.changes!==1)throw new HttpError(409,'Demande modifiée ailleurs. Actualisez.');return json({status:data.status,version:version+1});
     }
     if(path==='/admin/api/shipping'){if(request.method==='GET'){const record=await readShipping(db);return json(record||{settings:defaultShipping,version:0});}if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await saveShipping(db,await body(request),actor));}
-    if(path==='/admin/api/stripe'){if(request.method==='GET'){const row=await db.prepare("SELECT * FROM payment_settings WHERE id='stripe'").first();const pending=await db.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE status IN ('creating','open')").first();return json({...safeConfig(row),pending:pending.count});}if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await configurePayments(await body(request),env,actor));}
+    if(path==='/admin/api/stripe'){if(request.method==='GET'){const row=await db.prepare("SELECT enabled,mode,account_id,version,shipping_cents,countries FROM payment_settings WHERE id='stripe'").first();const pending=await db.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE status IN ('creating','open')").first();return json({...safeConfig(row),pending:pending.count});}if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await configurePayments(await body(request),env,actor));}
     if(path==='/admin/api/stripe/reconcile'){if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const config=await paymentConfig(env);if(!config)throw new HttpError(409,'Configurez Stripe avant de vérifier les paiements');return json(await reconcilePayments(env,config));}
 
     if(path==='/admin/api/puck'){
@@ -222,6 +238,7 @@ export async function handleAdmin(request, env) {
     if(error instanceof HttpError) return json({error:error.message},error.status);
     if(/highlight version conflict/.test(String(error)))return json({error:'Les nouveautés ont changé. Actualisez puis réessayez.'},409);
     if(/UNIQUE constraint/.test(String(error)))return json({error:'Identifiant déjà utilisé'},409);
+    if(/sp fixed reference/.test(String(error)))return json({error:'La catégorie et l’unité sont verrouillées après le premier mouvement. Archivez la référence et créez-en une autre.'},409);
     if(/stock|product unavailable/.test(String(error)))return json({error:'Stock insuffisant ou produit supprimé'},409);
     return json({error:'Opération impossible. Vérifiez la configuration et réessayez.'},500);
   }

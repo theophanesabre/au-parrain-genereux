@@ -72,3 +72,5 @@ export const highlightsState = sqliteTable('highlights_state', {id:integer('id')
 export const adminMutationGuards=sqliteTable('admin_mutation_guards',{id:text('id').primaryKey(),valid:integer('valid').notNull()});
 
 export const mediaLibraryHidden=sqliteTable('media_library_hidden',{id:text('id').primaryKey()});
+
+export * from './inventory';

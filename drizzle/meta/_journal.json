@@ -232,6 +232,13 @@
       "when": 1792448946116,
       "tag": "0032_product_copy_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1792450000000,
+      "tag": "0033_stocks_production",
+      "breakpoints": true
     }
   ]
 }
