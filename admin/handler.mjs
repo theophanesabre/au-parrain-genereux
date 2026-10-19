@@ -1,3 +1,4 @@
+import { defaultShipping, readShipping, saveShipping } from '../commerce/shipping.mjs';
 import { mediaInfo, mediaSnapshot, mediaUsages, deleteMedia, replaceMedia } from './media.mjs';
 import { paymentConfig, safeConfig, configurePayments } from '../commerce/stripe.mjs';
 import { reconcilePayments } from '../commerce/payments.mjs';
@@ -65,6 +66,7 @@ export async function handleAdmin(request, env) {
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
     const db=env.DB;
+    if(path==='/admin/api/shipping'){if(request.method==='GET'){const record=await readShipping(db);return json(record||{settings:defaultShipping,version:0});}if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await saveShipping(db,await body(request),actor));}
     if(path==='/admin/api/stripe'){if(request.method==='GET'){const row=await db.prepare("SELECT * FROM payment_settings WHERE id='stripe'").first();const pending=await db.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE status IN ('creating','open')").first();return json({...safeConfig(row),pending:pending.count});}if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await configurePayments(await body(request),env,actor));}
     if(path==='/admin/api/stripe/reconcile'){if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const config=await paymentConfig(env);if(!config)throw new HttpError(409,'Configurez Stripe avant de vérifier les paiements');return json(await reconcilePayments(env,config));}
 

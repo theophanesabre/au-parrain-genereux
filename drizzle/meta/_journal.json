@@ -204,6 +204,13 @@
       "when": 1792367577505,
       "tag": "0028_transparent_calendar_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1792368072850,
+      "tag": "0029_tiered_shipping",
+      "breakpoints": true
     }
   ]
 }
