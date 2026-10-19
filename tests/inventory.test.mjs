@@ -116,3 +116,17 @@ test('database prevents attaching a raced or mismatched supplier to an existing 
  const id=crypto.randomUUID(),lot=env.sqlite.prepare('SELECT id FROM sp_lots').get();
  assert.throws(()=>env.sqlite.prepare("INSERT INTO sp_movements(id,request_key,payload,reference_id,reference_name,category,unit,kind,direction,quantity,before_quantity,after_quantity,actor,actor_name,actor_role,created_at,occurred_on,lot_id,lot_code,supplier) VALUES(?,?,'{}',?,'Noisettes','raw','kg','raw_in',1,1000,1000,2000,'owner','owner','admin',?,'2026-10-19',?,'same','Supplier B')").run(id,id,ref.id,new Date().toISOString(),lot.id),/sp invalid lot/);assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_balances').get().quantity,1000);env.sqlite.close();
 });
+test('sensitive admin routes refuse employees before reading payments or customer data',async()=>{
+ const env=setup();for(const role of ['laboratory','shop'])await good(call(env,'/users','PUT',{user_id:role,name:role,role}));
+ const prepare=env.DB.prepare,queries=[];env.DB.prepare=sql=>{queries.push(sql);return prepare(sql);};
+ const routes=[['/admin/paiements','GET'],['/admin/api/stripe','GET'],['/admin/api/stripe','PUT'],['/admin/api/stripe/reconcile','POST'],['/admin/api/orders','GET'],['/admin/api/audit','GET'],['/admin/api/images','GET'],['/admin/api/appearance','PUT']];
+ for(const actor of ['laboratory','shop','visitor'])for(const [path,method]of routes){
+ const response=await handleAdmin(new Request(origin+path,{method,headers:{'oai-authenticated-user-id':actor,origin,'content-type':'application/json','x-admin-role':'admin'},...(method==='GET'?{}:{body:JSON.stringify({role:'admin',enabled:true})})}),env);
+ assert.equal(response.status,403,actor+' '+path);assert.match(response.headers.get('cache-control'),/no-store/);
+ }
+ assert.equal(queries.some(sql=>/payment_settings|checkout_attempts|FROM orders|FROM audit|FROM images/i.test(sql)),false);
+ assert.equal((await call(env,'/users','PUT',{user_id:'laboratory',name:'Lab',role:'admin',version:1},'laboratory')).status,403);
+ assert.equal((await call(env,'/users','PUT',{user_id:'new',name:'Fake admin',role:'admin'})).status,400);
+ env.sqlite.prepare("INSERT INTO payment_settings(id,secret,webhook_secret,account_id,endpoint_id,mode,enabled,version,countries) VALUES('stripe','DO_NOT_EXPOSE','WEBHOOK_PRIVATE','acct_apg','we_private','test',0,1,'[]')").run();
+ queries.length=0;const config=await handleAdmin(new Request(origin+'/admin/api/stripe',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(config.status,200);const output=await config.text();assert.ok(!output.includes('DO_NOT_EXPOSE'));assert.ok(!output.includes('WEBHOOK_PRIVATE'));assert.ok(!output.includes('we_private'));assert.ok(queries.every(sql=>!sql.includes('SELECT * FROM payment_settings')));env.sqlite.close();
+});
