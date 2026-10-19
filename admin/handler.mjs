@@ -56,7 +56,7 @@ export async function handleAdmin(request, env) {
     if(path==='/admin/paiements'&&request.method==='GET'){const nonce=crypto.randomUUID();return new Response(paymentsHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});}
     if(path==='/admin/puck'&&request.method==='GET')return null;
     if(path==='/admin/editeur'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck'}});
-    if(path==='/admin/apparence'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck?section=theme'}});
+    if(path==='/admin/apparence'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck?section=products'}});
     if(path==='/admin' && request.method==='GET') {
       const embedded=url.searchParams.get('workspace')==='1';
       if(!embedded)return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck'}});
