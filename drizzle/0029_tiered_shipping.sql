@@ -1,0 +1,2 @@
+-- Set the new delivery grid without touching encrypted Stripe settings or existing checkout attempts.
+INSERT INTO site_settings(id,body,version) SELECT 'shipping','{"enabled":true,"base_cents":890,"reduced_from_cents":4000,"reduced_cents":450,"free_from_cents":8000,"countries":["FR"],"label":"Colissimo à domicile","costs":{"discount_percent":0,"packaging_cents":150,"preparation_minutes":3,"hourly_cost_cents":2000,"margin_percent":50,"weight_g":1000}}',1 WHERE EXISTS(SELECT 1 FROM payment_settings WHERE id='stripe') ON CONFLICT(id) DO NOTHING;

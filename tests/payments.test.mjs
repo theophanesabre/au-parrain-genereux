@@ -96,3 +96,37 @@ test('the Stripe creation deadline retains a margin beyond the minimum even afte
  const {env,stripe}=await setup();const create=stripe.client.checkout.sessions.create;const now=Date.now.bind(Date);stripe.client.checkout.sessions.create=async(...args)=>{t.mock.method(Date,'now',()=>now()+10000);return create(...args);};
  const result=await checkout(env,stripe);assert.equal(result.status,200);const params=stripe.calls[0];assert.ok(params.expires_at>=Math.floor(Date.now()/1000)+1800);assert.equal('payment_method_types' in params,false);env.db.close();
 });
+
+// The shared delivery policy must agree with the amount actually charged by Stripe.
+import {defaultShipping,shippingPrice,saveShipping,estimateDeliveryCost,validateShipping} from '../commerce/shipping.mjs';
+test('delivery thresholds are inclusive and cost assumptions remain private',async()=>{
+ for(const [subtotal,fee] of [[0,890],[3999,890],[4000,450],[7999,450],[8000,0],[8001,0]])assert.equal(shippingPrice(subtotal,defaultShipping),fee);
+ assert.equal(shippingPrice(4000,{...defaultShipping,enabled:false}),null);assert.equal(shippingPrice(4000,null,750),750);
+ assert.throws(()=>validateShipping({...defaultShipping,free_from_cents:4000}));assert.throws(()=>validateShipping({...defaultShipping,base_cents:8.9}));assert.throws(()=>validateShipping({...defaultShipping,countries:['BE']}));
+ const {env,stripe}=await setup();await saveShipping(env.DB,{version:0,settings:defaultShipping},'owner');
+ const config=await handlePayments(new Request(origin+'/api/paiement/config',{headers:{'oai-authenticated-user-id':'owner'}}),env,()=>stripe.client);const publicConfig=await config.json();assert.equal(publicConfig.shipping_policy.free_from_cents,8000);assert.equal('costs' in publicConfig.shipping_policy,false);
+ assert.equal((await handleAdmin(new Request(origin+'/admin/api/shipping'),env)).status,401);
+ assert.equal((await handleAdmin(new Request(origin+'/admin/api/shipping',{method:'PUT',headers:{origin:'https://evil.example','oai-authenticated-user-id':'owner','content-type':'application/json'},body:'{}'}),env)).status,403);
+ await assert.rejects(()=>saveShipping(env.DB,{version:0,settings:defaultShipping},'owner'),e=>e.status===409);
+ assert.equal(estimateDeliveryCost(8000,defaultShipping).total_cost_cents,1209);
+ assert.equal(estimateDeliveryCost(8000,{...defaultShipping,costs:{...defaultShipping.costs,discount_percent:15}}).total_cost_cents,1065);
+ assert.equal(estimateDeliveryCost(8000,{...defaultShipping,costs:{...defaultShipping.costs,weight_g:2000}}).total_cost_cents,1369);env.db.close();
+});
+test('Stripe charges the server subtotal tier, including free delivery with an address',async()=>{
+ for(const [subtotal,fee] of [[3999,890],[4000,450],[7999,450],[8000,0]]){
+  const {env,stripe}=await setup();await saveShipping(env.DB,{version:0,settings:defaultShipping},'owner');env.db.prepare("UPDATE products SET price_cents=? WHERE id='coffret'").run(subtotal);
+  assert.equal((await checkout(env,stripe,{delivery:'shipping'})).status,200);assert.equal(stripe.calls[0].shipping_options[0].shipping_rate_data.fixed_amount.amount,fee);assert.deepEqual(stripe.calls[0].shipping_address_collection.allowed_countries,['FR']);
+  const session=[...stripe.sessions.values()][0];session.status='complete';session.payment_status='paid';session.shipping_details={name:'Client',address:{line1:'1 rue Test',postal_code:'76600',city:'Le Havre',country:'FR'}};
+  assert.equal((await webhook(env,stripe,session)).status,200);assert.equal(orders(env)[0].shipping_cents,fee);assert.equal(orders(env)[0].total_cents,subtotal+fee);env.db.close();
+ }
+});
+test('changing delivery settings preserves the amount of an existing checkout and pickup stays free',async()=>{
+ const {env,stripe}=await setup();await saveShipping(env.DB,{version:0,settings:defaultShipping},'owner');const id=crypto.randomUUID();await checkout(env,stripe,{id,delivery:'shipping'});
+ await saveShipping(env.DB,{version:1,settings:{...defaultShipping,base_cents:1090}},'owner');assert.equal((await checkout(env,stripe,{id,delivery:'shipping'})).status,200);assert.equal(stripe.sessions.size,1);
+ const session=[...stripe.sessions.values()][0];assert.equal(session.amount_total,3390);session.status='complete';session.payment_status='paid';session.shipping_details={name:'Client',address:{line1:'1 rue Test',postal_code:'76600',city:'Le Havre',country:'FR'}};assert.equal((await webhook(env,stripe,session)).status,200);assert.equal(orders(env)[0].shipping_cents,890);
+ await saveShipping(env.DB,{version:2,settings:{...defaultShipping,enabled:false}},'owner');assert.equal((await checkout(env,stripe,{delivery:'shipping'})).status,409);assert.equal((await checkout(env,stripe)).status,200);assert.equal(stripe.calls.at(-1).shipping_options,undefined);env.db.close();
+});
+test('shipping migration preserves encrypted Stripe settings and existing policy',async()=>{
+ const {env}=await setup({shipping:750,countries:['FR']});const before=env.db.prepare('SELECT * FROM payment_settings').get();const sql=readFileSync(new URL('../drizzle/0029_tiered_shipping.sql',import.meta.url),'utf8');env.db.exec(sql);assert.deepEqual(env.db.prepare('SELECT * FROM payment_settings').get(),before);assert.equal(JSON.parse(env.db.prepare("SELECT body FROM site_settings WHERE id='shipping'").get().body).base_cents,890);
+ await saveShipping(env.DB,{version:1,settings:{...defaultShipping,base_cents:990}},'owner');env.db.exec(sql);assert.equal(JSON.parse(env.db.prepare("SELECT body FROM site_settings WHERE id='shipping'").get().body).base_cents,990);env.db.close();
+});

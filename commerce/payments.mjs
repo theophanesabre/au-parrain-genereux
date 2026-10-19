@@ -1,3 +1,4 @@
+import { shippingConfiguration, shippingPrice } from './shipping.mjs';
 import { buildCheckoutParams } from './stripe-params.ts';
 import { normalizeCart,quoteCart } from './cart.mjs';
 import { authorize,HttpError } from '../admin/core.mjs';
@@ -68,9 +69,10 @@ export async function handlePayments(request,env,makeClient=stripeClient){
    if(config&&attempt.mode===config.mode&&['creating','open'].includes(attempt.status)){try{await settleSession(await makeClient(config.secret).checkout.sessions.retrieve(id,{expand:['payment_intent.latest_charge']}),env);}catch{/* The signed webhook will retry fulfillment. */}}
    const order=await env.DB.prepare('SELECT id,payment_status,payment_mode FROM orders WHERE stripe_session_id=?').bind(id).first();return json(order?{state:order.payment_status,reference:order.id,mode:order.payment_mode,items:JSON.parse(attempt.items).map(({id,quantity})=>({id,quantity}))}:{state:attempt.status==='expired'?'expired':attempt.status==='failed'?'failed':'pending',mode:attempt.mode});
   }
+  const deliveryConfig=await shippingConfiguration(env.DB,config);
   const visible=!prelaunchEnabled||await isStoreAdmin(request,env);
   if(path==='/api/paiement/config'){
-   if(request.method!=='GET')throw new HttpError(405,'Méthode refusée');return json({enabled:visible&&config?.enabled===1,mode:config?.mode||'test',shipping_cents:config?.shipping_cents??null,countries:config?.countries||[]});
+   if(request.method!=='GET')throw new HttpError(405,'Méthode refusée');return json({enabled:visible&&config?.enabled===1,mode:config?.mode||'test',...deliveryConfig});
   }
   if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');
   if(request.headers.get('origin')!==url.origin)throw new HttpError(403,'Origine refusée');
@@ -86,7 +88,7 @@ export async function handlePayments(request,env,makeClient=stripeClient){
   }
   const lines=normalizeCart(body.items);if(!Array.isArray(body.items)||!lines.length||lines.length!==body.items.length||lines.some(line=>line.quantity>1000))throw new HttpError(400,'Panier invalide');
   if(!['pickup','shipping'].includes(body.delivery)||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(body.key||''))throw new HttpError(400,'Réception ou référence invalide');
-  if(body.delivery==='shipping'&&(config.shipping_cents===null||!config.countries.length))throw new HttpError(409,'L’expédition n’est pas encore configurée. Choisissez le retrait en boutique.');
+  if(body.delivery==='shipping'&&(deliveryConfig.shipping_cents===null||!deliveryConfig.countries.length))throw new HttpError(409,'L’expédition n’est pas encore configurée. Choisissez le retrait en boutique.');
   const fingerprint=JSON.stringify({items:[...lines].sort((a,b)=>a.id.localeCompare(b.id)),delivery:body.delivery,mode:config.mode});let attempt=await env.DB.prepare('SELECT * FROM checkout_attempts WHERE id=?').bind(body.key).first();const stripe=makeClient(config.secret);
   if(attempt&&attempt.fingerprint!==fingerprint)throw new HttpError(409,'Le panier a changé : recommencez le paiement.');
   if(!attempt){
@@ -94,8 +96,8 @@ export async function handlePayments(request,env,makeClient=stripeClient){
    const rows=(await env.DB.prepare(`SELECT id,name,price_cents,stock,published FROM products WHERE id IN (${lines.map(()=>'?').join(',')})`).bind(...lines.map(line=>line.id)).all()).results;const quote=quoteCart(lines,rows);
    if(!quote.valid||quote.total_cents>99999999)throw new HttpError(409,'Les prix ou stocks ont changé. Actualisez le panier.');
    const items=quote.items.map(item=>({id:item.id,name:item.name,quantity:item.quantity,price_cents:item.price_cents,line_total_cents:item.line_cents,unit:'piece'}));
-   const createdAt=Math.floor(Date.now()/1000),expiresAt=createdAt+2100;attempt={id:body.key,session_id:null,delivery:body.delivery,shipping_cents:body.delivery==='shipping'?config.shipping_cents:0,total_cents:quote.total_cents,expires_at:expiresAt,status:'creating'};
-   attempt.params=JSON.stringify(checkoutParams(attempt,items,config.countries));
+   const createdAt=Math.floor(Date.now()/1000),expiresAt=createdAt+2100;attempt={id:body.key,session_id:null,delivery:body.delivery,shipping_cents:body.delivery==='shipping'?shippingPrice(quote.total_cents,deliveryConfig.shipping_policy,deliveryConfig.shipping_cents):0,shipping_label:deliveryConfig.shipping_policy?.label||'Expédition',total_cents:quote.total_cents,expires_at:expiresAt,status:'creating'};
+   attempt.params=JSON.stringify(checkoutParams(attempt,items,deliveryConfig.countries));
    const requester=await requesterHash(request,env);
    const active=await env.DB.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE requester=? AND status IN ('creating','open')").bind(requester).first();if(active.count>=5)throw new HttpError(429,'Plusieurs paiements sont déjà en cours. Patientez avant de recommencer.');
    try{await env.DB.batch([env.DB.prepare('INSERT INTO checkout_attempts(id,params,requester,fingerprint,items,total_cents,shipping_cents,delivery,mode,status,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').bind(attempt.id,attempt.params,requester,fingerprint,JSON.stringify(items),attempt.total_cents,attempt.shipping_cents,body.delivery,config.mode,'creating',createdAt,expiresAt)]);}catch(error){
