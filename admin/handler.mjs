@@ -189,7 +189,7 @@ export async function handleAdmin(request, env) {
           fields=['name','description','price_cents','stock','image','published'];values=[text(b.name),text(b.description,4000),integer(b.price_cents),integer(b.stock,1000000),imagePath(b.image),published];
           if(b.photo_crops!==undefined){fields.push('photo_crops');values.push(JSON.stringify(validatePhotoCrops(b.photo_crops)));}
           if(b.images!==undefined){const images=validateProductImages(b.images);values[fields.indexOf('image')]=images[0]||'';fields.push('images');values.push(JSON.stringify(images));}
-          for(const field of ['weight','conservation','ingredients','allergens']){if(b[field]!==undefined){fields.push(field);values.push(b[field]===''?'':text(b[field],field==='weight'?100:8000));}}
+          for(const field of ['weight','conservation','ingredients','allergens','food_name','nutrition']){if(b[field]!==undefined){fields.push(field);values.push(b[field]===''?'':text(b[field],field==='weight'?100:8000));}}
         }
       }
       else {fields=['title','body','published'];values=[text(b.title),validatePageBody(key,text(b.body,60000)),published];}

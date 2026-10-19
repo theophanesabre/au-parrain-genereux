@@ -218,6 +218,20 @@
       "when": 1792392749219,
       "tag": "0030_consumer_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1792448886316,
+      "tag": "0031_food_information",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1792448946116,
+      "tag": "0032_product_copy_storage",
+      "breakpoints": true
     }
   ]
 }

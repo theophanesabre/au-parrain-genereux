@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+import {netWeightGrams,pricePerKilogram} from '../commerce/food-info.mjs';
+test('unit pricing uses only an unambiguous positive net mass and never invents a missing weight',()=>{assert.equal(netWeightGrams('150 g'),150);assert.equal(netWeightGrams('0,15 kg'),150);assert.equal(netWeightGrams('1.5 KG'),1500);assert.equal(pricePerKilogram(1500,'150 g'),10000);assert.equal(pricePerKilogram(3800,''),null);for(const value of ['24 pièces','150 g ou 200 g','150 g emballage compris','0 g','-1 g','Infinity kg','1e3 g'])assert.equal(netWeightGrams(value),null);assert.equal(pricePerKilogram(15.5,'150 g'),null);});
+test('copy migration improves observed text without overwriting current prices, stock, recipes or owner edits',()=>{
+ const db=new DatabaseSync(':memory:');const entries=JSON.parse(readFileSync(new URL('../drizzle/meta/_journal.json',import.meta.url))).entries;for(const entry of entries.filter(entry=>entry.idx<31))db.exec(readFileSync(new URL('../drizzle/'+entry.tag+'.sql',import.meta.url),'utf8'));
+ db.exec("UPDATE products SET price_cents=3800,stock=7,ingredients='Ma recette validée',allergens='Mes allergènes' WHERE id='calendrier-conte-avent'");const before=db.prepare("SELECT * FROM products WHERE id='calendrier-conte-avent'").get();const oldDescription=before.description;
+ db.exec(readFileSync(new URL('../drizzle/0031_food_information.sql',import.meta.url),'utf8'));const sql=readFileSync(new URL('../drizzle/0032_product_copy_storage.sql',import.meta.url),'utf8');db.exec(sql);const updated=db.prepare("SELECT * FROM products WHERE id='calendrier-conte-avent'").get();for(const field of ['price_cents','stock','ingredients','allergens','image','published'])assert.equal(updated[field],before[field]);assert.notEqual(updated.description,oldDescription);assert.ok(updated.conservation);assert.equal(updated.food_name,'');assert.equal(updated.nutrition,'');
+ db.exec("UPDATE products SET description='Ma nouvelle présentation',conservation='Mes conditions de conservation' WHERE id='calendrier-conte-avent'");const custom=db.prepare("SELECT * FROM products WHERE id='calendrier-conte-avent'").get();db.exec(sql);assert.deepEqual(db.prepare("SELECT * FROM products WHERE id='calendrier-conte-avent'").get(),custom);db.close();
+});
