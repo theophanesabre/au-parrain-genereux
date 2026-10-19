@@ -1,3 +1,4 @@
+import { handleConsumerRequests } from '../site/consumer-requests.mjs';
 import { handlePayments } from '../commerce/payments.mjs';
 import { handlePrelaunch } from '../site/prelaunch.mjs';
 import { handleCommerce } from '../commerce/handler.mjs';
@@ -36,6 +37,8 @@ interface ExecutionContext {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const consumerResponse=await handleConsumerRequests(request,env);
+    if(consumerResponse)return consumerResponse;
     const paymentResponse = await handlePayments(request, env);
     if (paymentResponse) return paymentResponse;
     const commerceResponse = await handleCommerce(request, env);

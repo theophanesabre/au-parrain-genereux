@@ -1,4 +1,5 @@
 'use client';
+import { legalLinks } from '@/site/legal.mjs';
 import { visualStyle } from './visual-style';
 import type { VisualSettings } from './visual-types';
 import { usePathname } from 'next/navigation';
@@ -82,11 +83,14 @@ export function ContactCard({name='Au Parrain Généreux',address,hours,phone,em
 }
 type FooterFallback={title:string;text:string;address:string;hours:string;phone:string;email:string;background?:string;logo?:string;anchor?:string};
 export function StoreFooter(props:FooterFallback){
- const {chrome}=useContext(AppearanceContext);const content=chrome.overrideContent?{title:chrome.footerTitle,text:chrome.footerText,address:chrome.address,hours:chrome.hours,phone:chrome.phone,email:chrome.email}:props;
- return <footer id={props.anchor} className="apg-store-footer" style={{background:chrome.footerBackground||props.background||'#fffdf9',color:chrome.footerColor||'var(--apg-ink,#30271f)',padding:`${chrome.footerPadding}px clamp(20px,5vw,80px)`,'--footer-columns':chrome.footerColumns} as React.CSSProperties}>
- <div className="apg-store-footer__grid"><div>{chrome.showFooterLogo?<img className="apg-store-footer__logo" src={chrome.logo||props.logo||'/images/logo-boutique-neon.webp'} alt="Au Parrain Généreux"/>:null}{content.title?<h2>{content.title}</h2>:null}{content.text?<p>{content.text}</p>:null}</div>
- {chrome.showFooterLinks?<nav aria-label="Liens de bas de page"><h3>Liens utiles</h3><MenuLinks flat/></nav>:null}
- <ContactCard address={content.address} hours={content.hours} phone={content.phone} email={content.email}/></div><p className="apg-store-footer__legal">{chrome.legal||'© 2026 Au Parrain Généreux'}</p>
+ const {chrome,navigation}=useContext(AppearanceContext);const content=chrome.overrideContent?{title:chrome.footerTitle,text:chrome.footerText,address:chrome.address,hours:chrome.hours,phone:chrome.phone,email:chrome.email}:props;
+ const lines=(value:string)=>value.replace(/\s*·\s*/, '\n').split('\n').filter(Boolean);
+ const destinations=[['La maison','/maison'],['Boutique en ligne','/boutique'],['Nous trouver','/#nous-trouver']];
+ return <footer id={props.anchor} className="apg-store-footer apg-editorial-footer" style={{background:'#ffffff',color:chrome.footerColor||'var(--apg-ink,#30271f)'}}>
+ <div className="apg-editorial-footer__main"><section className="apg-editorial-footer__intro"><p className="apg-footer-label">Au Parrain Généreux</p>{content.title?<h2>{content.title}</h2>:<h2>Une chocolaterie havraise</h2>}{content.text?<p>{content.text}</p>:<p>Des produits de qualité, un savoir-faire attentif et des recettes fidèles à l’identité de la maison.</p>}</section>
+ <nav className="apg-editorial-footer__explore" aria-label="Explorer"><h3 className="apg-footer-label">Explorer</h3>{destinations.map(([label,href])=><a key={href} href={href}>{navigation.items.find(item=>item.href===href)?.label||label}</a>)}</nav>
+ <address className="apg-editorial-footer__contact"><div><h3 className="apg-footer-label">La boutique</h3>{lines(content.address).map((line,index)=><p key={index}>{line}</p>)}</div>{content.hours?<div><h3 className="apg-footer-label">Horaires</h3>{lines(content.hours).map((line,index)=><p key={index}>{line}</p>)}</div>:null}{content.phone||content.email?<div><h3 className="apg-footer-label">Nous contacter</h3>{content.phone?<p><a href={'tel:'+content.phone.replace(/[^+0-9]/g,'')}>{content.phone}</a></p>:null}{content.email?<p><a href={'mailto:'+content.email}>{content.email}</a></p>:null}</div>:null}</address></div>
+ <div className="apg-editorial-footer__bottom"><p className="apg-editorial-footer__copyright">{chrome.legal||'© 2026 Au Parrain Généreux — Le Havre'}</p><nav className="apg-legal-links" aria-label="Informations légales">{legalLinks.filter(([,href])=>href!=='/cookies').map(([label,href])=><a key={href} href={href}>{label}</a>)}<a href="/cookies#preferences">Gestion des cookies</a></nav><nav className="apg-footer-social" aria-label="Réseaux sociaux"><a href="https://www.instagram.com/au_parrain_genereux/" target="_blank" rel="noreferrer" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg></a><a href="https://www.facebook.com/chocolatier.auparraingenereux/?locale=fr_FR" target="_blank" rel="noreferrer" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.2 8.2h2.2V5.1c-.4-.1-1.5-.2-2.8-.2-2.8 0-4.7 1.7-4.7 4.8v2.7H6v3.5h2.9V22h3.6v-6.1h3l.5-3.5h-3.5V10c0-1 .3-1.8 1.7-1.8Z" fill="currentColor" stroke="none"/></svg></a></nav></div>
  </footer>;
 }
 
