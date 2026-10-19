@@ -1,4 +1,4 @@
--- Optional LOCAL/manual rollback only, before any use. Never run on a used ledger.
+-- Optional LOCAL/manual rollback only, before any use and BEFORE migration 0034. Never run on a used ledger.
 -- This transaction intentionally fails when any reference, access grant or journal exists.
 BEGIN IMMEDIATE;
 CREATE TEMP TABLE sp_rollback_guard(n INTEGER CHECK(n=0));
