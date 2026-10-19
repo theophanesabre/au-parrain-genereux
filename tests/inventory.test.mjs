@@ -9,9 +9,9 @@ import {handleAdmin} from '../admin/handler.mjs';
 import {quantity} from '../admin/inventory/service.mjs';
 import {inventoryHTML} from '../admin/inventory/ui.mjs';
 const origin='https://apg.example';
-function setup(path=':memory:'){
+function setup(path=':memory:',through=Infinity){
  const sqlite=new DatabaseSync(path);sqlite.exec('PRAGMA foreign_keys=ON');
- for(const entry of JSON.parse(readFileSync(new URL('../drizzle/meta/_journal.json',import.meta.url))).entries)sqlite.exec(readFileSync(new URL('../drizzle/'+entry.tag+'.sql',import.meta.url),'utf8'));
+ for(const entry of JSON.parse(readFileSync(new URL('../drizzle/meta/_journal.json',import.meta.url))).entries.filter(entry=>entry.idx<=through))sqlite.exec(readFileSync(new URL('../drizzle/'+entry.tag+'.sql',import.meta.url),'utf8'));
  function statement(sql,values=[]){return {bind(...args){return statement(sql,args);},async first(){return sqlite.prepare(sql).get(...values)||null;},async all(){return {results:sqlite.prepare(sql).all(...values)};},execute(){const result=sqlite.prepare(sql).run(...values);return {meta:{changes:result.changes},success:true};}};}
  const DB={prepare:sql=>statement(sql),async batch(statements){sqlite.exec('BEGIN IMMEDIATE');try{const results=statements.map(s=>s.execute());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
  return {DB,sqlite,ADMIN_USER_IDS:'owner',BUCKET:{}};
@@ -99,15 +99,15 @@ test('balances and journal survive connection closure / refresh and migration ad
 test('two real concurrent writers cannot overspend a shared balance',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'apg-stock-race-')),path=join(dir,'stock.sqlite'),env=setup(path),ref=await create(env);env.sqlite.exec('PRAGMA journal_mode=WAL');await good(call(env,'/movements','POST',move(ref,'raw_in','10')),201);env.sqlite.close();
  const ready=new Int32Array(new SharedArrayBuffer(4));
- const writer=()=>new Promise((resolve,reject)=>{const worker=new Worker(`const {parentPort,workerData}=require('node:worker_threads');const {DatabaseSync}=require('node:sqlite');const {randomUUID}=require('node:crypto');const db=new DatabaseSync(workerData.path);db.exec('PRAGMA busy_timeout=10000');parentPort.postMessage('ready');Atomics.wait(new Int32Array(workerData.signal),0,0);try{db.exec('BEGIN IMMEDIATE');const id=randomUUID();db.prepare("INSERT INTO sp_movements(id,request_key,payload,reference_id,reference_name,category,unit,kind,direction,quantity,before_quantity,after_quantity,actor,actor_name,actor_role,created_at,occurred_on) SELECT ?,?,'{}',r.id,r.name,r.category,r.unit,'raw_out',-1,7000,b.quantity,b.quantity-7000,?,?, 'admin',?,? FROM sp_references r JOIN sp_balances b ON b.reference_id=r.id WHERE r.id=?").run(id,id,id,id,new Date().toISOString(),'2026-10-19',workerData.ref);db.exec('COMMIT');parentPort.postMessage('success');}catch(e){db.exec('ROLLBACK');parentPort.postMessage('refused');}db.close();`,{eval:true,workerData:{path,ref:ref.id,signal:ready.buffer}});worker.on('message',m=>{if(m==='ready'){if(Atomics.add(ready,0,0)===0){ready.count=(ready.count||0)+1;if(ready.count===2){Atomics.store(ready,0,1);Atomics.notify(ready,0);}}}else resolve(m);});worker.on('error',reject);});
- const outcomes=await Promise.all([writer(),writer()]);assert.deepEqual(outcomes.sort(),['refused','success']);const db=new DatabaseSync(path);assert.equal(db.prepare('SELECT quantity FROM sp_balances').get().quantity,3000);assert.equal(db.prepare('SELECT SUM(direction*quantity) n FROM sp_movements').get().n,3000);db.close();rmSync(dir,{recursive:true});
+ const writer=()=>new Promise((resolve,reject)=>{const worker=new Worker(`const {parentPort,workerData}=require('node:worker_threads');const {DatabaseSync}=require('node:sqlite');const {randomUUID}=require('node:crypto');const db=new DatabaseSync(workerData.path);db.exec('PRAGMA busy_timeout=10000');parentPort.postMessage('ready');Atomics.wait(new Int32Array(workerData.signal),0,0);try{db.exec('BEGIN IMMEDIATE');const id=randomUUID();db.prepare("INSERT INTO sp_movements(id,request_key,payload,reference_id,reference_name,category,unit,kind,direction,quantity,before_quantity,after_quantity,actor,actor_name,actor_role,created_at,occurred_on) SELECT ?,?,'{}',r.id,r.name,r.category,r.unit,'raw_out',-1,7000,b.quantity,b.quantity-7000,?,?, 'admin',?,? FROM sp_references r JOIN sp_balances b ON b.reference_id=r.id WHERE r.id=?").run(id,id,id,id,new Date().toISOString(),'2026-10-19',workerData.ref);db.exec('COMMIT');parentPort.postMessage('success');}catch(e){db.exec('ROLLBACK');parentPort.postMessage('refused');}db.close();`,{eval:true,workerData:{path,ref:ref.id,signal:ready.buffer}});worker.on('message',m=>{if(m==='ready'){if(Atomics.add(ready,0,0)===0){ready.count=(ready.count||0)+1;if(ready.count===2){Atomics.store(ready,0,1);Atomics.notify(ready,0);}}}else worker.outcome=m;});worker.on('exit',code=>code?reject(Error('Writer failed')):resolve(worker.outcome));worker.on('error',reject);});
+ const outcomes=await Promise.all([writer(),writer()]);assert.deepEqual(outcomes.sort(),['refused','success']);const db=new DatabaseSync(path);db.exec('PRAGMA busy_timeout=10000');assert.equal(db.prepare('SELECT quantity FROM sp_balances').get().quantity,3000);assert.equal(db.prepare('SELECT SUM(direction*quantity) n FROM sp_movements').get().n,3000);db.close();rmSync(dir,{recursive:true});
 });
 test('tablet surface includes viewport, large targets, restricted CSP and an executable client',async()=>{
  const env=setup();const response=await handleAdmin(new Request(origin+'/admin/stocks',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(response.status,200);assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'self'/);const html=inventoryHTML('test');assert.match(html,/width=device-width/);assert.match(html,/min-height:52px/);const script=html.match(/<script nonce="test">([\s\S]*)<\/script>/)[1];assert.doesNotThrow(()=>new Function(script));env.sqlite.close();
 });
 test('empty rollback is possible but cannot erase a used ledger',async()=>{
  const rollback=readFileSync(new URL('../docs/migrations/0033_rollback_empty.sql',import.meta.url),'utf8');
- const empty=setup();empty.sqlite.exec(rollback);assert.equal(empty.sqlite.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE name='sp_movements'").get().n,0);empty.sqlite.close();
+ const empty=setup(':memory:',33);empty.sqlite.exec(rollback);assert.equal(empty.sqlite.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE name='sp_movements'").get().n,0);empty.sqlite.close();
  const used=setup();const ref=await create(used);await good(call(used,'/movements','POST',move(ref,'raw_in','1')),201);assert.throws(()=>used.sqlite.exec(rollback));used.sqlite.exec('ROLLBACK');assert.equal(used.sqlite.prepare('SELECT COUNT(*) n FROM sp_movements').get().n,1);used.sqlite.close();
 });
 test('database prevents attaching a raced or mismatched supplier to an existing lot',async()=>{
@@ -129,4 +129,51 @@ test('sensitive admin routes refuse employees before reading payments or custome
  assert.equal((await call(env,'/users','PUT',{user_id:'new',name:'Fake admin',role:'admin'})).status,400);
  env.sqlite.prepare("INSERT INTO payment_settings(id,secret,webhook_secret,account_id,endpoint_id,mode,enabled,version,countries) VALUES('stripe','DO_NOT_EXPOSE','WEBHOOK_PRIVATE','acct_apg','we_private','test',0,1,'[]')").run();
  queries.length=0;const config=await handleAdmin(new Request(origin+'/admin/api/stripe',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(config.status,200);const output=await config.text();assert.ok(!output.includes('DO_NOT_EXPOSE'));assert.ok(!output.includes('WEBHOOK_PRIVATE'));assert.ok(!output.includes('we_private'));assert.ok(queries.every(sql=>!sql.includes('SELECT * FROM payment_settings')));env.sqlite.close();
+});
+test('D1 trigger-inclusive change counts do not falsely report a conflict after reference creation',async()=>{
+ const env=setup(),original=env.DB.batch;env.DB.batch=async statements=>{const rows=await original(statements);if(rows[0].meta.changes===1)rows[0].meta.changes=2;return rows;};
+ const ref=await create(env,'Amandes');assert.equal(ref.name,'Amandes');assert.equal(ref.quantity,'0');
+ await good(call(env,'/references/'+ref.id,'PUT',{name:ref.name,category:ref.category,unit:ref.unit,threshold:ref.threshold,archived:true,version:ref.version}));assert.equal((await good(call(env,'/references'))).total,0);assert.equal((await good(call(env,'/references?archived=1'))).total,1);
+ assert.equal((await call(env,'/references/'+ref.id,'PUT',{name:ref.name,category:ref.category,unit:ref.unit,version:ref.version})).status,409);env.sqlite.close();
+});
+test('explicit laboratory to shop transfer moves one balance to the other exactly once',async()=>{
+ const env=setup(),ref=await create(env,'Bonbons','finished','kg');await good(call(env,'/movements','POST',move(ref,'production_in','5')),201);
+ const payload=move(ref,'production_out','3',{destination:'shop'});const transfer=await good(call(env,'/movements','POST',payload),201);await good(call(env,'/movements','POST',payload),201);
+ assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_balances WHERE reference_id=?').get(ref.id).quantity,2000);assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_shop_balances WHERE reference_id=?').get(ref.id).quantity,3000);assert.equal(env.sqlite.prepare('SELECT COUNT(*) n FROM sp_shop_movements').get().n,1);
+ const shop=await good(call(env,'/shop'));assert.equal(shop.items[0].quantity,'3');assert.equal(shop.items[0].initialized,1);
+ await good(call(env,'/movements','POST',{request_key:crypto.randomUUID(),correction_of:transfer.movement.id,comment:'Annuler transfert'}),201);assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_balances WHERE reference_id=?').get(ref.id).quantity,5000);assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_shop_balances WHERE reference_id=?').get(ref.id).quantity,0);env.sqlite.close();
+});
+test('web allocations are atomic, piece-for-piece and do not expose payment or customer details',async()=>{
+ const env=setup(),ref=await create(env,'Coffret','finished','piece');env.sqlite.prepare("INSERT INTO products(id,name,description,price_cents,stock,published) VALUES('web-box','Coffret','Maison',1500,0,1)").run();
+ await good(call(env,'/users','PUT',{user_id:'shop',name:'Boutique',role:'shop'}));
+ const input={request_key:crypto.randomUUID(),reference_id:ref.id,kind:'shop_in',quantity:'10'};await good(call(env,'/shop-movements','POST',input,'shop'));
+ const transfer={...input,request_key:crypto.randomUUID(),kind:'web_reserve',quantity:'3',web_product_id:'web-box',confirm_same_article:true};await good(call(env,'/shop-movements','POST',transfer,'shop'));await good(call(env,'/shop-movements','POST',transfer,'shop'));
+ assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_shop_balances WHERE reference_id=?').get(ref.id).quantity,7000);assert.equal(env.sqlite.prepare("SELECT stock FROM products WHERE id='web-box'").get().stock,3);
+ // A pending web payment reserves a piece. Returning more than the available web quantity is refused atomically.
+ env.sqlite.prepare("UPDATE products SET stock=stock-1 WHERE id='web-box'").run();
+ assert.equal((await call(env,'/shop-movements','POST',{...transfer,request_key:crypto.randomUUID(),kind:'web_return',quantity:'3'},'shop')).status,409);
+ assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_shop_balances WHERE reference_id=?').get(ref.id).quantity,7000);
+ await good(call(env,'/shop-movements','POST',{...transfer,request_key:crypto.randomUUID(),kind:'web_return',quantity:'2'},'shop'));assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_shop_balances WHERE reference_id=?').get(ref.id).quantity,9000);assert.equal(env.sqlite.prepare("SELECT stock FROM products WHERE id='web-box'").get().stock,0);
+ const online=await good(call(env,'/online','GET',undefined,'shop'));assert.ok(online.items.length);assert.deepEqual(Object.keys(online.items[0]).sort(),['id','name','published','stock']);
+ assert.equal((await call(env,'/shop-movements','POST',{...transfer,request_key:crypto.randomUUID(),quantity:'10'},'shop')).status,409);
+ assert.equal((await call(env,'/shop-movements','POST',{...transfer,request_key:crypto.randomUUID(),confirm_same_article:false},'shop')).status,400);
+ const kg=await create(env,'Vrac','finished','kg');assert.equal((await call(env,'/shop-movements','POST',{...transfer,request_key:crypto.randomUUID(),reference_id:kg.id},'shop')).status,400);
+ assert.throws(()=>env.sqlite.exec('DELETE FROM sp_shop_movements'));assert.throws(()=>env.sqlite.exec('UPDATE sp_shop_balances SET quantity=999'));env.sqlite.close();
+});
+test('historical laboratory exits are not retrospectively invented as shop stock; failed reversals roll back both sides',async()=>{
+ const env=setup(),ref=await create(env,'Pralinés','finished');await good(call(env,'/movements','POST',move(ref,'production_in','5')),201);await good(call(env,'/movements','POST',move(ref,'production_out','1')),201);
+ assert.equal((await good(call(env,'/shop'))).items[0].initialized,0);
+ const transfer=await good(call(env,'/movements','POST',move(ref,'production_out','3',{destination:'shop'})),201);
+ await good(call(env,'/shop-movements','POST',{request_key:crypto.randomUUID(),reference_id:ref.id,kind:'shop_out',quantity:'2'}));
+ assert.equal((await call(env,'/movements','POST',{request_key:crypto.randomUUID(),correction_of:transfer.movement.id,comment:'Trop tard, déjà prélevé'})).status,409);
+ assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_balances WHERE reference_id=?').get(ref.id).quantity,1000);assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_shop_balances WHERE reference_id=?').get(ref.id).quantity,1000);env.sqlite.close();
+});
+test('concurrent web allocations cannot duplicate shop units; shop corrections preserve the original',async()=>{
+ const env=setup(),ref=await create(env,'Boîte','finished','piece');env.sqlite.prepare("INSERT INTO products(id,name,description,price_cents,stock,published) VALUES('w','Boîte','Maison',100,0,1)").run();
+ const initial={request_key:crypto.randomUUID(),reference_id:ref.id,kind:'shop_in',quantity:'10'};const first=await good(call(env,'/shop-movements','POST',initial));
+ const allocate=()=>call(env,'/shop-movements','POST',{request_key:crypto.randomUUID(),reference_id:ref.id,kind:'web_reserve',quantity:'7',web_product_id:'w',confirm_same_article:true});const results=await Promise.all([allocate(),allocate()]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
+ assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_shop_balances WHERE reference_id=?').get(ref.id).quantity,3000);assert.equal(env.sqlite.prepare("SELECT stock FROM products WHERE id='w'").get().stock,7);
+ const out=await good(call(env,'/shop-movements','POST',{request_key:crypto.randomUUID(),reference_id:ref.id,kind:'shop_out',quantity:'1'}));
+ const payload={request_key:crypto.randomUUID(),correction_of:out.movement.id,comment:'Erreur de prélèvement'};const reversed=await good(call(env,'/shop-movements','POST',payload));assert.equal(reversed.movement.after_quantity,'3');assert.equal(reversed.movement.correction_of,out.movement.id);assert.equal((await call(env,'/shop-movements','POST',{...payload,request_key:crypto.randomUUID()})).status,409);
+ assert.equal(env.sqlite.prepare('SELECT quantity FROM sp_shop_balances WHERE reference_id=?').get(ref.id).quantity,3000);assert.ok(env.sqlite.prepare('SELECT id FROM sp_shop_movements WHERE id=?').get(first.movement.id));env.sqlite.close();
 });

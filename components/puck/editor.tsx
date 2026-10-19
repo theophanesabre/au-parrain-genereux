@@ -3,9 +3,9 @@ import { ConsumerRequests } from '../consumer-requests';
 import { ShippingSettings } from './shipping-settings';
 import { MediaLibrary } from './media-library';
 import { useEffect, useRef, useState } from 'react';
-const sections=[['products','Articles et stocks'],['recipes','Recettes'],['highlights','Nouveautés'],['images','Médiathèque'],['orders','Commandes'],['shipping','Livraisons'],['withdrawals','Rétractations'],['audit','Historique'],['inventory','Stocks & Production']] as const;
+const sections=[['products','Articles et stocks'],['recipes','Recettes'],['highlights','Nouveautés'],['images','Médiathèque'],['orders','Commandes'],['shipping','Livraisons'],['withdrawals','Rétractations'],['audit','Historique'],['inventory','Stocks']] as const;
 type Section=typeof sections[number][0];
-const modules=[{id:'inventory',label:'Stocks & Production',entry:'inventory',sections:['inventory']},{id:'products',label:'Articles',entry:'products',sections:['products','recipes','highlights']},{id:'orders',label:'Commandes',entry:'orders',sections:['orders','shipping','withdrawals','audit']},{id:'images',label:'Médiathèque',entry:'images',sections:['images']}] as const;
+const modules=[{id:'inventory',label:'Stocks',entry:'inventory',sections:['inventory']},{id:'products',label:'Articles',entry:'products',sections:['products','recipes','highlights']},{id:'orders',label:'Commandes',entry:'orders',sections:['orders','shipping','withdrawals','audit']},{id:'images',label:'Médiathèque',entry:'images',sections:['images']}] as const;
 export function AdminWorkspace(){
  const [section,setSection]=useState<Section>('products'),[dirty,setDirty]=useState(false),[revision,setRevision]=useState(0),[item,setItem]=useState('');const manager=useRef<HTMLIFrameElement>(null);
  useEffect(()=>{const query=new URLSearchParams(location.search),selected=query.get('section');if(sections.some(([key])=>key===selected))setSection(selected as Section);else history.replaceState(null,'','/admin/puck?section=products');setItem(query.get('item')||'');},[]);

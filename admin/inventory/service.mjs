@@ -1,3 +1,4 @@
+import {stockLocationsAPI} from './locations.mjs';
 import {authorize,checkOrigin,HttpError,text,integer} from '../core.mjs';
 export const inventoryUnits=['kg','g','piece','sac','carton','litre'];
 const kinds={raw_in:['raw',1],raw_out:['raw',-1],production_in:['finished',1],production_out:['finished',-1]};
@@ -49,16 +50,17 @@ export async function saveReference(db,actor,input,id){
  if(id){uid(id);const version=integer(input.version);statement=db.prepare('UPDATE sp_references SET name=?,category=?,unit=?,threshold=?,archived=?,version=version+1 WHERE id=? AND version=?').bind(name,category,unit,threshold,archived,id,version);}
  else{id=crypto.randomUUID();statement=db.prepare('INSERT INTO sp_references(id,name,category,unit,threshold,created_at,created_by) VALUES(?,?,?,?,?,?,?)').bind(id,name,category,unit,threshold,now,actor.id);}
  const results=await db.batch([statement,db.prepare("INSERT INTO sp_access_audit(id,actor,target,details,created_at) SELECT ?,?,?,?,? WHERE changes()=1").bind(crypto.randomUUID(),actor.id,id,JSON.stringify({action:input.version?'reference_update':'reference_create',name,category,unit,threshold,archived}),now)]);
- if(results[0].meta.changes!==1)throw new HttpError(409,'Référence modifiée ailleurs. Actualisez.');return publicReference(await reference(db,id,actor));
+ if(results[0].meta.changes<1)throw new HttpError(409,'Référence modifiée ailleurs. Actualisez.');return publicReference(await reference(db,id,actor));
 }
 export async function recordMovement(db,actor,input){
  const key=uid(input.request_key),correctionId=input.correction_of?uid(input.correction_of):null;
+ let destination=input.destination||'';if(!['','shop'].includes(destination))throw new HttpError(400,'Destination invalide');
  let original=null,kind=input.kind,referenceId=input.reference_id,amount,direction,lotCode=optional(input.lot_code,120),supplier=optional(input.supplier,160),occurredOn=input.occurred_on?date(input.occurred_on):new Date().toISOString().slice(0,10),comment=optional(input.comment,1000);
- if(correctionId){requireAdmin(actor);original=await db.prepare('SELECT * FROM sp_movements WHERE id=?').bind(correctionId).first();if(!original||original.correction_of)throw new HttpError(400,'Mouvement d’origine requis');if(!comment)throw new HttpError(400,'Motif de correction obligatoire');kind='correction';referenceId=original.reference_id;amount=original.quantity;direction=-original.direction;lotCode=original.lot_code;supplier=original.supplier;occurredOn=original.occurred_on;}
+ if(correctionId){requireAdmin(actor);original=await db.prepare('SELECT * FROM sp_movements WHERE id=?').bind(correctionId).first();if(!original||original.correction_of)throw new HttpError(400,'Mouvement d’origine requis');if(!comment)throw new HttpError(400,'Motif de correction obligatoire');destination=original.destination;kind='correction';referenceId=original.reference_id;amount=original.quantity;direction=-original.direction;lotCode=original.lot_code;supplier=original.supplier;occurredOn=original.occurred_on;}
  else{if(!kinds[kind])throw new HttpError(400,'Type de mouvement invalide');allowed(actor,kind);}
  const ref=await reference(db,referenceId,actor);
  if(!original){if(ref.category!==kinds[kind][0])throw new HttpError(400,'Catégorie incompatible');amount=quantity(input.quantity,ref.unit);direction=kinds[kind][1];}
- const payload=JSON.stringify({referenceId,kind,amount,direction,lotCode,supplier,occurredOn,comment,correctionId});
+ const payload=JSON.stringify({referenceId,kind,amount,direction,lotCode,supplier,occurredOn,comment,correctionId,...(destination?{destination}:{})});
  const prior=await db.prepare('SELECT * FROM sp_movements WHERE request_key=?').bind(key).first();
  if(prior){if(prior.actor!==actor.id||prior.payload!==payload)throw new HttpError(409,'Cette validation a déjà été utilisée pour un autre mouvement');return {movement:publicMovement(prior),replayed:true};}
  if(ref.archived&&!original)throw new HttpError(409,'Référence archivée');
@@ -71,9 +73,9 @@ export async function recordMovement(db,actor,input){
  // The ledger trigger validates it and applies the new balance atomically on D1.
  const lotExpression=lotCode?'(SELECT id FROM sp_lots WHERE reference_id=? AND code=?)':'NULL';
  const values=[id,key,payload,kind,direction,amount,amount,direction,actor.id,actor.name,actor.role,now,occurredOn];
- if(lotCode)values.push(ref.id,lotCode);values.push(lotCode,snapshotSupplier,comment,correctionId,ref.id);
- batch.push(db.prepare(`INSERT INTO sp_movements(id,request_key,payload,reference_id,reference_name,category,unit,kind,direction,quantity,before_quantity,after_quantity,actor,actor_name,actor_role,created_at,occurred_on,lot_id,lot_code,supplier,comment,correction_of)
- SELECT ?,?,?,r.id,r.name,r.category,r.unit,?,?,?,b.quantity,b.quantity+?*?,?,?,?,?,?,${lotExpression},?,?,?,? FROM sp_references r JOIN sp_balances b ON b.reference_id=r.id WHERE r.id=?`).bind(...values));
+ if(lotCode)values.push(ref.id,lotCode);values.push(lotCode,snapshotSupplier,comment,correctionId,destination,ref.id);
+ batch.push(db.prepare(`INSERT INTO sp_movements(id,request_key,payload,reference_id,reference_name,category,unit,kind,direction,quantity,before_quantity,after_quantity,actor,actor_name,actor_role,created_at,occurred_on,lot_id,lot_code,supplier,comment,correction_of,destination)
+ SELECT ?,?,?,r.id,r.name,r.category,r.unit,?,?,?,b.quantity,b.quantity+?*?,?,?,?,?,?,${lotExpression},?,?,?,?,? FROM sp_references r JOIN sp_balances b ON b.reference_id=r.id WHERE r.id=?`).bind(...values));
  try{await db.batch(batch);}catch(error){
  const existing=await db.prepare('SELECT * FROM sp_movements WHERE request_key=?').bind(key).first();if(existing&&existing.actor===actor.id&&existing.payload===payload)return {movement:publicMovement(existing),replayed:true};
  if(/constraint|sp balance|sp whole|sp invalid|sp forbidden/i.test(String(error)))throw new HttpError(409,'Mouvement refusé : stock insuffisant, correction déjà effectuée ou données modifiées. Actualisez.');throw error;
@@ -86,6 +88,7 @@ export async function inventoryAPI(request,env,actor,readBody){
  const url=new URL(request.url),path=url.pathname.slice('/admin/api/inventory'.length),method=request.method;
  if(method!=='GET')checkOrigin(request);
  const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
+ const locationResponse=await stockLocationsAPI(request,env,actor,readBody);if(locationResponse)return locationResponse;
  if(path==='/me'&&method==='GET')return json(actor);
  if(path==='/references'&&method==='GET'){
  const f=filters(url.searchParams,actor),offset=integer(Number(url.searchParams.get('offset')||0));
