@@ -270,7 +270,7 @@ test('appearance is protected, versioned, validates layout and restores defaults
  assert.equal((await handleAdmin(req('/admin/api/appearance',{method:'PUT',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.example','content-type':'application/json'},body:JSON.stringify({settings,version:1})}),env)).status,403);
  assert.equal((await call(env,'appearance','PUT',{settings:defaultAppearance,version:1})).status,200);
  const restored=await (await call(env,'appearance')).json();assert.equal(restored.version,2);assert.deepEqual(restored.settings,defaultAppearance);
- const redirected=await handleAdmin(req('/admin/apparence',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(redirected.status,302);assert.equal(redirected.headers.get('location'),'/admin/puck?section=theme');
+ const redirected=await handleAdmin(req('/admin/apparence',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(redirected.status,302);assert.equal(redirected.headers.get('location'),'/admin/puck?section=products');
  env.sqlite.close();
 });
 
