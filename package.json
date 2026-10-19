@@ -9,14 +9,15 @@
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
-    "test": "npm run build && npm run test:admin && npm run test:cart && npm run test:prelaunch && npm run test:payments && npm run test:legal",
+    "test": "npm run build && npm run test:admin && npm run test:cart && npm run test:prelaunch && npm run test:payments && npm run test:legal && npm run test:food",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test:admin": "node tests/admin.test.mjs",
     "test:cart": "node tests/cart.test.mjs",
     "test:prelaunch": "node tests/prelaunch.test.mjs",
     "test:payments": "node tests/payments.test.mjs",
-    "test:legal": "node tests/legal.test.mjs"
+    "test:legal": "node tests/legal.test.mjs",
+    "test:food": "node tests/food.test.mjs"
   },
   "dependencies": {
     "@puckeditor/core": "^0.23.0",

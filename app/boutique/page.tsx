@@ -11,7 +11,7 @@ export const metadata={title:'Tous les articles | Au Parrain Généreux',descrip
 export default async function Shop(){
   const puck=await publishedPuckPage("/boutique");if(puck)return puck;
 
-  const [rows,sources]=await Promise.all([env.DB?env.DB.prepare('SELECT id,name,description,price_cents,stock,image,images,photo_crops FROM products WHERE archived=0 AND published=1 AND price_cents>0 ORDER BY name LIMIT 500').all<SaleProduct>():Promise.resolve({results:[] as SaleProduct[]}),getImageSources()]);
+  const [rows,sources]=await Promise.all([env.DB?env.DB.prepare('SELECT id,name,description,price_cents,stock,image,images,photo_crops,weight FROM products WHERE archived=0 AND published=1 AND price_cents>0 ORDER BY name LIMIT 500').all<SaleProduct>():Promise.resolve({results:[] as SaleProduct[]}),getImageSources()]);
   const products=rows.results.filter(product=>isSale(product.id));
   return <main className="inner-page"><SiteHeader/><PageSections page="/boutique" items={[{id:"intro",content:<PageIntro index="05" kicker="La boutique" title="Tous les articles."><p>Découvrez les articles de la maison : boîtes, coffrets et créations préparées par nos soins. Retrait en boutique ou expédition : préparez votre sélection.</p></PageIntro>},{id:"catalog",content:<Catalog products={products.map(product=>({...product,image:sources[product.image]||product.image,images:productGallery(product).map((src:string)=>sources[src]||src),photo_crops:productPhotoCrops(product,(src:string)=>sources[src]||src)}))}/>}]} /><SiteFooter/></main>;
 }

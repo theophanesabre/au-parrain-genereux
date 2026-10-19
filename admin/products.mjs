@@ -11,7 +11,7 @@ export function lineTotal(product, quantity) { return product.price_cents*quanti
 
 export async function getStoreProduct(db,id) {
   if(!db||typeof id!=='string'||id.length>100||!isSale(id))return null;
-  return db.prepare('SELECT id,name,description,price_cents,stock,image,images,photo_crops,weight,conservation,ingredients,allergens FROM products WHERE id=? AND published=1 AND archived=0 AND price_cents>0').bind(id).first();
+  return db.prepare('SELECT id,name,description,price_cents,stock,image,images,photo_crops,weight,conservation,ingredients,allergens,food_name,nutrition FROM products WHERE id=? AND published=1 AND archived=0 AND price_cents>0').bind(id).first();
 }
 
 export function validateProductImages(images){

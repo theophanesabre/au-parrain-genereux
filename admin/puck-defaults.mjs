@@ -11,7 +11,7 @@ export async function puckContext(db,path){
   db.prepare("SELECT id,body FROM pages WHERE published=1 AND (id=? OR id='accueil')").bind(pageId).all(),
   db.prepare('SELECT r.original,r.image_id FROM image_replacements r').all(),
   db.prepare('SELECT * FROM highlights ORDER BY position LIMIT 500').all(),
-  db.prepare('SELECT id,name,description,price_cents,stock,image,images,photo_crops,published FROM products WHERE archived=0 AND published=1 ORDER BY name LIMIT 500').all(),
+  db.prepare('SELECT id,name,description,price_cents,stock,image,images,photo_crops,weight,published FROM products WHERE archived=0 AND published=1 ORDER BY name LIMIT 500').all(),
   db.prepare("SELECT body FROM site_settings WHERE id='appearance'").first(),
  ]);
  const images=Object.fromEntries(replacements.results.map(item=>[item.original,'/media/'+item.image_id]));
