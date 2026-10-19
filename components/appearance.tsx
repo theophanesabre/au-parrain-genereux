@@ -78,13 +78,22 @@ export function StoreHeader({logo='/images/logo-boutique-neon.webp',logoWidth=10
   <nav className="apg-store-desktop" aria-label="Navigation principale"><MenuLinks/></nav><div className="apg-store-actions"><CartLink/><details className="apg-store-mobile"><summary aria-label="Ouvrir le menu">☰</summary><nav aria-label="Navigation mobile"><MenuLinks/></nav></details></div>
  </header>;
 }
+type ContactCardProps={name?:string;address:string;hours:string;phone:string;email:string};
+export function ContactCard({name='Au Parrain Généreux',address,hours,phone,email}:ContactCardProps){
+ const lines=(value:string)=>value.replace(/\s*·\s*/, '\n').split('\n').filter(line=>line.trim());
+ return <div className="apg-contact-card" aria-label="Coordonnées de la boutique">
+  <section className="apg-contact-card__section"><h3>Nous rendre visite —</h3><p className="apg-contact-card__name">{name}</p><address>{lines(address).map((line,index)=><p key={index}>{line}</p>)}</address></section>
+  {hours?<section className="apg-contact-card__section"><h3>Horaires —</h3>{lines(hours).map((line,index)=><p key={index}>{line}</p>)}</section>:null}
+  {phone||email?<section className="apg-contact-card__section"><h3>Nous contacter —</h3>{phone?<p><a href={'tel:'+phone.replace(/[^+0-9]/g,'')}>{phone}</a></p>:null}{email?<p><a href={'mailto:'+email}>{email}</a></p>:null}</section>:null}
+ </div>;
+}
 type FooterFallback={title:string;text:string;address:string;hours:string;phone:string;email:string;background?:string;logo?:string;anchor?:string};
 export function StoreFooter(props:FooterFallback){
  const {chrome}=useContext(AppearanceContext);const content=chrome.overrideContent?{title:chrome.footerTitle,text:chrome.footerText,address:chrome.address,hours:chrome.hours,phone:chrome.phone,email:chrome.email}:props;
  return <footer id={props.anchor} className="apg-store-footer" style={{background:chrome.footerBackground||props.background||'#fffdf9',color:chrome.footerColor||'var(--apg-ink,#30271f)',padding:`${chrome.footerPadding}px clamp(20px,5vw,80px)`,'--footer-columns':chrome.footerColumns} as React.CSSProperties}>
  <div className="apg-store-footer__grid"><div>{chrome.showFooterLogo?<img className="apg-store-footer__logo" src={chrome.logo||props.logo||'/images/logo-boutique-neon.webp'} alt="Au Parrain Généreux"/>:null}{content.title?<h2>{content.title}</h2>:null}{content.text?<p>{content.text}</p>:null}</div>
  {chrome.showFooterLinks?<nav aria-label="Liens de bas de page"><h3>Liens utiles</h3><MenuLinks flat/></nav>:null}
- <address>{content.address?<p>{content.address}</p>:null}{content.hours?<p>{content.hours}</p>:null}{content.phone?<a href={'tel:'+content.phone.replace(/[^+0-9]/g,'')}>{content.phone}</a>:null}{content.email?<a href={'mailto:'+content.email}>{content.email}</a>:null}</address></div><p className="apg-store-footer__legal">{chrome.legal||'© 2026 Au Parrain Généreux'}</p>
+ <ContactCard address={content.address} hours={content.hours} phone={content.phone} email={content.email}/></div><p className="apg-store-footer__legal">{chrome.legal||'© 2026 Au Parrain Généreux'}</p>
  </footer>;
 }
 
