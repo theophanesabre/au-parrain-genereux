@@ -3,6 +3,7 @@ import { ConsumerRequests } from '../consumer-requests';
 import { ShippingSettings } from './shipping-settings';
 import { MediaLibrary } from './media-library';
 import { useEffect, useRef, useState } from 'react';
+import { adminThemeCSS, adminThemeClient } from '@/admin/theme.mjs';
 
 const sections = [
   ['products', 'Articles'], ['recipes', 'Recettes'], ['highlights', 'Nouveautés'],
@@ -33,6 +34,7 @@ export function AdminWorkspace() {
   const [item, setItem] = useState('');
   const manager = useRef<HTMLIFrameElement>(null);
 
+  useEffect(() => adminThemeClient(), []);
   useEffect(() => {
     const query = new URLSearchParams(location.search), selected = query.get('section');
     if (sections.some(([key]) => key === selected)) setSection(selected as Section);
@@ -66,11 +68,13 @@ export function AdminWorkspace() {
   const sectionLabel = sections.find(([key]) => key === section)?.[1];
 
   return <div className="apg-puck-editor apg-simple-admin">
+    <style>{adminThemeCSS}</style>
     <header className="apg-workspace-header">
-      <a href="/admin" aria-label="Accueil de l’administration"><img src="/images/logo-boutique-neon.webp" alt="Au Parrain Généreux"/></a>
-      <h1>Administration</h1>
+      <a className="apg-admin-centered-brand" href="/admin" aria-label="Accueil de l’administration"><img src="/images/logo-boutique-neon.webp" alt="Au Parrain Généreux"/></a>
+      <h1 className="apg-admin-accessible-title">Administration</h1>
       <div className="apg-admin-header-actions">
         <a href="/?apercu=1" target="_blank" rel="noreferrer">Voir le site</a>
+        <button type="button" data-admin-theme-toggle aria-pressed={false}>Mode sombre</button>
         <details className="apg-admin-settings">
           <summary>Réglages</summary>
           <div><a href="/admin/paiements">Paiements Stripe</a><a href="/signout-with-chatgpt?return_to=%2Fadmin">Déconnexion</a></div>
@@ -91,7 +95,7 @@ export function AdminWorkspace() {
         </details>
         {dirty ? <span className="apg-admin-unsaved" role="status">Modifications non enregistrées</span> : null}
       </div> : null}
-      {section === 'inventory' ? <iframe className="apg-management-frame" title="Stocks" src="/admin/stocks"/> :
+      {section === 'inventory' ? <iframe className="apg-management-frame" title="Stocks" src="/admin/stocks?embedded=1"/> :
         section === 'withdrawals' ? <ConsumerRequests/> :
           section === 'shipping' ? <ShippingSettings onDirty={setDirty}/> :
             section === 'images' ? <MediaLibrary onSaved={() => {}}/> :
