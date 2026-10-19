@@ -49,7 +49,7 @@ export async function saveReference(db,actor,input,id){
  if(id){uid(id);const version=integer(input.version);statement=db.prepare('UPDATE sp_references SET name=?,category=?,unit=?,threshold=?,archived=?,version=version+1 WHERE id=? AND version=?').bind(name,category,unit,threshold,archived,id,version);}
  else{id=crypto.randomUUID();statement=db.prepare('INSERT INTO sp_references(id,name,category,unit,threshold,created_at,created_by) VALUES(?,?,?,?,?,?,?)').bind(id,name,category,unit,threshold,now,actor.id);}
  const results=await db.batch([statement,db.prepare("INSERT INTO sp_access_audit(id,actor,target,details,created_at) SELECT ?,?,?,?,? WHERE changes()=1").bind(crypto.randomUUID(),actor.id,id,JSON.stringify({action:input.version?'reference_update':'reference_create',name,category,unit,threshold,archived}),now)]);
- if(results[0].meta.changes!==1)throw new HttpError(409,'Référence modifiée ailleurs. Actualisez.');return publicReference(await reference(db,id,actor));
+ if(results[0].meta.changes<1)throw new HttpError(409,'Référence modifiée ailleurs. Actualisez.');return publicReference(await reference(db,id,actor));
 }
 export async function recordMovement(db,actor,input){
  const key=uid(input.request_key),correctionId=input.correction_of?uid(input.correction_of):null;

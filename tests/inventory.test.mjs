@@ -130,3 +130,9 @@ test('sensitive admin routes refuse employees before reading payments or custome
  env.sqlite.prepare("INSERT INTO payment_settings(id,secret,webhook_secret,account_id,endpoint_id,mode,enabled,version,countries) VALUES('stripe','DO_NOT_EXPOSE','WEBHOOK_PRIVATE','acct_apg','we_private','test',0,1,'[]')").run();
  queries.length=0;const config=await handleAdmin(new Request(origin+'/admin/api/stripe',{headers:{'oai-authenticated-user-id':'owner'}}),env);assert.equal(config.status,200);const output=await config.text();assert.ok(!output.includes('DO_NOT_EXPOSE'));assert.ok(!output.includes('WEBHOOK_PRIVATE'));assert.ok(!output.includes('we_private'));assert.ok(queries.every(sql=>!sql.includes('SELECT * FROM payment_settings')));env.sqlite.close();
 });
+test('D1 trigger-inclusive change counts do not falsely report a conflict after reference creation',async()=>{
+ const env=setup(),original=env.DB.batch;env.DB.batch=async statements=>{const rows=await original(statements);if(rows[0].meta.changes===1)rows[0].meta.changes=2;return rows;};
+ const ref=await create(env,'Amandes');assert.equal(ref.name,'Amandes');assert.equal(ref.quantity,'0');
+ await good(call(env,'/references/'+ref.id,'PUT',{name:ref.name,category:ref.category,unit:ref.unit,threshold:ref.threshold,archived:true,version:ref.version}));assert.equal((await good(call(env,'/references'))).total,0);assert.equal((await good(call(env,'/references?archived=1'))).total,1);
+ assert.equal((await call(env,'/references/'+ref.id,'PUT',{name:ref.name,category:ref.category,unit:ref.unit,version:ref.version})).status,409);env.sqlite.close();
+});

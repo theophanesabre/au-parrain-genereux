@@ -76,3 +76,7 @@ Les tests SQLite reproduisent les transactions et triggers utilisés sur D1, mai
 ## Protection des informations sensibles
 
 Les accès Stripe, réglages de paiement, commandes/données clients, journal général du site et médiathèque restent réservés au propriétaire et aux administrateurs responsables déjà explicitement autorisés. Le profil de production ne peut pas s’élever en administrateur, même par appel direct à l’API ou envoi d’un faux champ/en-tête de rôle. Le quatorzième test du module vérifie le refus avant toute lecture de données sensibles. La consultation de configuration Stripe ne lit que les colonnes non secrètes ; les clés API et webhook restent chiffrées côté serveur et ne sont pas renvoyées dans l’interface. Les accès au tableau de bord Stripe lui-même se gèrent également dans les permissions de l’équipe du compte Stripe ; le module APG n’accorde aucun accès à ce compte externe.
+
+## Écran quotidien simplifié
+
+À la demande du propriétaire, l’interface du programme ne présente plus que Stocks : catégories, cartes, mouvement et ajout/modification/retrait d’une référence. Les menus secondaires sont retirés de cet écran. Le journal durable et les services protégés restent conservés, sans suppression de données. Le retrait d’une référence est un archivage explicite avec confirmation. Le contrôle de création accepte les compteurs D1 incluant les écritures des triggers, tout en refusant toujours une mise à jour de version périmée.
