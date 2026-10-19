@@ -1,3 +1,5 @@
+import {inventoryActor, inventoryAPI} from './inventory/service.mjs';
+import {inventoryHTML} from './inventory/ui.mjs';
 import { defaultShipping, readShipping, saveShipping } from '../commerce/shipping.mjs';
 import { mediaInfo, mediaSnapshot, mediaUsages, deleteMedia, replaceMedia } from './media.mjs';
 import { paymentConfig, safeConfig, configurePayments } from '../commerce/stripe.mjs';
@@ -42,6 +44,17 @@ export async function handleAdmin(request, env) {
       if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');
       return json(await claimAdmin(request,env));
     }
+    if(path==='/admin/stocks'||path==='/admin/api/inventory'||path.startsWith('/admin/api/inventory/')) {
+      let inventoryUser;
+      try {inventoryUser=await inventoryActor(request,env);} catch(error) {
+        if(error.status===401&&path==='/admin/stocks'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to=%2Fadmin%2Fstocks'}});
+        throw error;
+      }
+      if(path==='/admin/stocks'&&request.method==='GET'){
+        const nonce=crypto.randomUUID();return new Response(inventoryHTML(nonce),{headers:{...headers,'X-Frame-Options':'SAMEORIGIN','Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'self'`}});
+      }
+      return await inventoryAPI(request,env,inventoryUser,body);
+    }
     let actor;
     try {
       try {actor=authorize(request,env);} catch(error) {
@@ -50,6 +63,9 @@ export async function handleAdmin(request, env) {
         if(!grant)throw error;actor=user;
       }
     } catch(error) {
+      if(error.status===403&&request.method==='GET'&&['/admin','/admin/puck'].includes(path)){
+        try{await inventoryActor(request,env);return new Response(null,{status:302,headers:{...headers,Location:'/admin/stocks'}});}catch{/* Staff have no access to the other administration modules. */}
+      }
       if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck','/admin/paiements'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
       throw error;
     }
@@ -222,6 +238,7 @@ export async function handleAdmin(request, env) {
     if(error instanceof HttpError) return json({error:error.message},error.status);
     if(/highlight version conflict/.test(String(error)))return json({error:'Les nouveautés ont changé. Actualisez puis réessayez.'},409);
     if(/UNIQUE constraint/.test(String(error)))return json({error:'Identifiant déjà utilisé'},409);
+    if(/sp fixed reference/.test(String(error)))return json({error:'La catégorie et l’unité sont verrouillées après le premier mouvement. Archivez la référence et créez-en une autre.'},409);
     if(/stock|product unavailable/.test(String(error)))return json({error:'Stock insuffisant ou produit supprimé'},409);
     return json({error:'Opération impossible. Vérifiez la configuration et réessayez.'},500);
   }
