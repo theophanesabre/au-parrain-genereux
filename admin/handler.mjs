@@ -222,7 +222,7 @@ export async function handleAdmin(request, env) {
       throw new HttpError(405,'La création manuelle de commandes est désactivée. Les commandes en ligne sont enregistrées après paiement.');
     }
     if(resource==='orders' && request.method==='PUT' && id) {
-      const current=await db.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();if(!current)throw new HttpError(404,'Commande introuvable');transition(current.status,b.status);
+      const current=await db.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();if(!current)throw new HttpError(404,'Commande introuvable');if(current.payment_status==='refunded')throw new HttpError(409,'Une commande remboursée ne peut pas être remise en préparation.');transition(current.status,b.status);
       if(current.payment_status==='paid'&&b.status==='cancelled')throw new HttpError(409,'Remboursez d’abord le paiement dans Stripe. Une annulation de préparation ne rembourse pas le client.');
       if(b.status==='confirmed' && JSON.parse(current.items).some(line=>!isSale(line.id)))throw new HttpError(409,'Recréez cette commande avec les articles maison actuels');
       const result=await db.batch([db.prepare('UPDATE orders SET status=?,version=version+1 WHERE id=? AND version=?').bind(b.status,id,integer(b.version)),log()]);
