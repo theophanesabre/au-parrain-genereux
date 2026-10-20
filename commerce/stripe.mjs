@@ -24,13 +24,19 @@ export async function configurePayments(input,env,actor,makeClient=stripeClient)
  if(current&&current.mode!==mode){const pending=await env.DB.prepare("SELECT id FROM checkout_attempts WHERE status IN ('creating','open') LIMIT 1").first();if(pending)throw new HttpError(409,'Des paiements sont encore en cours. Terminez-les avant de changer de mode.');}
  const stripe=makeClient(secret);let account;
  try{account=await stripe.accounts.retrieve();}catch{throw new HttpError(400,'Clé Stripe refusée : vérifiez le compte et les autorisations.');}
- if(current&&current.account_id!==account.id)throw new HttpError(409,'Le changement de compte Stripe nécessite une migration des paiements existants.');
+ const accountChanging=Boolean(current&&current.account_id!==account.id);
+ const firstLiveAccount=accountChanging&&current.mode==='test'&&mode==='live';
+ if(accountChanging){
+  const liveHistory=firstLiveAccount?await env.DB.prepare("SELECT id FROM checkout_attempts WHERE mode='live' UNION ALL SELECT id FROM orders WHERE payment_mode='live' LIMIT 1").first():true;
+  if(!firstLiveAccount||liveHistory)throw new HttpError(409,'Le changement de compte Stripe nécessite une migration des paiements existants.');
+ }
+
  if(input.enabled&&mode==='live'&&!account.charges_enabled)throw new HttpError(400,'Activez les paiements et terminez la vérification du compte dans Stripe.');
  let webhookSecret=current?.mode===mode?current.webhook_secret:null,endpointId=current?.mode===mode?current.endpoint_id:null;
  if(!webhookSecret){try{const endpoint=await stripe.webhookEndpoints.create({url:storeOrigin+'/api/stripe/webhook',enabled_events:['checkout.session.completed','checkout.session.expired','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed','charge.refunded'],description:'Au Parrain Généreux — commandes du site'},{idempotencyKey:'apg-webhook-'+mode+'-'+account.id});webhookSecret=endpoint.secret;endpointId=endpoint.id;}catch{throw new HttpError(400,'Stripe ne permet pas de créer le webhook. Utilisez une clé autorisée à gérer les sessions Checkout et les webhooks.');}}
  if(!webhookSecret)throw new HttpError(503,'Signature du webhook indisponible : recommencez la configuration.');
  const values=[await seal(secret,env),await seal(webhookSecret,env),account.id,endpointId,mode,input.enabled?1:0,input.shipping_cents,JSON.stringify(input.countries)];
- const change=current?env.DB.prepare("UPDATE payment_settings SET secret=?,webhook_secret=?,account_id=?,endpoint_id=?,mode=?,enabled=?,shipping_cents=?,countries=?,version=version+1 WHERE id='stripe' AND version=? AND NOT EXISTS (SELECT 1 FROM checkout_attempts WHERE status IN ('creating','open') AND mode<>?)").bind(...values,input.version,mode):env.DB.prepare("INSERT OR IGNORE INTO payment_settings(secret,webhook_secret,account_id,endpoint_id,mode,enabled,shipping_cents,countries,id) VALUES (?,?,?,?,?,?,?,?,'stripe')").bind(...values);
+ const change=current?env.DB.prepare("UPDATE payment_settings SET secret=?,webhook_secret=?,account_id=?,endpoint_id=?,mode=?,enabled=?,shipping_cents=?,countries=?,version=version+1 WHERE id='stripe' AND version=? AND NOT EXISTS (SELECT 1 FROM checkout_attempts WHERE status IN ('creating','open') AND mode<>?) AND (?=0 OR (NOT EXISTS (SELECT 1 FROM checkout_attempts WHERE mode='live') AND NOT EXISTS (SELECT 1 FROM orders WHERE payment_mode='live')))").bind(...values,input.version,mode,firstLiveAccount?1:0):env.DB.prepare("INSERT OR IGNORE INTO payment_settings(secret,webhook_secret,account_id,endpoint_id,mode,enabled,shipping_cents,countries,id) VALUES (?,?,?,?,?,?,?,?,'stripe')").bind(...values);
  const [result]=await env.DB.batch([change,env.DB.prepare('INSERT INTO audit(id,actor,action,target,created_at) SELECT ?,?,?,?,? WHERE changes()=1').bind(crypto.randomUUID(),actor,'STRIPE_CONFIGURE',mode,new Date().toISOString())]);if(result.meta.changes!==1)throw new HttpError(409,'Réglages modifiés ailleurs : rechargez.');return {configured:true,mode,version:input.version+1};
 }
 export async function verifyStripeEvent(raw,signature,secret){return Stripe.webhooks.constructEventAsync(raw,signature,secret,300,Stripe.createSubtleCryptoProvider());}
