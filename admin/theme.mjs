@@ -3,11 +3,12 @@ export const adminThemeCSS = `
 html[data-apg-admin-theme]{--adm-bg:#fff;--adm-surface:#fff;--adm-soft:#f4f4f5;--adm-text:#18181b;--adm-muted:#62626b;--adm-line:#dedee3;--adm-add:#166534;--adm-remove:#b91c1c;--adm-action-text:#fff;--adm-selected:#18181b;--adm-selected-text:#fff;color-scheme:light;background:var(--adm-bg)}
 html[data-apg-admin-theme=dark]{--adm-bg:#111113;--adm-surface:#1c1c20;--adm-soft:#28282e;--adm-text:#f4f4f5;--adm-muted:#b0b0ba;--adm-line:#41414b;--adm-add:#34d399;--adm-remove:#fb7185;--adm-action-text:#101014;--adm-selected:#f4f4f5;--adm-selected-text:#18181b;color-scheme:dark}
 html[data-apg-admin-theme] body,html[data-apg-admin-theme] .apg-puck-editor{background:var(--adm-bg)!important;color:var(--adm-text)!important}
-html[data-apg-admin-theme] :where(header,article,.panel,dialog,.apg-workspace-surface,.apg-workspace-header,.apg-shipping-layout>form,.apg-shipping-layout>aside,.apg-shipping-simulation,.apg-media-delete-dialog,.apg-media-library){background:var(--adm-surface)!important;color:var(--adm-text)!important;border-color:var(--adm-line)!important;box-shadow:none!important}
+html[data-apg-admin-theme] :where(main,nav,header,article,.panel,dialog,.apg-workspace-surface,.apg-workspace-header,.apg-shipping-layout>form,.apg-shipping-layout>aside,.apg-shipping-simulation,.apg-media-delete-dialog,.apg-media-library){background:var(--adm-surface)!important;color:var(--adm-text)!important;border-color:var(--adm-line)!important;box-shadow:none!important}
 html[data-apg-admin-theme] :where(h1,h2,h3,h4,strong,label,legend,summary,td,th){color:var(--adm-text)!important}
 html[data-apg-admin-theme] :where(p,small,.muted,.apg-setting-field,.apg-shipping-settings p){color:var(--adm-muted)!important}
 html[data-apg-admin-theme] :where(a){color:var(--adm-text)!important}
 html[data-apg-admin-theme] :where(input,select,textarea){background:var(--adm-surface)!important;color:var(--adm-text)!important;border-color:var(--adm-line)!important;accent-color:var(--adm-text)!important}
+html[data-apg-admin-theme] :where(input,textarea)::placeholder{color:var(--adm-muted)!important;opacity:1}
 html[data-apg-admin-theme] :where(input:disabled,input:read-only){background:var(--adm-soft)!important;color:var(--adm-muted)!important}
 html[data-apg-admin-theme] :where(button,.button,summary,.apg-admin-settings>div,.apg-admin-secondary>summary){background:var(--adm-soft)!important;color:var(--adm-text)!important;border-color:var(--adm-line)!important;box-shadow:none!important}
 html[data-apg-admin-theme] :where(button[aria-current=page],button[aria-pressed=true],.primary,#save){background:var(--adm-selected)!important;color:var(--adm-selected-text)!important;border-color:var(--adm-selected)!important}
@@ -26,7 +27,7 @@ html[data-apg-admin-theme] :where(:focus-visible){outline:3px solid var(--adm-te
 html[data-apg-admin-theme] :where(.quick-movement,td,th,dialog h2,dialog form>.actions){border-color:var(--adm-line)!important}
 html[data-apg-admin-theme] dialog form>.actions{background:var(--adm-surface)!important}
 html[data-apg-admin-theme] :where(.apg-admin-settings>summary:after,.apg-admin-secondary>summary:after,.apg-workspace-modules svg){color:inherit!important}
-html[data-apg-admin-theme] :where(.product-photo-selected figure,.product-photo-library button,.apg-media-item,.apg-media-toolbar){background:var(--adm-soft)!important;border-color:var(--adm-line)!important}
+html[data-apg-admin-theme] :where(.product-photo-editor,.admin-form-group,.product-photo-selected figure,.product-photo-library button,.apg-media-item,.apg-media-toolbar){background:var(--adm-soft)!important;border-color:var(--adm-line)!important}
 html[data-apg-admin-theme] .product-crop-guide{border-color:var(--adm-text)!important}
 html[data-apg-admin-theme] :where(.apg-media-grid article,.apg-media-photo,.apg-media-dialog,.apg-media-failures,.apg-media-empty,.apg-shipping-simulation,.apg-media-message){background:var(--adm-surface)!important;color:var(--adm-text)!important;border-color:var(--adm-line)!important}
 html[data-apg-admin-theme] :where(.apg-media-upload){background:var(--adm-add)!important;color:var(--adm-action-text)!important;border-color:var(--adm-add)!important}
@@ -47,15 +48,17 @@ export function adminThemeClient(){
  const key='apg-admin-theme',root=document.documentElement;let theme='light';let stopped=false;
  const bindings=[],knownFrames=new WeakSet();
  try{if(localStorage.getItem(key)==='dark')theme='dark';}catch{}
+ try{if(window.parent!==window){const inherited=window.parent.document.documentElement.dataset.apgAdminTheme;if(inherited==='dark'||inherited==='light')theme=inherited;}}catch{}
  const frameList=()=>Array.from(document.querySelectorAll('iframe'));
- function publish(){for(const frame of frameList()){try{frame.contentWindow?.postMessage({type:'apg-admin-theme',theme},location.origin);}catch{}}}
+ function syncFrame(frame){try{const child=frame.contentDocument?.documentElement;if(child)child.dataset.apgAdminTheme=theme;frame.contentWindow?.postMessage({type:'apg-admin-theme',theme},location.origin);}catch{}}
+ function publish(){for(const frame of frameList())syncFrame(frame);}
  function markButtons(){
   for(const button of document.querySelectorAll('button:not(.stock-card):not([data-admin-theme-toggle])')){
    if(button.dataset.adminAction)continue;const label=(button.textContent||button.getAttribute('aria-label')||'').trim();
    if(/^\+\s|^(Ajouter|Importer|Créer|Nouvel article|Nouveau produit)\b/i.test(label))button.dataset.adminAction='add';
    else if(/^(Supprimer|Retirer|Archiver)\b/i.test(label))button.dataset.adminAction='remove';
   }
-  for(const frame of frameList()){if(knownFrames.has(frame))continue;knownFrames.add(frame);const loaded=()=>{try{frame.contentWindow?.postMessage({type:'apg-admin-theme',theme},location.origin);}catch{}};frame.addEventListener('load',loaded);bindings.push(()=>frame.removeEventListener('load',loaded));}
+  for(const frame of frameList()){if(knownFrames.has(frame))continue;knownFrames.add(frame);const loaded=()=>syncFrame(frame);frame.addEventListener('load',loaded);syncFrame(frame);bindings.push(()=>frame.removeEventListener('load',loaded));}
  }
  function apply(value,persist=false){theme=value==='dark'?'dark':'light';root.dataset.apgAdminTheme=theme;
   for(const button of document.querySelectorAll('[data-admin-theme-toggle]')){button.setAttribute('aria-pressed',String(theme==='dark'));button.setAttribute('aria-label','Mode sombre');button.textContent=theme==='dark'?'Mode clair':'Mode sombre';}
