@@ -731,3 +731,11 @@ test('order numbers are unique, permanent, backfilled and assigned to future pai
  const after=await(await call(env,'orders')).json();assert.equal(after.find(r=>r.id===a.id).order_number,a.order_number);assert.equal(after.find(r=>r.id==='web-number-c').order_number,b.order_number+1);
  env.sqlite.exec('DROP TRIGGER orders_assign_number; DROP TABLE order_numbers;');const original=env.sqlite.prepare('SELECT * FROM orders ORDER BY id').all();const migration=readFileSync(new URL('../drizzle/0035_order_numbers.sql',import.meta.url),'utf8');env.sqlite.exec(migration);const assigned=env.sqlite.prepare('SELECT * FROM order_numbers ORDER BY number').all();assert.equal(assigned.length,3);assert.equal(assigned[0].order_id,'web-number-c');env.sqlite.exec(migration);assert.deepEqual(env.sqlite.prepare('SELECT * FROM order_numbers ORDER BY number').all(),assigned);assert.deepEqual(env.sqlite.prepare('SELECT * FROM orders ORDER BY id').all(),original);env.sqlite.close();
 });
+
+test('completed paid orders can be corrected without changing paid amounts or deducting stock twice',async()=>{
+ const env=bindings();const p={id:'status-box',name:'Coffret',description:'Maison',price_cents:1500,stock:5,image:'',published:true};await call(env,'products','POST',p);const order=seedHistoricalOrder(env,[{id:p.id,quantity:1}]);
+ for(const [version,status] of [[1,'confirmed'],[2,'preparing'],[3,'ready'],[4,'completed']])assert.equal((await call(env,'orders/'+order.id,'PUT',{status,version})).status,200);
+ env.sqlite.prepare("UPDATE orders SET payment_status='paid' WHERE id=?").run(order.id);const before=env.sqlite.prepare('SELECT * FROM products WHERE id=?').get(p.id);
+ assert.equal((await call(env,'orders/'+order.id,'PUT',{status:'ready',version:5})).status,200);assert.equal((await call(env,'orders/'+order.id,'PUT',{status:'preparing',version:5})).status,409);assert.equal((await call(env,'orders/'+order.id,'PUT',{status:'preparing',version:6})).status,200);assert.deepEqual(env.sqlite.prepare('SELECT * FROM products WHERE id=?').get(p.id),before);
+ env.sqlite.prepare("UPDATE orders SET payment_status='refunded' WHERE id=?").run(order.id);assert.equal((await call(env,'orders/'+order.id,'PUT',{status:'ready',version:7})).status,409);env.sqlite.close();
+});

@@ -28,7 +28,7 @@ export function imagePath(value) {
   if (typeof value !== 'string' || !/^\/(?:media\/[a-f0-9-]+|images\/[a-zA-Z0-9_./-]+\.(?:png|jpe?g|webp))$/.test(value) || value.includes('..')) throw new HttpError(400, 'Image locale attendue');
   return value;
 }
-export const transitions = {draft:['confirmed','cancelled'], confirmed:['preparing','cancelled'], preparing:['ready','cancelled'], ready:['completed'], completed:[], cancelled:[]};
+export const transitions = {draft:['confirmed','cancelled'], confirmed:['preparing','cancelled'], preparing:['confirmed','ready','cancelled'], ready:['preparing','completed'], completed:['preparing','ready'], cancelled:[]};
 export function transition(from, to) {
   if (!transitions[from]?.includes(to)) throw new HttpError(409, 'Transition de commande refusée');
 }
