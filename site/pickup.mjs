@@ -1,0 +1,1 @@
+export const pickupTiming='Commande validée avant 8 h : retrait possible le jour même. À partir de 8 h : retrait le lendemain. Si la boutique est fermée, le retrait est reporté au prochain jour d’ouverture, du mardi au samedi.';
