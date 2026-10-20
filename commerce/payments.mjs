@@ -68,7 +68,7 @@ export async function handlePayments(request,env,makeClient=stripeClient){
    if(request.method!=='GET')throw new HttpError(405,'Méthode refusée');const id=url.searchParams.get('session_id')||'';if(!/^cs_(?:test_|live_)?[a-zA-Z0-9_]{10,250}$/.test(id))throw new HttpError(400,'Référence invalide');
    const attempt=await env.DB.prepare('SELECT * FROM checkout_attempts WHERE session_id=?').bind(id).first();if(!attempt)throw new HttpError(404,'Paiement introuvable');
    if(config&&attempt.mode===config.mode&&['creating','open'].includes(attempt.status)){try{await settleSession(await makeClient(config.secret).checkout.sessions.retrieve(id,{expand:['payment_intent.latest_charge']}),env);}catch{/* The signed webhook will retry fulfillment. */}}
-   const order=await env.DB.prepare('SELECT id,payment_status,payment_mode FROM orders WHERE stripe_session_id=?').bind(id).first();return json(order?{state:order.payment_status,reference:order.id,mode:order.payment_mode,items:JSON.parse(attempt.items).map(({id,quantity})=>({id,quantity}))}:{state:attempt.status==='expired'?'expired':attempt.status==='failed'?'failed':'pending',mode:attempt.mode});
+   const order=await env.DB.prepare('SELECT id,payment_status,payment_mode FROM orders WHERE stripe_session_id=?').bind(id).first();return json(order?{state:order.payment_status,reference:order.id,mode:order.payment_mode,delivery:attempt.delivery,items:JSON.parse(attempt.items).map(({id,quantity})=>({id,quantity}))}:{state:attempt.status==='expired'?'expired':attempt.status==='failed'?'failed':'pending',mode:attempt.mode});
   }
   const deliveryConfig=await shippingConfiguration(env.DB,config);
   const visible=!prelaunchEnabled||await isStoreAdmin(request,env);

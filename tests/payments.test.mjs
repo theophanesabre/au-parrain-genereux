@@ -157,3 +157,7 @@ test('switching to another test account or replacing an active production accoun
  const {env,stripe}=await setup();const other={accounts:{retrieve:async()=>({id:'acct_other',charges_enabled:true})}};const settings={enabled:true,shipping_cents:null,countries:[],version:1};await assert.rejects(()=>configurePayments({...settings,secret:key},env,'owner',()=>other),e=>e.status===409);
  await configurePayments({...settings,secret:'rk_live_'+'e'.repeat(32)},env,'owner',()=>stripe.client);await assert.rejects(()=>configurePayments({...settings,version:2,secret:'rk_live_'+'f'.repeat(32)},env,'owner',()=>other),e=>e.status===409);assert.equal((await paymentConfig(env)).account_id,'acct_apg');env.db.close();
 });
+
+test('pickup deadline appears at checkout and pickup delivery is returned with the paid confirmation',async()=>{
+ const {env,stripe}=await setup();await checkout(env,stripe);assert.match(stripe.calls[0].custom_text.submit.message,/avant 8 h/);assert.match(stripe.calls[0].custom_text.submit.message,/prochain jour d’ouverture/);assert.equal(stripe.calls[0].phone_number_collection.enabled,true);const session=[...stripe.sessions.values()][0];session.payment_status='paid';session.status='complete';await webhook(env,stripe,session);const response=await handlePayments(new Request(origin+'/api/paiement/statut?session_id='+session.id),env,()=>stripe.client);assert.equal((await response.json()).delivery,'pickup');env.db.close();
+});
