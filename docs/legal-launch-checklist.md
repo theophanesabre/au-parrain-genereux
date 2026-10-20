@@ -10,7 +10,7 @@ Le propriétaire a confirmé SIRET 42827364300018, TVA FR69428273643, préparati
 - Directeur de publication : nom du responsable légal à fournir, pas celui du développeur par défaut.
 - Médiateur de la consommation : convention réelle, nom, adresse postale, URL. Aucune adhésion ni sélection d’organisme n’a été faite.
 
-Les mentions et CGV affichent leur statut préparatoire. Cela ne constitue pas une certification de conformité ni des CGV finales. La page d’attente et le mode de paiement existants sont conservés. Pour finaliser : compléter site/legal.mjs et les passages concernés, retirer le statut préparatoire seulement après résolution des manquants, incrémenter LEGAL_VERSION à chaque changement contractuel et conserver les anciennes versions.
+Les mentions et CGV indiquent que les ventes ne sont pas ouvertes au public. Les notes internes et annonces de champs à compléter ont été retirées des textes publics le 20 octobre 2026, sans considérer les informations manquantes comme résolues. Cela ne constitue pas une certification de conformité ni des CGV finales. La page d’attente et le mode de paiement existants sont conservés. Pour finaliser : compléter site/legal.mjs et les passages concernés, retirer le statut préparatoire seulement après résolution des manquants, incrémenter LEGAL_VERSION à chaque changement contractuel et conserver les anciennes versions.
 
 ## Fonctionnement livré
 
@@ -41,3 +41,7 @@ Les mentions et CGV affichent leur statut préparatoire. Cela ne constitue pas u
 - https://www.cnil.fr/fr/conformite-rgpd-information-des-personnes-et-transparence
 - https://www.cnil.fr/fr/passer-laction/les-durees-de-conservation-des-donnees
 - https://docs.stripe.com/payments/checkout/custom-components
+
+## Vérification du 20 octobre 2026
+
+L’API publique Recherche d’entreprises confirme l’identité et l’établissement (SIREN 428273643). Les dirigeants retournés ne suffisent pas à désigner avec certitude le directeur de publication, ni à établir une convention de médiation. Le capital, le directeur de publication, le médiateur conventionné et, si applicable, l’identifiant REP restent à obtenir avant la finalisation juridique. La suppression de notes provisoires ne remplace aucune mention obligatoire. La mention de création via ChatGPT est retirée ; les prestataires réels et leurs politiques restent dans la confidentialité.
