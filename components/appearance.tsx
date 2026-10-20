@@ -68,7 +68,7 @@ type HeaderFallback={logo?:string;logoWidth?:number;background?:string};
 export function StoreHeader({logo='/images/logo-medaillon-orange.webp',logoWidth=100,background='#fffdf9'}:HeaderFallback){
  const {chrome}=useContext(AppearanceContext);
  return <header className="apg-store-header" data-logo-position="center" data-sticky={chrome.sticky} style={{background:chrome.headerBackground||background,color:chrome.headerColor||'var(--apg-ink,#30271f)','--header-background':chrome.headerBackground||background,'--header-padding':`${chrome.headerPadding}px`,'--menu-size':`${chrome.menuSize}px`,'--menu-gap':`${chrome.menuGap}px`} as React.CSSProperties}>
-  <a className="apg-store-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src="/images/logo-medaillon-orange.webp" alt="Au Parrain Généreux" style={{width:chrome.logoWidth||logoWidth}}/></a>
+  <a className="apg-store-logo" href="/" aria-label="Au Parrain Généreux — Accueil"><img src="/images/logo-medaillon-orange.webp" alt="Au Parrain Généreux" style={{width:(chrome.logoWidth||logoWidth)/2}}/></a>
   <nav className="apg-store-desktop" aria-label="Navigation principale"><MenuLinks/></nav><div className="apg-store-actions"><CartLink/><details className="apg-store-mobile"><summary aria-label="Ouvrir le menu">☰</summary><nav aria-label="Navigation mobile"><MenuLinks/></nav></details></div>
  </header>;
 }
