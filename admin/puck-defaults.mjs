@@ -23,7 +23,7 @@ export async function puckContext(db,path){
 }
 export function defaultPuckData(path,context){
  const {content:c,home,images,appearance:a,highlights}=context;let counter=0;const block=(type,props={})=>({type,props:{...structuredClone(puckDefaults[type]),id:type+'-initial-'+(++counter),...props}});const img=src=>images[src]||src;
- const root={...structuredClone(puckRoot),pattern:'inherit',stripeColor:a.visual.stripeColor||'#f5e6da',stripeWidth:a.visual.stripeWidth??38,stripeAngle:a.visual.stripeAngle??90,background:a.visual.surface,textColor:a.visual.ink,accent:a.visual.accent,font:a.visual.font,logo:img('/images/logo-medaillon-orange.webp'),footerTitle:home.footerTitle||puckRoot.footerTitle,footerText:home.footerText||'',address:[home.address,home.city].filter(Boolean).join(' · '),hours:[home.days,home.hours].filter(Boolean).join(' · '),phone:home.phone||'',email:home.email||''};
+ const root={...structuredClone(puckRoot),pattern:'inherit',stripeColor:a.visual.stripeColor||'#f5e6da',stripeWidth:a.visual.stripeWidth??38,stripeAngle:a.visual.stripeAngle??90,background:a.visual.surface,textColor:a.visual.ink,accent:a.visual.accent,font:a.visual.font,logo:img('/images/logo-medaillon-orange-transparent.webp'),footerTitle:home.footerTitle||puckRoot.footerTitle,footerText:home.footerText||'',address:[home.address,home.city].filter(Boolean).join(' · '),hours:[home.days,home.hours].filter(Boolean).join(' · '),phone:home.phone||'',email:home.email||''};
  let content=[];
  if(path==='/'){
   const slide=item=>Object.fromEntries(['title','description','kicker','image','alt','href','button_label','image_fit'].map(key=>[key,item[key]]));
