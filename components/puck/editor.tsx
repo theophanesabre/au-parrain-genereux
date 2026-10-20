@@ -68,7 +68,7 @@ export function AdminWorkspace() {
   return <div className="apg-puck-editor apg-simple-admin">
     <style>{adminThemeCSS}</style>
     <header className="apg-workspace-header">
-      <a className="apg-admin-centered-brand" href="/admin" aria-label="Accueil de l’administration"><img src="/images/logo-boutique-neon.webp" alt="Au Parrain Généreux"/></a>
+      <a className="apg-admin-centered-brand" href="/admin" aria-label="Accueil de l’administration"><img src="/images/logo-medaillon-orange.webp" alt="Au Parrain Généreux"/></a>
       <h1 className="apg-admin-accessible-title">Administration</h1>
       <div className="apg-admin-header-actions">
         <details className="apg-admin-settings">
