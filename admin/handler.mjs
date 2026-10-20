@@ -121,6 +121,7 @@ export async function handleAdmin(request, env) {
     const [,resource,id]=match;
     if(request.method==='GET') {
       if(id) throw new HttpError(405,'Utiliser la liste');
+      if(resource==='orders'){const result=await db.prepare('SELECT orders.*, order_numbers.number AS order_number FROM orders JOIN order_numbers ON order_numbers.order_id=orders.id ORDER BY orders.created_at DESC, orders.id DESC LIMIT 500').all();return json(result.results);}
       const result=await db.prepare(`SELECT * FROM ${resource}${resource==='products'?' WHERE archived=0':''} ORDER BY ${resource==='orders'||resource==='audit'?'created_at DESC':'id'} LIMIT 500`).all();
       if(resource==='highlights')return json(mergeHighlights(result.results));
       if(resource==='pages') {
