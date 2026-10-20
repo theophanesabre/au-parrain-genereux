@@ -209,7 +209,7 @@ test('admin interface exposes edit controls for the four existing pages and repl
  await cards[0].children.find(node=>node.tag==='button'&&node.textContent==='Modifier').onclick();
  assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='placement'&&input.tag==='select')));
  assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='image'&&input.tag==='select'&&input.children.length>20)));
- tabs.find(b=>b.dataset.tab==='orders').onclick();await settle();assert.equal(nodes.get('#add').hidden,true);assert.equal(nodes.get('#stock-alerts').hidden,true);nodes.get('#dialog').close();await nodes.get('#add').onclick();assert.equal(nodes.get('#dialog').open,false);assert.match(nodes.get('#message').textContent,/création manuelle/);tabs.find(b=>b.dataset.tab==='products').onclick();await settle();assert.equal(nodes.get('#add').hidden,false);
+ seedHistoricalOrder(env,[{id:'calendrier-conte-avent',quantity:2}]);tabs.find(b=>b.dataset.tab==='orders').onclick();await settle();const orderCard=nodes.get('#list').children.find(n=>n.tag==='article');assert.match(orderCard.children.find(n=>n.tag==='small').textContent,/Commande n° \d{4}/);const lines=orderCard.children.find(n=>n.tag==='ul');assert.equal(lines.children.length,1);assert.equal(lines.children[0].children[0].textContent,'2 ×');assert.equal(lines.children[0].children[1].textContent,'Le Conte de l’Avent');assert.ok(orderCard.children.some(n=>n.tag==='details'));assert.equal(nodes.get('#add').hidden,true);assert.equal(nodes.get('#stock-alerts').hidden,true);nodes.get('#dialog').close();await nodes.get('#add').onclick();assert.equal(nodes.get('#dialog').open,false);assert.match(nodes.get('#message').textContent,/création manuelle/);tabs.find(b=>b.dataset.tab==='products').onclick();await settle();assert.equal(nodes.get('#add').hidden,false);
  env.sqlite.close();
 });
 
@@ -721,4 +721,13 @@ test('contact paragraphs upgrade into an editable address card without altering 
  const unrelated={type:'Texte',props:{...structuredClone(puckDefaults.Texte),id:'story',body:'Notre savoir-faire au Havre.'}};
  const result=validatePuckData({root:{props:root},content:[text,unrelated]});assert.equal(result.content[0].type,'Coordonnees');assert.equal(result.content[0].props.phone,root.phone);assert.equal(result.content[0].props.address,root.address);assert.equal(result.content[0].props.id,'contact');assert.equal(result.content[1].type,'Texte');assert.equal(result.content[1].props.body,unrelated.props.body);assert.deepEqual(validatePuckData(result),result);
  result.content[0].props.phone='02 35 00 00 00';assert.equal(validatePuckData(result).content[0].props.phone,'02 35 00 00 00');
+});
+
+test('order numbers are unique, permanent, backfilled and assigned to future paid orders',async()=>{
+ const env=bindings();const insert=env.sqlite.prepare("INSERT INTO orders(id,customer,contact,items,total_cents,created_at) VALUES (?,'Client','contact','[]',0,?)");
+ insert.run('web-number-a','2026-10-20');insert.run('web-number-b','2026-10-20');
+ const before=await(await call(env,'orders')).json();const a=before.find(r=>r.id==='web-number-a'),b=before.find(r=>r.id==='web-number-b');assert.ok(a.order_number>0);assert.equal(b.order_number,a.order_number+1);
+ env.sqlite.exec("UPDATE orders SET customer='Autre nom' WHERE id='web-number-a'");insert.run('web-number-c','2026-10-19');
+ const after=await(await call(env,'orders')).json();assert.equal(after.find(r=>r.id===a.id).order_number,a.order_number);assert.equal(after.find(r=>r.id==='web-number-c').order_number,b.order_number+1);
+ env.sqlite.exec('DROP TRIGGER orders_assign_number; DROP TABLE order_numbers;');const original=env.sqlite.prepare('SELECT * FROM orders ORDER BY id').all();const migration=readFileSync(new URL('../drizzle/0035_order_numbers.sql',import.meta.url),'utf8');env.sqlite.exec(migration);const assigned=env.sqlite.prepare('SELECT * FROM order_numbers ORDER BY number').all();assert.equal(assigned.length,3);assert.equal(assigned[0].order_id,'web-number-c');env.sqlite.exec(migration);assert.deepEqual(env.sqlite.prepare('SELECT * FROM order_numbers ORDER BY number').all(),assigned);assert.deepEqual(env.sqlite.prepare('SELECT * FROM orders ORDER BY id').all(),original);env.sqlite.close();
 });
