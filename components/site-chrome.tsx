@@ -2,7 +2,7 @@ import { PageButtons, StoreHeader, StoreFooter } from "./appearance";
 import { getPageContent, getImageSources } from "./site-data";
 export async function SiteHeader() {
   const imageSources=await getImageSources();
-  return <><StoreHeader logo={imageSources["/images/logo-medaillon-orange.webp"] || "/images/logo-medaillon-orange.webp"}/><PageButtons location="page-top"/></>;
+  return <><StoreHeader logo={imageSources["/images/logo-medaillon-orange-transparent.webp"] || "/images/logo-medaillon-orange-transparent.webp"}/><PageButtons location="page-top"/></>;
 }
 
 export async function SiteFooter() {
