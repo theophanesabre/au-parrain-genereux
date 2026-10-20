@@ -1,3 +1,5 @@
+import {notificationStatus,saveNotificationSettings,retryNotification} from '../commerce/notifications.mjs';
+import {notificationsHTML} from './notifications-ui.mjs';
 import {inventoryActor, inventoryAPI} from './inventory/service.mjs';
 import {inventoryHTML} from './inventory/ui.mjs';
 import { defaultShipping, readShipping, saveShipping } from '../commerce/shipping.mjs';
@@ -66,9 +68,10 @@ export async function handleAdmin(request, env) {
       if(error.status===403&&request.method==='GET'&&['/admin','/admin/puck'].includes(path)){
         try{await inventoryActor(request,env);return new Response(null,{status:302,headers:{...headers,Location:'/admin/stocks'}});}catch{/* Staff have no access to the other administration modules. */}
       }
-      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck','/admin/paiements'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
+      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck','/admin/paiements','/admin/notifications'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
       throw error;
     }
+    if(path==='/admin/notifications'&&request.method==='GET'){const nonce=crypto.randomUUID();return new Response(notificationsHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});}
     if(path==='/admin/paiements'&&request.method==='GET'){const nonce=crypto.randomUUID();return new Response(paymentsHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});}
     if(path==='/admin/puck'&&request.method==='GET')return null;
     if(path==='/admin/editeur'&&request.method==='GET')return new Response(null,{status:302,headers:{...headers,Location:'/admin/puck'}});
@@ -82,6 +85,11 @@ export async function handleAdmin(request, env) {
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
     const db=env.DB;
+    if(path==='/admin/api/notifications'){
+      if(request.method==='GET'){const config=await notificationStatus(env);const rows=await db.prepare('SELECT n.id,n.event,n.channel,n.state,n.error,n.created_at,num.number AS order_number FROM order_notifications n JOIN order_numbers num ON num.order_id=n.order_id ORDER BY n.created_at DESC LIMIT 100').all();return json({...config,items:rows.results});}
+      if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await saveNotificationSettings(await body(request),env,actor));
+    }
+    if(path==='/admin/api/notifications/retry'){if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const data=await body(request);if(typeof data.id!=='string'||data.id.length>150)throw new HttpError(400,'Envoi invalide');return json(await retryNotification(env,data.id,actor));}
     if(path==='/admin/api/withdrawals'){
       if(request.method==='GET'){const result=await db.prepare('SELECT id,name,email,order_reference,products,created_at,status,version FROM consumer_requests ORDER BY created_at DESC LIMIT 200').all();return json({items:result.results});}
       if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const data=await body(request);if(typeof data.id!=='string'||!['pending','processed'].includes(data.status))throw new HttpError(400,'Demande invalide');const version=integer(data.version);const result=await db.batch([db.prepare('UPDATE consumer_requests SET status=?,version=version+1 WHERE id=? AND version=?').bind(data.status,data.id,version),db.prepare("INSERT INTO audit(id,actor,action,target,created_at) SELECT ?,?,'WITHDRAWAL_STATUS',?,? WHERE changes()=1").bind(crypto.randomUUID(),actor,data.id,new Date().toISOString())]);if(result[0].meta.changes!==1)throw new HttpError(409,'Demande modifiée ailleurs. Actualisez.');return json({status:data.status,version:version+1});

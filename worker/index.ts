@@ -1,3 +1,4 @@
+import {dispatchNotifications} from '../commerce/notifications.mjs';
 import { handleConsumerRequests } from '../site/consumer-requests.mjs';
 import { handlePayments } from '../commerce/payments.mjs';
 import { handlePrelaunch } from '../site/prelaunch.mjs';
@@ -36,15 +37,16 @@ interface ExecutionContext {
 // const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
 
 const worker = {
+  async scheduled(_event: unknown, env: Env, ctx: ExecutionContext) {ctx.waitUntil(dispatchNotifications(env));},
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const consumerResponse=await handleConsumerRequests(request,env);
     if(consumerResponse)return consumerResponse;
     const paymentResponse = await handlePayments(request, env);
-    if (paymentResponse) return paymentResponse;
+    if (paymentResponse) {if(paymentResponse.ok&&request.method==='POST')ctx.waitUntil(dispatchNotifications(env).catch(()=>{}));return paymentResponse;}
     const commerceResponse = await handleCommerce(request, env);
     if (commerceResponse) return commerceResponse;
     const adminResponse = await handleAdmin(request, env);
-    if (adminResponse) return adminResponse;
+    if (adminResponse) {if(adminResponse.ok&&request.method!=='GET')ctx.waitUntil(dispatchNotifications(env).catch(()=>{}));return adminResponse;}
     const prelaunchResponse = await handlePrelaunch(request, env);
     if (prelaunchResponse) return prelaunchResponse;
     const url = new URL(request.url);
