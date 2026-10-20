@@ -73,7 +73,7 @@ export function AdminWorkspace() {
       <div className="apg-admin-header-actions">
         <details className="apg-admin-settings">
           <summary>Réglages</summary>
-          <div><a href="/admin/paiements">Paiements Stripe</a><a href="/signout-with-chatgpt?return_to=%2Fadmin">Déconnexion</a></div>
+          <div><a href="/admin/paiements">Paiements Stripe</a><a href="/admin/notifications">Emails & SMS</a><a href="/signout-with-chatgpt?return_to=%2Fadmin">Déconnexion</a></div>
         </details>
       </div>
     </header>
