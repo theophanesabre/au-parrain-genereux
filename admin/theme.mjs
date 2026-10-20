@@ -1,7 +1,7 @@
 // Admin-only appearance. No business setting, payment or stock is changed.
 export const adminThemeCSS = `
-html[data-apg-admin-theme]{--adm-bg:#fff;--adm-surface:#fff;--adm-soft:#f4f4f5;--adm-text:#18181b;--adm-muted:#62626b;--adm-line:#dedee3;--adm-add:#166534;--adm-remove:#b91c1c;--adm-action-text:#fff;--adm-selected:#18181b;--adm-selected-text:#fff;color-scheme:light;background:var(--adm-bg)}
-html[data-apg-admin-theme=dark]{--adm-bg:#111113;--adm-surface:#1c1c20;--adm-soft:#28282e;--adm-text:#f4f4f5;--adm-muted:#b0b0ba;--adm-line:#41414b;--adm-add:#34d399;--adm-remove:#fb7185;--adm-action-text:#101014;--adm-selected:#f4f4f5;--adm-selected-text:#18181b;color-scheme:dark}
+html[data-apg-admin-theme]{--adm-alert-bg:#fff1f2;--adm-alert-text:#991b1b;--adm-alert-border:#e11d48;--adm-bg:#fff;--adm-surface:#fff;--adm-soft:#f4f4f5;--adm-text:#18181b;--adm-muted:#62626b;--adm-line:#dedee3;--adm-add:#166534;--adm-remove:#b91c1c;--adm-action-text:#fff;--adm-selected:#18181b;--adm-selected-text:#fff;color-scheme:light;background:var(--adm-bg)}
+html[data-apg-admin-theme=dark]{--adm-alert-bg:#391a22;--adm-alert-text:#fda4af;--adm-alert-border:#fb7185;--adm-bg:#111113;--adm-surface:#1c1c20;--adm-soft:#28282e;--adm-text:#f4f4f5;--adm-muted:#b0b0ba;--adm-line:#41414b;--adm-add:#34d399;--adm-remove:#fb7185;--adm-action-text:#101014;--adm-selected:#f4f4f5;--adm-selected-text:#18181b;color-scheme:dark}
 html[data-apg-admin-theme] body,html[data-apg-admin-theme] .apg-puck-editor{background:var(--adm-bg)!important;color:var(--adm-text)!important}
 html[data-apg-admin-theme] :where(main,nav,header,article,.panel,dialog,.apg-workspace-surface,.apg-workspace-header,.apg-shipping-layout>form,.apg-shipping-layout>aside,.apg-shipping-simulation,.apg-media-delete-dialog,.apg-media-library){background:var(--adm-surface)!important;color:var(--adm-text)!important;border-color:var(--adm-line)!important;box-shadow:none!important}
 html[data-apg-admin-theme] :where(h1,h2,h3,h4,strong,label,legend,summary,td,th){color:var(--adm-text)!important}
@@ -19,6 +19,9 @@ html[data-apg-admin-theme] .stock-card :where(strong,small){color:var(--adm-text
 html[data-apg-admin-theme] :where(button[data-admin-action=add],#add,.admin-add){background:var(--adm-add)!important;color:var(--adm-action-text)!important;border-color:var(--adm-add)!important}
 html[data-apg-admin-theme] :where(button[data-admin-action=remove],.admin-danger){background:var(--adm-remove)!important;color:var(--adm-action-text)!important;border-color:var(--adm-remove)!important;text-decoration:none!important}
 html[data-apg-admin-theme] :where(button[data-admin-action=add],button[data-admin-action=remove]) *{color:inherit!important}
+html[data-apg-admin-theme] :is(.stock-alerts,.stock-badge,.chip){background:var(--adm-alert-bg)!important;color:var(--adm-alert-text)!important;border-color:var(--adm-alert-border)!important}
+html[data-apg-admin-theme] .stock-alerts :is(h2,p,strong),html[data-apg-admin-theme] .stock-card .chip{color:var(--adm-alert-text)!important}
+html[data-apg-admin-theme] :is(.stock-badge,.stock-card .chip){font-weight:700;border:1px solid var(--adm-alert-border);border-radius:8px;padding:5px 10px}
 html[data-apg-admin-theme] .operation-choice label{border-radius:12px;padding:10px 16px;background:var(--adm-soft)}
 html[data-apg-admin-theme] .operation-choice label:has(input[value=in]:checked){background:var(--adm-add)!important;color:var(--adm-action-text)!important}
 html[data-apg-admin-theme] .operation-choice label:has(input[value=out]:checked){background:var(--adm-remove)!important;color:var(--adm-action-text)!important}
