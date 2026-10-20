@@ -260,6 +260,13 @@
       "when": 1792528732991,
       "tag": "0036_order_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1792530216183,
+      "tag": "0037_ready_email_only",
+      "breakpoints": true
     }
   ]
 }

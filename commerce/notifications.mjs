@@ -38,6 +38,7 @@ export async function dispatchNotifications(env,send=fetch){
  const claimed=await env.DB.prepare("UPDATE order_notifications SET state='sending',attempts=attempts+1,updated_at=? WHERE id=? AND state='pending'").bind(now,row.id).run();if(claimed.meta.changes!==1)return;
  processed++;
  const finish=async(state,error='',provider=null)=>env.DB.prepare("UPDATE order_notifications SET state=?,error=?,provider_id=?,updated_at=? WHERE id=? AND state='sending'").bind(state,error,provider,new Date().toISOString(),row.id).run();
+ if(row.channel==='email'&&row.event!=='ready'){await finish('skipped','Email envoyé uniquement lorsque la commande est prête');return;}
  if(row.payment_mode!=='live'||row.payment_status!=='paid'||['cancelled','draft'].includes(row.order_status)){await finish('skipped','Commande non payable ou annulée');return;}
  if(row.event==='ready'&&!['ready','completed'].includes(row.order_status)){await finish('skipped','La commande n’est plus prête');return;}
  const recipient=row.channel==='email'?row.customer_email:normalizePhone(row.customer_phone);
@@ -53,6 +54,6 @@ export async function dispatchNotifications(env,send=fetch){
  return {processed};
 }
 export async function retryNotification(env,id,actor){
- const [result]=await env.DB.batch([env.DB.prepare("UPDATE order_notifications SET state='pending',error='',updated_at=? WHERE id=? AND state='failed'").bind(new Date().toISOString(),id),env.DB.prepare("INSERT INTO audit(id,actor,action,target,created_at) SELECT ?,?,'NOTIFICATION_RETRY',?,? WHERE changes()=1").bind(crypto.randomUUID(),actor,id,new Date().toISOString())]);
+ const [result]=await env.DB.batch([env.DB.prepare("UPDATE order_notifications SET state='pending',error='',updated_at=? WHERE id=? AND state='failed' AND NOT(event='confirmed' AND channel='email')").bind(new Date().toISOString(),id),env.DB.prepare("INSERT INTO audit(id,actor,action,target,created_at) SELECT ?,?,'NOTIFICATION_RETRY',?,? WHERE changes()=1").bind(crypto.randomUUID(),actor,id,new Date().toISOString())]);
  if(result.meta.changes!==1)throw new HttpError(409,'Seuls les envois refusés peuvent être relancés. Vérifiez les envois incertains dans Brevo.');return {ok:true};
 }

@@ -8,7 +8,7 @@ Renseigner la clé API dans le formulaire sécurisé, une adresse email active v
 
 ## Fonctionnement
 
-Migration 0036 : email et téléphone séparés dans les commandes ; paramètres chiffrés ; file persistante par commande/événement/canal. Les déclencheurs SQL enregistrent atomiquement deux événements : création d’une commande réelle payée confirmée ; passage à Prête. Unicité par événement/canal, même lors d’un aller-retour de statut. Aucune notification pour les paiements test, brouillons ou remboursés. La sortie boutique/stock ne déclenche rien.
+Migrations 0036 et 0037 : email et téléphone séparés dans les commandes ; paramètres chiffrés ; file persistante par commande/événement/canal. Les déclencheurs SQL enregistrent atomiquement deux événements : création d’une commande réelle payée confirmée (SMS uniquement) ; passage à Prête (email et SMS). Le seul email envoyé par ce module est celui de commande prête. Les anciens emails de confirmation en attente ou refusés sont marqués non envoyés. Unicité par événement/canal, même lors d’un aller-retour de statut. Aucune notification pour les paiements test, brouillons ou remboursés. La sortie boutique/stock ne déclenche rien.
 
 Les nouvelles commandes conservent le téléphone collecté par Stripe. Les anciennes commandes ne possédant qu’un email n’ont pas de téléphone récupérable : il n’est pas inventé. Un téléphone absent met le seul SMS en échec.
 
@@ -18,4 +18,4 @@ Une acceptation par Brevo est affichée Transmis, jamais Livré : aucun callback
 
 ## Vérification avant première utilisation
 
-Après connexion, effectuer une commande réelle contrôlée, avec email et téléphone appartenant au propriétaire, vérifier les deux canaux dans Brevo puis passer la commande à Prête et contrôler le second message. Cette vérification n’a pas été exécutée, faute de clé connectée. Ne jamais demander une clé dans la conversation.
+Après connexion, effectuer une commande réelle contrôlée, avec email et téléphone appartenant au propriétaire, vérifier le SMS de confirmation dans Brevo puis passer la commande à Prête et contrôler l’email et le SMS. Cette vérification n’a pas été exécutée, faute de clé connectée. Ne jamais demander une clé dans la conversation.
