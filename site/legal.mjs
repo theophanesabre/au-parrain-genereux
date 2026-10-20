@@ -1,5 +1,5 @@
 // Confirm the outstanding facts with the shop before presenting these CGV as final.
-export const LEGAL_VERSION='2026-10-19-v2';
+export const LEGAL_VERSION='2026-10-20-v3';
 export const legalIdentity={name:'AU PARRAIN GENEREUX',form:'SARL',siren:'428 273 643',siret:'428 273 643 00018',registry:'RCS Le Havre 428 273 643',registeredAddress:'121 et 123 rue Maréchal Joffre, 76600 Le Havre',shopAddress:'123 rue Maréchal Joffre, 76600 Le Havre',phone:'02 35 42 32 75',email:'genereuxparrain@gmail.com',capital:'',vat:'FR69428273643',publicationDirector:'',mediatorName:'',mediatorAddress:'',mediatorWebsite:'',preparationDelay:'2 jours',collectionDelay:'7 jours',source:'https://annuaire-entreprises.data.gouv.fr/entreprise/au-parrain-genereux-428273643'};
 export const legalPending=['capital social confirmé','directeur de publication','médiateur conventionné et ses coordonnées'];
 export const legalLinks=[['Mentions légales','/mentions-legales'],['Conditions générales de vente','/conditions-generales-de-vente'],['Politique de confidentialité','/politique-de-confidentialite'],['Cookies','/cookies'],['Se rétracter ici','/retractation']];
