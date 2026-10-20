@@ -3,7 +3,7 @@ import {inventoryHTML} from './inventory/ui.mjs';
 import { defaultShipping, readShipping, saveShipping } from '../commerce/shipping.mjs';
 import { mediaInfo, mediaSnapshot, mediaUsages, deleteMedia, replaceMedia } from './media.mjs';
 import { paymentConfig, safeConfig, configurePayments } from '../commerce/stripe.mjs';
-import { reconcilePayments } from '../commerce/payments.mjs';
+import { reconcilePayments, closeTestPayments } from '../commerce/payments.mjs';
 import { paymentsHTML } from './payments-ui.mjs';
 import { loadMaisonDocument } from './maison.mjs';
 import { puckPaths, validatePuckData, puckImages } from './puck-model.mjs';
@@ -88,6 +88,7 @@ export async function handleAdmin(request, env) {
     }
     if(path==='/admin/api/shipping'){if(request.method==='GET'){const record=await readShipping(db);return json(record||{settings:defaultShipping,version:0});}if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await saveShipping(db,await body(request),actor));}
     if(path==='/admin/api/stripe'){if(request.method==='GET'){const row=await db.prepare("SELECT enabled,mode,account_id,version,shipping_cents,countries FROM payment_settings WHERE id='stripe'").first();const pending=await db.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE status IN ('creating','open')").first();return json({...safeConfig(row),pending:pending.count});}if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await configurePayments(await body(request),env,actor));}
+    if(path==='/admin/api/stripe/close-tests'){if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const config=await paymentConfig(env);if(!config)throw new HttpError(409,'Stripe n’est pas configuré');return json(await closeTestPayments(env,config));}
     if(path==='/admin/api/stripe/reconcile'){if(request.method!=='POST')throw new HttpError(405,'Méthode refusée');checkOrigin(request);const config=await paymentConfig(env);if(!config)throw new HttpError(409,'Configurez Stripe avant de vérifier les paiements');return json(await reconcilePayments(env,config));}
 
     if(path==='/admin/api/puck'){
