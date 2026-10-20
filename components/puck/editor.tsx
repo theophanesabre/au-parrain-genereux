@@ -63,8 +63,6 @@ export function AdminWorkspace() {
     history.replaceState(null, '', '/admin/puck?section=' + next);
   }
   const active = modules.find(module => (module.sections as readonly string[]).includes(section))!;
-  const secondary = sections.filter(([key]) => key !== active.entry && (active.sections as readonly string[]).includes(key));
-  const secondaryActive = section !== active.entry;
   const sectionLabel = sections.find(([key]) => key === section)?.[1];
 
   return <div className="apg-puck-editor apg-simple-admin">
@@ -73,8 +71,6 @@ export function AdminWorkspace() {
       <a className="apg-admin-centered-brand" href="/admin" aria-label="Accueil de l’administration"><img src="/images/logo-boutique-neon.webp" alt="Au Parrain Généreux"/></a>
       <h1 className="apg-admin-accessible-title">Administration</h1>
       <div className="apg-admin-header-actions">
-        <a href="/?apercu=1" target="_blank" rel="noreferrer">Voir le site</a>
-        <button type="button" data-admin-theme-toggle aria-pressed={false}>Mode sombre</button>
         <details className="apg-admin-settings">
           <summary>Réglages</summary>
           <div><a href="/admin/paiements">Paiements Stripe</a><a href="/signout-with-chatgpt?return_to=%2Fadmin">Déconnexion</a></div>
@@ -87,14 +83,7 @@ export function AdminWorkspace() {
       </button>)}
     </nav>
     <section className="apg-workspace-surface" aria-label={active.label}>
-      {secondary.length ? <div className="apg-admin-section-tools">
-        {secondaryActive ? <button type="button" className="apg-admin-back" onClick={() => navigate(active.entry)}>Retour aux {active.label.toLocaleLowerCase('fr-FR')}</button> : null}
-        <details key={active.id} className="apg-admin-secondary" open={secondaryActive || undefined}>
-          <summary>{secondaryActive ? sectionLabel : active.id === 'products' ? 'Recettes et nouveautés' : 'Livraisons et autres outils'}</summary>
-          <nav aria-label={'Autres rubriques · ' + active.label}>{secondary.map(([key, label]) => <button type="button" key={key} aria-current={section === key ? 'page' : undefined} onClick={() => navigate(key)}>{label}</button>)}</nav>
-        </details>
-        {dirty ? <span className="apg-admin-unsaved" role="status">Modifications non enregistrées</span> : null}
-      </div> : null}
+      {dirty ? <span className="apg-admin-unsaved" role="status">Modifications non enregistrées</span> : null}
       {section === 'inventory' ? <iframe className="apg-management-frame" title="Stocks" src="/admin/stocks?embedded=1"/> :
         section === 'withdrawals' ? <ConsumerRequests/> :
           section === 'shipping' ? <ShippingSettings onDirty={setDirty}/> :

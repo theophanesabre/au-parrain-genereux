@@ -14,30 +14,18 @@ function harness({saved=null,embedded=false}={}){
  const window={parent:null,addEventListener(k,v){windowEvents.set(k,v);},removeEventListener(k){windowEvents.delete(k);}};window.parent=embedded?parent:window;
  const document={documentElement:root,body:{},querySelectorAll(selector){if(selector==='iframe')return frames;if(selector==='[data-admin-theme-toggle]')return [toggle];if(selector.startsWith('button:not'))return [add,remove,neutral];return [];},addEventListener(k,v){listeners.set(k,v);},removeEventListener(k){listeners.delete(k);}};
  let observer;class MutationObserver{constructor(fn){observer=this;this.fn=fn;}observe(){}disconnect(){this.disconnected=true;}}
- const context=createContext({document,window,location:{origin:'https://apg.example'},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},MutationObserver});
+ const context=createContext({document,window,location:{origin:'https://apg.example'},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},MutationObserver});
  const cleanup=new Script('('+adminThemeClient.toString()+')()').runInContext(context);
  return {frames,frameListeners,root,toggle,add,remove,neutral,posts,frame,parent,windowEvents,listeners,storage,cleanup,get observer(){return observer;},click(){listeners.get('click')({target:{closest:()=>toggle}});}};
 }
-test('admin starts white and persists dark choice while synchronising embedded screens',()=>{
- const h=harness();assert.equal(h.root.dataset.apgAdminTheme,'light');assert.equal(h.toggle.attributes['aria-pressed'],'false');h.click();assert.equal(h.root.dataset.apgAdminTheme,'dark');assert.equal(h.storage.get('apg-admin-theme'),'dark');assert.equal(h.toggle.attributes['aria-pressed'],'true');assert.equal(h.posts.at(-1).data.theme,'dark');assert.equal(h.posts.at(-1).origin,'https://apg.example');
- const restored=harness({saved:'dark'});assert.equal(restored.root.dataset.apgAdminTheme,'dark');h.windowEvents.get('storage')({key:'apg-admin-theme',newValue:'light'});assert.equal(h.root.dataset.apgAdminTheme,'light');h.cleanup();restored.cleanup();
+test('administration always starts in light mode and discards the old dark preference',()=>{
+ const h=harness({saved:'dark'});assert.equal(h.root.dataset.apgAdminTheme,'light');assert.equal(h.storage.has('apg-admin-theme'),false);h.cleanup();assert.equal(h.root.dataset.apgAdminTheme,undefined);assert.equal(h.observer.disconnected,true);
 });
-test('only approved same-origin parent can set an embedded theme and admin cleanup restores page isolation',()=>{
- const h=harness({embedded:true});const message=h.windowEvents.get('message');message({origin:'https://evil.example',source:h.parent,data:{type:'apg-admin-theme',theme:'dark'}});assert.equal(h.root.dataset.apgAdminTheme,'light');message({origin:'https://apg.example',source:{},data:{type:'apg-admin-theme',theme:'dark'}});assert.equal(h.root.dataset.apgAdminTheme,'light');message({origin:'https://apg.example',source:h.parent,data:{type:'apg-admin-theme',theme:'dark'}});assert.equal(h.root.dataset.apgAdminTheme,'dark');assert.equal(h.storage.size,0);h.cleanup();assert.equal(h.root.dataset.apgAdminTheme,undefined);assert.equal(h.observer.disconnected,true);assert.equal(h.listeners.size,0);assert.equal(h.windowEvents.size,0);
+test('add and remove actions retain their semantic colors after content updates',()=>{
+ const h=harness();assert.equal(h.add.dataset.adminAction,'add');assert.equal(h.remove.dataset.adminAction,'remove');assert.equal(h.neutral.dataset.adminAction,undefined);h.add.dataset.adminAction='';h.observer.fn();assert.equal(h.add.dataset.adminAction,'add');h.cleanup();
 });
-test('add and remove buttons have explicit semantic markers while ordinary saves stay neutral',()=>{
- const h=harness();assert.equal(h.add.dataset.adminAction,'add');assert.equal(h.remove.dataset.adminAction,'remove');assert.equal(h.neutral.dataset.adminAction,undefined);h.cleanup();
-});
-test('all standalone admin surfaces retain a centered logo, theme control and nonce scripts',()=>{
+test('standalone admin pages retain the centered logo and contain no dark mode control',()=>{
  for(const html of [adminHTML('theme-test'),inventoryHTML('theme-test'),paymentsHTML('theme-test')]){
-  assert.equal((html.match(/<img class="admin-center-logo"/g)||[]).length,1);assert.match(html,/data-admin-theme-toggle/);assert.match(html,/data-apg-admin-theme=dark/);assert.match(html,/<script nonce="theme-test">/);
+  assert.equal((html.match(/<img class="admin-center-logo"/g)||[]).length,1);assert.doesNotMatch(html,/<button[^>]*data-admin-theme-toggle/);assert.doesNotMatch(html,/data-apg-admin-theme=dark/);assert.match(html,/<script nonce="theme-test">/);
  }
-});
-
-test('dark theme reaches already loaded frames, new screens and frame reloads without relying on messages',()=>{
- const h=harness({saved:'dark'});assert.equal(h.frame.contentDocument.documentElement.dataset.apgAdminTheme,'dark');
- const late={contentDocument:{documentElement:{dataset:{}}},contentWindow:{postMessage(){}},addEventListener(k,fn){this.reload=fn;},removeEventListener(){}};
- h.frames.push(late);h.observer.fn();assert.equal(late.contentDocument.documentElement.dataset.apgAdminTheme,'dark');
- late.contentDocument.documentElement.dataset.apgAdminTheme='light';late.reload();assert.equal(late.contentDocument.documentElement.dataset.apgAdminTheme,'dark');
- h.click();assert.equal(late.contentDocument.documentElement.dataset.apgAdminTheme,'light');assert.equal(h.frame.contentDocument.documentElement.dataset.apgAdminTheme,'light');h.cleanup();
 });
