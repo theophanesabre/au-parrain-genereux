@@ -139,3 +139,21 @@ test('new checkout requires explicit acceptance and stores the version without t
  assert.equal((await raw({terms_version:LEGAL_VERSION,terms_accepted:true})).status,200);const attempt=env.db.prepare('SELECT terms_version,terms_accepted_at FROM checkout_attempts WHERE id=?').get(id);assert.equal(attempt.terms_version,LEGAL_VERSION);assert.ok(attempt.terms_accepted_at);
  assert.equal((await raw({})).status,200);assert.equal(stripe.sessions.size,1);env.db.close();
 });
+
+test('first production account may differ from the sandbox without changing test orders or stock',async()=>{
+ const {env,stripe}=await setup();await checkout(env,stripe);const session=[...stripe.sessions.values()][0];session.payment_status='paid';session.status='complete';await webhook(env,stripe,session);
+ const before=orders(env),available=stock(env),liveKey='rk_live_'+'b'.repeat(32);let endpoints=0;
+ const client={accounts:{retrieve:async()=>({id:'acct_live_apg',charges_enabled:true})},webhookEndpoints:{create:async()=>{endpoints++;return {id:'we_live_apg',secret:'whsec_live_fixture'};}}};
+ const result=await configurePayments({secret:liveKey,enabled:true,shipping_cents:null,countries:[],version:1},env,'owner',()=>client);assert.equal(result.mode,'live');assert.equal(endpoints,1);const config=await paymentConfig(env);assert.equal(config.account_id,'acct_live_apg');assert.equal(config.secret,liveKey);assert.equal(config.webhook_secret,'whsec_live_fixture');assert.deepEqual(orders(env),before);assert.equal(stock(env),available);assert.equal(env.db.prepare('SELECT secret FROM payment_settings').get().secret.includes(liveKey),false);env.db.close();
+});
+test('first production switch refuses pending sessions, previous live payments and an unverified account',async()=>{
+ const input={secret:'rk_live_'+'c'.repeat(32),enabled:true,shipping_cents:null,countries:[],version:1};
+ for(const reason of ['pending','live-history','unverified']){const {env,stripe}=await setup();if(reason==='pending')await checkout(env,stripe);if(reason==='live-history')env.db.exec("INSERT INTO orders(id,customer,contact,items,total_cents,payment_mode,created_at) VALUES ('old-live','Client','contact','[]',0,'live','2026-10-20')");let created=0;const client={accounts:{retrieve:async()=>({id:'acct_live_apg',charges_enabled:reason!=='unverified'})},webhookEndpoints:{create:async()=>{created++;return {id:'we_live_apg',secret:whsec};}}};await assert.rejects(()=>configurePayments(input,env,'owner',()=>client),e=>e.status===(reason==='unverified'?400:409));assert.equal(created,0);assert.equal((await paymentConfig(env)).mode,'test');env.db.close();}
+});
+test('a concurrent live payment blocks the account replacement transaction',async()=>{
+ const {env}=await setup();const client={accounts:{retrieve:async()=>({id:'acct_live_apg',charges_enabled:true})},webhookEndpoints:{create:async()=>{env.db.exec("INSERT INTO orders(id,customer,contact,items,total_cents,payment_mode,created_at) VALUES ('concurrent-live','Client','contact','[]',0,'live','2026-10-20')");return {id:'we_live_apg',secret:whsec};}}};await assert.rejects(()=>configurePayments({secret:'rk_live_'+'d'.repeat(32),enabled:true,shipping_cents:null,countries:[],version:1},env,'owner',()=>client),e=>e.status===409);assert.equal((await paymentConfig(env)).account_id,'acct_apg');env.db.close();
+});
+test('switching to another test account or replacing an active production account remains blocked',async()=>{
+ const {env,stripe}=await setup();const other={accounts:{retrieve:async()=>({id:'acct_other',charges_enabled:true})}};const settings={enabled:true,shipping_cents:null,countries:[],version:1};await assert.rejects(()=>configurePayments({...settings,secret:key},env,'owner',()=>other),e=>e.status===409);
+ await configurePayments({...settings,secret:'rk_live_'+'e'.repeat(32)},env,'owner',()=>stripe.client);await assert.rejects(()=>configurePayments({...settings,version:2,secret:'rk_live_'+'f'.repeat(32)},env,'owner',()=>other),e=>e.status===409);assert.equal((await paymentConfig(env)).account_id,'acct_apg');env.db.close();
+});
