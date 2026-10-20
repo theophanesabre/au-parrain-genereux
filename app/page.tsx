@@ -21,7 +21,7 @@ export default async function Home() {
   const slides=highlights.map(item=>({...item,image:imageSources[item.image]||item.image,alt:imageAlts[item.image]||item.alt}));
   if (managed) return <ManagedPage page={managed}/>;
   return <main className="heritage-home">
-    <StoreHeader logo={imageSources["/images/logo-boutique-neon.webp"] || "/images/logo-boutique-neon.webp"}/>
+    <StoreHeader logo={imageSources["/images/logo-medaillon-orange.webp"] || "/images/logo-medaillon-orange.webp"}/>
 
 
     <PageButtons location="page-top"/>

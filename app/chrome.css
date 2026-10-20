@@ -49,3 +49,13 @@
 
 .apg-site .apg-catalog[data-presentation=square][data-layout=list] .apg-product-square{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:24px;align-items:center}
 @media(max-width:620px){.apg-site .apg-catalog[data-presentation=square][data-layout=list] .apg-product-square{grid-template-columns:1fr;gap:0}}
+
+/* Center the brand independently of the cart and mobile menu widths. */
+@media(max-width:760px){
+ .apg-store-header[data-logo-position=center]{grid-template-columns:minmax(44px,1fr) auto minmax(44px,1fr);gap:8px}
+ .apg-store-header[data-logo-position=center]>.apg-store-logo{grid-column:2;grid-row:1;justify-self:center}
+ .apg-store-header[data-logo-position=center]>.apg-store-actions{display:contents}
+ .apg-store-header[data-logo-position=center] .apg-cart-link{grid-column:3;grid-row:1;justify-self:end;font-size:12px}
+ .apg-store-header[data-logo-position=center] .apg-store-mobile{grid-column:1;grid-row:1;justify-self:start}
+ .apg-store-header[data-logo-position=center] .apg-store-logo img{max-width:27vw}
+}
