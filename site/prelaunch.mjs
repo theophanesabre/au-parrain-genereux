@@ -2,7 +2,7 @@ import { waitingFooter, waitingFooterCSS } from './footer.mjs';
 import { authorize } from '../admin/core.mjs';
 
 // Switch off when the owner is ready to open the complete storefront.
-export const prelaunchEnabled=true;
+export const prelaunchEnabled=false;
 const publicPages=new Set(['/','/maison','/savoir-faire','/bonbons','/chocolats','/boutique','/panier']);
 const headers={'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin'};
 export async function handlePrelaunch(request,env){

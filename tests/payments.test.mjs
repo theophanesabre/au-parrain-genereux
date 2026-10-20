@@ -54,9 +54,9 @@ test('shipping uses configured fees and destination; forged totals or missing ad
  session.shipping_details={name:'Client Test',address:{line1:'1 rue du Test',postal_code:'76600',city:'Le Havre',country:'FR'}};session.amount_total=1;assert.equal((await webhook(env,stripe,session)).status,409);assert.equal(orders(env).length,0);
  session.amount_total=3250;assert.equal((await webhook(env,stripe,session)).status,200);assert.equal(orders(env)[0].shipping_cents,750);assert.equal(JSON.parse(orders(env)[0].shipping_address).address.country,'FR');assert.equal(stock(env),1);env.db.close();
 });
-test('unconfigured shipping, foreign requests, hidden storefront and disabled payment fail closed',async()=>{
- const {env,stripe}=await setup();assert.equal((await checkout(env,stripe,{delivery:'shipping'})).status,409);assert.equal((await checkout(env,stripe,{from:'https://evil.example'})).status,403);assert.equal((await checkout(env,stripe,{actor:null})).status,403);
- const config=await handlePayments(new Request(origin+'/api/paiement/config'),env,()=>stripe.client);assert.equal((await config.json()).enabled,false);assert.equal(orders(env).length,0);assert.equal(stock(env),5);
+test('public checkout works while unconfigured shipping, foreign requests and disabled payment fail closed',async()=>{
+ const {env,stripe}=await setup();assert.equal((await checkout(env,stripe,{delivery:'shipping'})).status,409);assert.equal((await checkout(env,stripe,{from:'https://evil.example'})).status,403);assert.equal((await checkout(env,stripe,{actor:null})).status,200);
+ const config=await handlePayments(new Request(origin+'/api/paiement/config'),env,()=>stripe.client);assert.equal((await config.json()).enabled,true);assert.equal(orders(env).length,0);assert.equal(stock(env),4);
  env.db.exec('UPDATE payment_settings SET enabled=0');assert.equal((await checkout(env,stripe)).status,503);assert.equal((await handlePayments(new Request(origin+'/api/paiement/checkout'),env,()=>stripe.client)).status,405);env.db.close();
 });
 test('a full refund arriving before the paid event releases the hold and preserves a refunded order',async()=>{
