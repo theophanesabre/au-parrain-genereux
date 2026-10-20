@@ -40,10 +40,30 @@ async function settleSession(session,env){
  if(session.status==='expired'){await env.DB.batch([env.DB.prepare("UPDATE checkout_attempts SET status='expired',session_id=? WHERE id=? AND status IN ('creating','open') AND (session_id IS NULL OR session_id=?)").bind(session.id,session.metadata?.apg_attempt||'',session.id)]);}
  return false;
 }
+export async function closeTestPayments(env,config,makeClient=stripeClient){
+ if(config.mode!=='test')throw new HttpError(409,'Cette action concerne uniquement les sessions de test.');
+ const attempts=await env.DB.prepare("SELECT * FROM checkout_attempts WHERE mode='test' AND status IN ('creating','open') ORDER BY created_at LIMIT 20").all();
+ const stripe=makeClient(config.secret);let checked=0,closed=0,paid=0;
+ for(const attempt of attempts.results){
+  try{
+   let session=await sessionFor(attempt,stripe);
+   if(session.livemode!==false||session.metadata?.apg_attempt!==attempt.id)continue;
+   checked++;
+   if(session.status==='open'&&session.payment_status==='unpaid'){
+    try{session=await stripe.checkout.sessions.expire(session.id);}catch{session=await stripe.checkout.sessions.retrieve(session.id);}
+    if(session.livemode!==false||session.metadata?.apg_attempt!==attempt.id)continue;
+   }
+   if(session.payment_status==='paid'){await fulfillSession(session,env);paid++;}
+   else if(session.status==='expired'){await settleSession(session,env);closed++;}
+  }catch{/* Keep the reservation until Stripe confirms the session state. */}
+ }
+ const remaining=await env.DB.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE mode='test' AND status IN ('creating','open')").first();
+ return {checked,closed,paid,pending:remaining.count};
+}
 export async function reconcilePayments(env,config,makeClient=stripeClient){
- const pending=await env.DB.prepare("SELECT * FROM checkout_attempts WHERE status IN ('creating','open') AND expires_at<=? ORDER BY created_at LIMIT 3").bind(Math.floor(Date.now()/1000)).all();const stripe=makeClient(config.secret);let checked=0;
+ const pending=await env.DB.prepare("SELECT * FROM checkout_attempts WHERE status IN ('creating','open') AND mode=? ORDER BY created_at LIMIT 20").bind(config.mode).all();const stripe=makeClient(config.secret);let checked=0;
  for(const attempt of pending.results){try{const session=await sessionFor(attempt,stripe);await settleSession(session,env);checked++;}catch{/* Keep uncertain reservations until Stripe confirms their state. */}}
- return {checked,pending:pending.results.length};
+ const remaining=await env.DB.prepare("SELECT COUNT(*) AS count FROM checkout_attempts WHERE status IN ('creating','open') AND mode=?").bind(config.mode).first();return {checked,pending:remaining.count};
 }
 export async function handlePayments(request,env,makeClient=stripeClient){
  const url=new URL(request.url),path=url.pathname;if(!['/api/paiement/config','/api/paiement/checkout','/api/paiement/annuler','/api/paiement/statut','/api/stripe/webhook'].includes(path))return null;

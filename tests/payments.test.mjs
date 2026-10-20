@@ -5,7 +5,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {createHmac} from 'node:crypto';
 import {configurePayments,paymentConfig,safeConfig} from '../commerce/stripe.mjs';
-import {handlePayments} from '../commerce/payments.mjs';
+import {handlePayments,closeTestPayments,reconcilePayments} from '../commerce/payments.mjs';
 import {handleAdmin} from '../admin/handler.mjs';
 const origin='https://auparraingenereux.fr';
 const key='sk_test_'+'a'.repeat(32),whsec='whsec_unit_test_signature';
@@ -160,4 +160,26 @@ test('switching to another test account or replacing an active production accoun
 
 test('pickup deadline appears at checkout and pickup delivery is returned with the paid confirmation',async()=>{
  const {env,stripe}=await setup();await checkout(env,stripe);assert.match(stripe.calls[0].custom_text.submit.message,/avant 8 h/);assert.match(stripe.calls[0].custom_text.submit.message,/prochain jour d’ouverture/);assert.equal(stripe.calls[0].phone_number_collection.enabled,true);const session=[...stripe.sessions.values()][0];session.payment_status='paid';session.status='complete';await webhook(env,stripe,session);const response=await handlePayments(new Request(origin+'/api/paiement/statut?session_id='+session.id),env,()=>stripe.client);assert.equal((await response.json()).delivery,'pickup');env.db.close();
+});
+
+test('closing open test sessions expires them at Stripe before releasing stock and is repeatable',async()=>{
+ const {env,stripe}=await setup({stock:2});await checkout(env,stripe);assert.equal(stock(env),1);const result=await closeTestPayments(env,await paymentConfig(env),()=>stripe.client);assert.equal(result.closed,1);assert.equal(result.pending,0);assert.equal([...stripe.sessions.values()][0].status,'expired');assert.equal(stock(env),2);assert.equal(orders(env).length,0);assert.equal((await closeTestPayments(env,await paymentConfig(env),()=>stripe.client)).closed,0);assert.equal(stock(env),2);env.db.close();
+});
+test('closing test sessions reconciles an already paid session instead of cancelling its order',async()=>{
+ const {env,stripe}=await setup({stock:2});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];session.payment_status='paid';session.status='complete';const result=await closeTestPayments(env,await paymentConfig(env),()=>stripe.client);assert.equal(result.paid,1);assert.equal(result.pending,0);assert.equal(orders(env).length,1);assert.equal(stock(env),1);assert.equal(orders(env)[0].payment_status,'paid');env.db.close();
+});
+test('failed expiry, live sessions and mismatching metadata never release uncertain stock',async()=>{
+ for(const reason of ['failed','live','metadata']){const {env,stripe}=await setup({stock:1});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];if(reason==='live')session.livemode=true;if(reason==='metadata')session.metadata.apg_attempt='different';stripe.client.checkout.sessions.expire=async()=>{throw Error('Provider error');};const result=await closeTestPayments(env,await paymentConfig(env),()=>stripe.client);assert.equal(result.pending,1);assert.equal(stock(env),0);assert.equal(orders(env).length,0);env.db.close();}
+});
+test('a payment completed during test session expiration is preserved without releasing its stock',async()=>{
+ const {env,stripe}=await setup({stock:1});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];stripe.client.checkout.sessions.expire=async()=>{session.status='complete';session.payment_status='paid';throw Error('Session completed');};const result=await closeTestPayments(env,await paymentConfig(env),()=>stripe.client);assert.equal(result.paid,1);assert.equal(orders(env).length,1);assert.equal(stock(env),0);env.db.close();
+});
+test('switching to live automatically closes open sandbox sessions with the existing test credential',async()=>{
+ const {env,stripe}=await setup({stock:1});await checkout(env,stripe);let endpoint=0;const live={accounts:{retrieve:async()=>({id:'acct_live_apg',charges_enabled:true})},webhookEndpoints:{create:async()=>{endpoint++;return {id:'we_live',secret:'whsec_live_fixture'};}}};const result=await configurePayments({secret:'rk_live_'+'g'.repeat(32),enabled:true,shipping_cents:null,countries:[],version:1},env,'owner',secret=>secret===key?stripe.client:live);assert.equal(result.mode,'live');assert.equal(endpoint,1);assert.equal(stock(env),1);assert.equal(orders(env).length,0);assert.equal(env.db.prepare("SELECT COUNT(*) n FROM checkout_attempts WHERE status IN ('creating','open')").get().n,0);env.db.close();
+});
+test('session cleanup is owner-only, checks origin and refuses a live configuration',async()=>{
+ const {env}=await setup();const url=origin+'/admin/api/stripe/close-tests';assert.equal((await handleAdmin(new Request(url,{method:'POST',headers:{origin}}),env)).status,401);assert.equal((await handleAdmin(new Request(url,{method:'POST',headers:{origin:'https://evil.example','oai-authenticated-user-id':'owner'}}),env)).status,403);await assert.rejects(()=>closeTestPayments(env,{mode:'live'}),e=>e.status===409);env.db.close();
+});
+test('manual reconciliation checks a session before its local expiry deadline',async()=>{
+ const {env,stripe}=await setup({stock:1});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];session.status='expired';const result=await reconcilePayments(env,await paymentConfig(env),()=>stripe.client);assert.equal(result.checked,1);assert.equal(result.pending,0);assert.equal(stock(env),1);env.db.close();
 });

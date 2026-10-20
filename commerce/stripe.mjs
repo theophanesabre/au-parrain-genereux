@@ -21,7 +21,6 @@ export async function configurePayments(input,env,actor,makeClient=stripeClient)
  if(input.shipping_cents!==null&&(!Number.isSafeInteger(input.shipping_cents)||input.shipping_cents<0||input.shipping_cents>100000))throw new HttpError(400,'Frais d’expédition invalides');
  const allowed=['FR','BE','LU','DE','ES','IT','NL','PT','AT','IE','MC','CH','GB'];
  if(!Array.isArray(input.countries)||input.countries.length>allowed.length||new Set(input.countries).size!==input.countries.length||input.countries.some(country=>!allowed.includes(country))||input.shipping_cents!==null&&!input.countries.length)throw new HttpError(400,'Choisissez les destinations d’expédition.');
- if(current&&current.mode!==mode){const pending=await env.DB.prepare("SELECT id FROM checkout_attempts WHERE status IN ('creating','open') LIMIT 1").first();if(pending)throw new HttpError(409,'Des paiements sont encore en cours. Terminez-les avant de changer de mode.');}
  const stripe=makeClient(secret);let account;
  try{account=await stripe.accounts.retrieve();}catch{throw new HttpError(400,'Clé Stripe refusée : vérifiez le compte et les autorisations.');}
  const accountChanging=Boolean(current&&current.account_id!==account.id);
@@ -32,6 +31,11 @@ export async function configurePayments(input,env,actor,makeClient=stripeClient)
  }
 
  if(input.enabled&&mode==='live'&&!account.charges_enabled)throw new HttpError(400,'Activez les paiements et terminez la vérification du compte dans Stripe.');
+ if(current&&current.mode!==mode){
+  if(current.mode==='test'&&mode==='live'){const {closeTestPayments}=await import('./payments.mjs');await closeTestPayments(env,current,makeClient);}
+  const pending=await env.DB.prepare("SELECT id FROM checkout_attempts WHERE status IN ('creating','open') LIMIT 1").first();
+  if(pending)throw new HttpError(409,current.mode==='test'?'Une session attend encore la confirmation de Stripe. Utilisez « Clôturer les sessions de test », puis réessayez.':'Des paiements réels sont encore en cours. Vérifiez leur état auprès de Stripe avant de changer de mode.');
+ }
  let webhookSecret=current?.mode===mode?current.webhook_secret:null,endpointId=current?.mode===mode?current.endpoint_id:null;
  if(!webhookSecret){try{const endpoint=await stripe.webhookEndpoints.create({url:storeOrigin+'/api/stripe/webhook',enabled_events:['checkout.session.completed','checkout.session.expired','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed','charge.refunded'],description:'Au Parrain Généreux — commandes du site'},{idempotencyKey:'apg-webhook-'+mode+'-'+account.id});webhookSecret=endpoint.secret;endpointId=endpoint.id;}catch{throw new HttpError(400,'Stripe ne permet pas de créer le webhook. Utilisez une clé autorisée à gérer les sessions Checkout et les webhooks.');}}
  if(!webhookSecret)throw new HttpError(503,'Signature du webhook indisponible : recommencez la configuration.');
