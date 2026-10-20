@@ -56,6 +56,15 @@ function bindings(){
  return {DB,BUCKET,ADMIN_USER_IDS:'owner',sqlite};
 }
 async function call(env,path,method='GET',body){return handleAdmin(req('/admin/api/'+path,{method,headers:{'oai-authenticated-user-id':'owner',origin,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}),env);}
+function seedHistoricalOrder(env,items){
+ const id=crypto.randomUUID();const lines=items.map(line=>{const p=env.sqlite.prepare('SELECT * FROM products WHERE id=?').get(line.id);return {...line,name:p.name,price_cents:p.price_cents,unit:'piece',line_total_cents:p.price_cents*line.quantity};});
+ env.sqlite.prepare("INSERT INTO orders (id,customer,contact,items,total_cents,status,created_at) VALUES (?,'Client','contact',?,?,'draft','2026-10-20')").run(id,JSON.stringify(lines),lines.reduce((sum,line)=>sum+line.line_total_cents,0));return {id};
+}
+test('manual order creation is refused without changing orders or product stock',async()=>{
+ const env=bindings();const before=env.sqlite.prepare('SELECT * FROM products ORDER BY id').all();const count=env.sqlite.prepare('SELECT COUNT(*) AS n FROM orders').get().n;
+ assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'contact',items:[{id:'bonbon',quantity:1}]})).status,405);
+ assert.equal(env.sqlite.prepare('SELECT COUNT(*) AS n FROM orders').get().n,count);assert.deepEqual(env.sqlite.prepare('SELECT * FROM products ORDER BY id').all(),before);env.sqlite.close();
+});
 test('CRUD and complete order workflow through authenticated HTTP boundary',async()=>{
  const env=bindings();
  const p={id:'praline',name:'Praliné',description:'Maison',price_cents:750,stock:3,image:'',published:true};
@@ -64,7 +73,7 @@ test('CRUD and complete order workflow through authenticated HTTP boundary',asyn
  assert.equal((await call(env,'products/praline','PUT',{...p,version:1,stock:-1})).status,400);
  assert.equal((await call(env,'products/praline','PUT',{...p,version:0})).status,409);
  const order={customer:'Client',contact:'client@example.test',items:[{id:'praline',quantity:2}]};
- const response=await call(env,'orders','POST',order);assert.equal(response.status,201);const {id}=await response.json();
+ const {id}=seedHistoricalOrder(env,order.items);
  assert.equal((await call(env,'orders/'+id,'PUT',{status:'confirmed',version:1})).status,200);
  assert.equal((await call(env,'products/praline','DELETE',{version:1})).status,409);
  assert.equal((await call(env,'products/praline','PUT',{...p,version:1})).status,409);
@@ -108,7 +117,7 @@ test('one-time activation requires both signed-in identity and private expiring 
  assert.equal((await call(env,'products')).status,200);
  assert.equal((await handleAdmin(req('/admin/api/products',{headers:{'oai-authenticated-user-id':'intruder'}}),env)).status,403);
  const rows=await (await call(env,'products')).json();assert.equal(rows.length,17);
- assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'test',items:[{id:'bonbon-1',quantity:1}]})).status,400);
+ assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'test',items:[{id:'bonbon-1',quantity:1}]})).status,405);
  env.sqlite.close();
 });
 
@@ -117,13 +126,13 @@ test('each house article has its own price and stock; weight sales are retired w
  const box={id:'boite-maison',name:'Boîte maison',description:'Sélection préparée par la maison',price_cents:2600,stock:8,image:'',published:true};
  assert.equal((await call(env,'products','POST',box)).status,201);
  assert.equal((await call(env,'products/boite-maison','PUT',{...box,name:'Coffret signature',price_cents:2800,version:1})).status,200);
- const order={customer:'Client',contact:'contact',items:[{id:box.id,quantity:2}]};const created=await (await call(env,'orders','POST',order)).json();const stored=env.sqlite.prepare('SELECT * FROM orders WHERE id=?').get(created.id);assert.equal(stored.total_cents,5600);assert.equal(JSON.parse(stored.items)[0].unit,'piece');
+ const order={customer:'Client',contact:'contact',items:[{id:box.id,quantity:2}]};const created=seedHistoricalOrder(env,order.items);const stored=env.sqlite.prepare('SELECT * FROM orders WHERE id=?').get(created.id);assert.equal(stored.total_cents,5600);assert.equal(JSON.parse(stored.items)[0].unit,'piece');
  assert.equal((await call(env,'orders/'+created.id,'PUT',{status:'confirmed',version:1})).status,200);assert.equal(env.sqlite.prepare('SELECT stock FROM products WHERE id=?').get(box.id).stock,6);
- const recipe={id:'bonbon-decouverte',name:'Découverte',description:'Recette',image:'',published:true};assert.equal((await call(env,'products','POST',recipe)).status,201);assert.equal((await call(env,'orders','POST',{...order,items:[{id:recipe.id,quantity:1}]})).status,400);
+ const recipe={id:'bonbon-decouverte',name:'Découverte',description:'Recette',image:'',published:true};assert.equal((await call(env,'products','POST',recipe)).status,201);assert.equal((await call(env,'orders','POST',{...order,items:[{id:recipe.id,quantity:1}]})).status,405);
  assert.equal((await call(env,'products','POST',{...box,id:'bonbon'})).status,400);
  env.sqlite.exec("INSERT INTO products (id,name,description,price_cents,stock,published) VALUES ('bonbon','Bonbon','Ancien article au poids',10600,1000,1)");
  env.sqlite.exec(readFileSync(new URL('../drizzle/0006_retire_weight_sales.sql',import.meta.url),'utf8'));assert.equal(env.sqlite.prepare("SELECT published FROM products WHERE id='bonbon'").get().published,0);
- assert.equal((await call(env,'orders','POST',{...order,items:[{id:'bonbon',quantity:250}]})).status,400);
+ assert.equal((await call(env,'orders','POST',{...order,items:[{id:'bonbon',quantity:250}]})).status,405);
  const oldItems=JSON.stringify([{id:'bonbon',name:'Bonbon',price_cents:10600,quantity:250,unit:'g',line_total_cents:2650}]);env.sqlite.prepare("INSERT INTO orders (id,customer,contact,items,total_cents,status,created_at) VALUES ('legacy','Client','contact',?,2650,'draft','2026-10-16')").run(oldItems);
  assert.equal((await call(env,'orders/legacy','PUT',{status:'confirmed',version:1})).status,409);
  env.sqlite.exec("UPDATE orders SET status='confirmed' WHERE id='legacy'");assert.equal((await call(env,'orders/legacy','PUT',{status:'cancelled',version:1})).status,200);assert.equal(env.sqlite.prepare("SELECT stock FROM products WHERE id='bonbon'").get().stock,1000);assert.equal(env.sqlite.prepare("SELECT total_cents FROM orders WHERE id='legacy'").get().total_cents,2650);
@@ -200,6 +209,7 @@ test('admin interface exposes edit controls for the four existing pages and repl
  await cards[0].children.find(node=>node.tag==='button'&&node.textContent==='Modifier').onclick();
  assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='placement'&&input.tag==='select')));
  assert.ok(nodes.get('#fields').children.some(label=>label.children.some(input=>input.name==='image'&&input.tag==='select'&&input.children.length>20)));
+ tabs.find(b=>b.dataset.tab==='orders').onclick();await settle();assert.equal(nodes.get('#add').hidden,true);assert.equal(nodes.get('#stock-alerts').hidden,true);nodes.get('#dialog').close();await nodes.get('#add').onclick();assert.equal(nodes.get('#dialog').open,false);assert.match(nodes.get('#message').textContent,/création manuelle/);tabs.find(b=>b.dataset.tab==='products').onclick();await settle();assert.equal(nodes.get('#add').hidden,false);
  env.sqlite.close();
 });
 
@@ -553,9 +563,9 @@ test('restoring the previous layout removes the editorial introduction without c
 });
 
 test('reserved products can leave the catalogue while their order and stock release remain intact',async()=>{
- const {getStoreProduct}=await import('../admin/products.mjs');const env=bindings();const product={id:'reserved-box',name:'Coffret',description:'Maison',price_cents:4000,stock:3,image:'',published:true};await call(env,'products','POST',product);const response=await call(env,'orders','POST',{customer:'Client',contact:'contact',items:[{id:product.id,quantity:1}]});const order=await response.json();assert.equal((await call(env,'orders/'+order.id,'PUT',{status:'confirmed',version:1})).status,200);
+ const {getStoreProduct}=await import('../admin/products.mjs');const env=bindings();const product={id:'reserved-box',name:'Coffret',description:'Maison',price_cents:4000,stock:3,image:'',published:true};await call(env,'products','POST',product);const order=seedHistoricalOrder(env,[{id:product.id,quantity:1}]);assert.equal((await call(env,'orders/'+order.id,'PUT',{status:'confirmed',version:1})).status,200);
  const before=env.sqlite.prepare('SELECT * FROM orders WHERE id=?').get(order.id);const result=await call(env,'products/'+product.id,'DELETE',{version:2});assert.equal(result.status,200);assert.equal((await result.json()).archived,true);assert.equal((await(await call(env,'products')).json()).some(p=>p.id===product.id),false);assert.equal(await getStoreProduct(env.DB,product.id),null);assert.deepEqual(env.sqlite.prepare('SELECT * FROM orders WHERE id=?').get(order.id),before);assert.equal(env.sqlite.prepare('SELECT stock FROM products WHERE id=?').get(product.id).stock,2);
- assert.equal((await call(env,'products/'+product.id,'PUT',{...product,version:3})).status,409);assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'contact',items:[{id:product.id,quantity:1}]})).status,400);
+ assert.equal((await call(env,'products/'+product.id,'PUT',{...product,version:3})).status,409);assert.equal((await call(env,'orders','POST',{customer:'Client',contact:'contact',items:[{id:product.id,quantity:1}]})).status,405);
  assert.equal((await call(env,'orders/'+order.id,'PUT',{status:'cancelled',version:2})).status,200);assert.equal(env.sqlite.prepare('SELECT stock FROM products WHERE id=?').get(product.id).stock,3);env.sqlite.close();
 });
 test('photo galleries validate paths, persist order, protect secondary uploads and support older single-photo edits',async()=>{

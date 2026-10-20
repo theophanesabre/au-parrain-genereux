@@ -9,14 +9,14 @@ function harness({saved=null,embedded=false}={}){
  const listeners=new Map(),windowEvents=new Map(),root={dataset:{}},storage=new Map(saved?[['apg-admin-theme',saved]]:[]),posts=[];
  const button=label=>({textContent:label,dataset:{},attributes:{},getAttribute(k){return this.attributes[k];},setAttribute(k,v){this.attributes[k]=v;}});
  const toggle=button('Mode sombre'),add=button('+ Ajouter un produit'),remove=button('Supprimer'),neutral=button('Enregistrer');
- const frame={contentWindow:{postMessage(data,origin){posts.push({data,origin});}},addEventListener(){},removeEventListener(){}};
+ const frameListeners=new Map();const frames=[];const frame={contentDocument:{documentElement:{dataset:{}}},contentWindow:{postMessage(data,origin){posts.push({data,origin});}},addEventListener(k,fn){frameListeners.set(k,fn);},removeEventListener(k){frameListeners.delete(k);}};frames.push(frame);
  const parent={postMessage(data,origin){posts.push({data,origin});}};
  const window={parent:null,addEventListener(k,v){windowEvents.set(k,v);},removeEventListener(k){windowEvents.delete(k);}};window.parent=embedded?parent:window;
- const document={documentElement:root,body:{},querySelectorAll(selector){if(selector==='iframe')return [frame];if(selector==='[data-admin-theme-toggle]')return [toggle];if(selector.startsWith('button:not'))return [add,remove,neutral];return [];},addEventListener(k,v){listeners.set(k,v);},removeEventListener(k){listeners.delete(k);}};
+ const document={documentElement:root,body:{},querySelectorAll(selector){if(selector==='iframe')return frames;if(selector==='[data-admin-theme-toggle]')return [toggle];if(selector.startsWith('button:not'))return [add,remove,neutral];return [];},addEventListener(k,v){listeners.set(k,v);},removeEventListener(k){listeners.delete(k);}};
  let observer;class MutationObserver{constructor(fn){observer=this;this.fn=fn;}observe(){}disconnect(){this.disconnected=true;}}
  const context=createContext({document,window,location:{origin:'https://apg.example'},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},MutationObserver});
  const cleanup=new Script('('+adminThemeClient.toString()+')()').runInContext(context);
- return {root,toggle,add,remove,neutral,posts,frame,parent,windowEvents,listeners,storage,cleanup,get observer(){return observer;},click(){listeners.get('click')({target:{closest:()=>toggle}});}};
+ return {frames,frameListeners,root,toggle,add,remove,neutral,posts,frame,parent,windowEvents,listeners,storage,cleanup,get observer(){return observer;},click(){listeners.get('click')({target:{closest:()=>toggle}});}};
 }
 test('admin starts white and persists dark choice while synchronising embedded screens',()=>{
  const h=harness();assert.equal(h.root.dataset.apgAdminTheme,'light');assert.equal(h.toggle.attributes['aria-pressed'],'false');h.click();assert.equal(h.root.dataset.apgAdminTheme,'dark');assert.equal(h.storage.get('apg-admin-theme'),'dark');assert.equal(h.toggle.attributes['aria-pressed'],'true');assert.equal(h.posts.at(-1).data.theme,'dark');assert.equal(h.posts.at(-1).origin,'https://apg.example');
@@ -32,4 +32,12 @@ test('all standalone admin surfaces retain a centered logo, theme control and no
  for(const html of [adminHTML('theme-test'),inventoryHTML('theme-test'),paymentsHTML('theme-test')]){
   assert.equal((html.match(/<img class="admin-center-logo"/g)||[]).length,1);assert.match(html,/data-admin-theme-toggle/);assert.match(html,/data-apg-admin-theme=dark/);assert.match(html,/<script nonce="theme-test">/);
  }
+});
+
+test('dark theme reaches already loaded frames, new screens and frame reloads without relying on messages',()=>{
+ const h=harness({saved:'dark'});assert.equal(h.frame.contentDocument.documentElement.dataset.apgAdminTheme,'dark');
+ const late={contentDocument:{documentElement:{dataset:{}}},contentWindow:{postMessage(){}},addEventListener(k,fn){this.reload=fn;},removeEventListener(){}};
+ h.frames.push(late);h.observer.fn();assert.equal(late.contentDocument.documentElement.dataset.apgAdminTheme,'dark');
+ late.contentDocument.documentElement.dataset.apgAdminTheme='light';late.reload();assert.equal(late.contentDocument.documentElement.dataset.apgAdminTheme,'dark');
+ h.click();assert.equal(late.contentDocument.documentElement.dataset.apgAdminTheme,'light');assert.equal(h.frame.contentDocument.documentElement.dataset.apgAdminTheme,'light');h.cleanup();
 });

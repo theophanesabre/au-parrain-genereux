@@ -13,7 +13,7 @@ import { isDefaultHighlight, mergeHighlights, validateHighlight, highlightChange
 import { builtinPages } from '../data/site-content.mjs';
 import { builtinImages } from '../data/site-assets.mjs';
 import { adminPage, pageDefinition, contentValues, validatePageBody } from './content.mjs';
-import { validatePhotoCrops, validateProductImages, BONBON_ID, isSale, isRecipe, productProfile, lineTotal } from './products.mjs';
+import { validatePhotoCrops, validateProductImages, BONBON_ID, isSale, isRecipe, productProfile } from './products.mjs';
 import { claimAdmin, setupHTML } from './setup.mjs';
 import { authorize, checkOrigin, text, integer, slug, imagePath, transition, imageType, HttpError } from './core.mjs';
 import { adminHTML } from './ui.mjs';
@@ -218,13 +218,7 @@ export async function handleAdmin(request, env) {
       return json({ok:true},id?200:201);
     }
     if(resource==='orders' && request.method==='POST' && !id) {
-      if(!Array.isArray(b.items)||!b.items.length||b.items.length>50) throw new HttpError(400,'Articles requis (50 maximum)');
-      const seen=new Set(),items=[];let total=0;
-      for(const line of b.items){const productId=slug(line.id),qty=integer(line.quantity,1000);if(!qty||seen.has(productId))throw new HttpError(400,'Quantité ou doublon invalide');seen.add(productId);
-        const p=await db.prepare('SELECT * FROM products WHERE id=?').bind(productId).first();if(!p||p.archived)throw new HttpError(400,'Choisissez un article actif dans le catalogue');if(!isSale(p.id))throw new HttpError(400,'Choisissez un article maison vendu à la pièce.');if(p.price_cents<=0)throw new HttpError(400,'Renseignez le prix du produit avant de créer une commande');items.push({id:p.id,name:p.name,price_cents:p.price_cents,quantity:qty,unit:'piece',line_total_cents:lineTotal(p,qty)});total+=lineTotal(p,qty);}
-      integer(total);const key=crypto.randomUUID();
-      await db.batch([db.prepare('INSERT INTO orders (id,customer,contact,items,total_cents,status,created_at) VALUES (?,?,?,?,?,?,?)').bind(key,text(b.customer),text(b.contact),JSON.stringify(items),total,'draft',new Date().toISOString()),log()]);
-      return json({id:key},201);
+      throw new HttpError(405,'La création manuelle de commandes est désactivée. Les commandes en ligne sont enregistrées après paiement.');
     }
     if(resource==='orders' && request.method==='PUT' && id) {
       const current=await db.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();if(!current)throw new HttpError(404,'Commande introuvable');transition(current.status,b.status);
