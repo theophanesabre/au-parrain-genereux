@@ -1,3 +1,5 @@
+import {saveCreation,saveFormat,createBallotin} from '../catalogue/service.mjs';
+import {demoCreations} from '../catalogue/model.mjs';
 import { LEGAL_VERSION } from '../site/legal.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -183,3 +185,5 @@ test('session cleanup is owner-only, checks origin and refuses a live configurat
 test('manual reconciliation checks a session before its local expiry deadline',async()=>{
  const {env,stripe}=await setup({stock:1});await checkout(env,stripe);const session=[...stripe.sessions.values()][0];session.status='expired';const result=await reconcilePayments(env,await paymentConfig(env),()=>stripe.client);assert.equal(result.checked,1);assert.equal(result.pending,0);assert.equal(stock(env),1);env.db.close();
 });
+
+test('personalized ballotins reuse the real product stock and preserve preparation details after payment',async()=>{const {env,stripe}=await setup({stock:3});const c={...demoCreations()[0],id:'test-catalogue',name:'Création test',image:'/images/test.png',demo:false,ingredients:'cacao, sucre',ingredientTags:['cacao','sucre'],ingredientsVerified:true,allergensVerified:true,tracesVerified:true,allergens:[],traces:[]};await saveCreation(env.DB,{creation:c,version:0},'owner');await saveFormat(env.DB,{size:6,productId:'coffret',version:0},'owner');const input={size:6,pieces:Array.from({length:6},()=>({id:c.id})),exclude:{allergens:[],ingredients:[]}},req=new Request(origin+'/api/catalogue/ballotin');const a=await createBallotin(env,input,req),b=await createBallotin(env,input,req);const response=await checkout(env,stripe,{items:[{id:a.id,quantity:1},{id:b.id,quantity:1},{id:'coffret',quantity:1}]});assert.equal(response.status,200);assert.equal(stock(env),0);assert.equal(stripe.calls[0].line_items.length,1);assert.equal(stripe.calls[0].line_items[0].quantity,3);const session=[...stripe.sessions.values()][0];session.payment_status='paid';session.status='complete';assert.equal((await webhook(env,stripe,session)).status,200);assert.equal((await webhook(env,stripe,session)).status,200);const lines=JSON.parse(orders(env)[0].items);assert.equal(lines[0].quantity,3);assert.equal(lines[0].ballotins.length,2);assert.equal(lines[0].ballotins[0].pieces.length,6);assert.equal(stock(env),0);env.db.close();});

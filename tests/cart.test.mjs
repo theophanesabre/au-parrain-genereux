@@ -18,8 +18,8 @@ test('server quotes independent house article prices and rejects retired weight 
  assert.equal(quoteCart([{id:'deleted',quantity:1}],[]).valid,false);assert.equal(quoteCart([],[]).valid,false);
 });
 test('public quote endpoint reads live SQLite prices without reserving stock or creating orders',async()=>{
- const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE products(id TEXT,name TEXT,price_cents INTEGER,stock INTEGER,published INTEGER)');
- db.prepare('INSERT INTO products VALUES(?,?,?,?,?)').run('boite-maison','Boîte maison',2600,10,1);
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE products(id TEXT,name TEXT,price_cents INTEGER,stock INTEGER,published INTEGER,archived INTEGER DEFAULT 0)');
+ db.prepare('INSERT INTO products(id,name,price_cents,stock,published) VALUES(?,?,?,?,?)').run('boite-maison','Boîte maison',2600,10,1);
  function statement(sql,args=[]){return {bind(...values){return statement(sql,values);},async all(){return {results:db.prepare(sql).all(...args)};}};}
  const env={DB:{prepare:sql=>statement(sql)}};
  const request=items=>new Request(origin+'/api/panier',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({items})});

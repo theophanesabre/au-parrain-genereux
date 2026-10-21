@@ -267,6 +267,13 @@
       "when": 1792530216183,
       "tag": "0037_ready_email_only",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1792540850894,
+      "tag": "0038_interactive_catalogue",
+      "breakpoints": true
     }
   ]
 }

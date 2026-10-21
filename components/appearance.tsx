@@ -58,7 +58,7 @@ export function PageSections({page,items}:{page:string;items:{id:string;content:
 
 export function MenuLinks({flat=false}:{flat?:boolean}){
  const {navigation}=useContext(AppearanceContext);
- const items=navigation.items,grouped=items.filter(item=>item.group);
+ const items=navigation.items.some(item=>item.href==='/catalogue')?navigation.items:[...navigation.items,{label:'Catalogue',href:'/catalogue',group:false}],grouped=items.filter(item=>item.group);
  const link=(item:{label:string;href:string},index:number)=><a href={item.href} key={index}>{item.label}</a>;
  if(flat)return <>{items.map(link)}</>;
  return <>{grouped.length?<details className="apg-menu-group"><summary>{navigation.groupLabel}</summary><div className="apg-menu-group__links">{grouped.map(link)}</div></details>:null}{items.filter(item=>!item.group).map(link)}</>;

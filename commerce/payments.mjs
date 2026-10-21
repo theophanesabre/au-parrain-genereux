@@ -1,7 +1,8 @@
 import { LEGAL_VERSION } from '../site/legal.mjs';
 import { shippingConfiguration, shippingPrice } from './shipping.mjs';
 import { buildCheckoutParams } from './stripe-params.ts';
-import { normalizeCart,quoteCart } from './cart.mjs';
+import { normalizeCart,quoteCart,checkoutItems } from './cart.mjs';
+import {cartProducts} from '../catalogue/service.mjs';
 import { authorize,HttpError } from '../admin/core.mjs';
 import { prelaunchEnabled } from '../site/prelaunch.mjs';
 import { paymentConfig,stripeClient,verifyStripeEvent,storeOrigin } from './stripe.mjs';
@@ -115,9 +116,9 @@ export async function handlePayments(request,env,makeClient=stripeClient){
   if(!attempt){
    if(body.terms_accepted!==true||body.terms_version!==LEGAL_VERSION)throw new HttpError(400,'Veuillez lire et accepter la version actuelle des conditions générales de vente.');
    await reconcilePayments(env,config,makeClient);
-   const rows=(await env.DB.prepare(`SELECT id,name,price_cents,stock,published FROM products WHERE id IN (${lines.map(()=>'?').join(',')})`).bind(...lines.map(line=>line.id)).all()).results;const quote=quoteCart(lines,rows);
+   const rows=await cartProducts(env.DB,lines);const quote=quoteCart(lines,rows);
    if(!quote.valid||quote.total_cents>99999999)throw new HttpError(409,'Les prix ou stocks ont changé. Actualisez le panier.');
-   const items=quote.items.map(item=>({id:item.id,name:item.name,quantity:item.quantity,price_cents:item.price_cents,line_total_cents:item.line_cents,unit:'piece'}));
+   const items=checkoutItems(quote.items);
    const createdAt=Math.floor(Date.now()/1000),expiresAt=createdAt+2100;attempt={id:body.key,session_id:null,delivery:body.delivery,shipping_cents:body.delivery==='shipping'?shippingPrice(quote.total_cents,deliveryConfig.shipping_policy,deliveryConfig.shipping_cents):0,shipping_label:deliveryConfig.shipping_policy?.label||'Expédition',total_cents:quote.total_cents,expires_at:expiresAt,status:'creating'};
    attempt.params=JSON.stringify(checkoutParams(attempt,items,deliveryConfig.countries));
    const requester=await requesterHash(request,env);

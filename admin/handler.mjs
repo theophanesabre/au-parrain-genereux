@@ -1,3 +1,6 @@
+import {readCreations} from '../catalogue/model.mjs';
+import {readFormats,saveCreation,archiveCreation,saveFormat} from '../catalogue/service.mjs';
+import {catalogueHTML} from './catalogue-ui.mjs';
 import {notificationStatus,saveNotificationSettings,retryNotification} from '../commerce/notifications.mjs';
 import {notificationsHTML} from './notifications-ui.mjs';
 import {inventoryActor, inventoryAPI} from './inventory/service.mjs';
@@ -68,9 +71,10 @@ export async function handleAdmin(request, env) {
       if(error.status===403&&request.method==='GET'&&['/admin','/admin/puck'].includes(path)){
         try{await inventoryActor(request,env);return new Response(null,{status:302,headers:{...headers,Location:'/admin/stocks'}});}catch{/* Staff have no access to the other administration modules. */}
       }
-      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck','/admin/paiements','/admin/notifications'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
+      if(error.status===401 && ['/admin','/admin/apparence','/admin/editeur','/admin/puck','/admin/paiements','/admin/notifications','/admin/catalogue'].includes(path) && request.method==='GET') return new Response(null,{status:302,headers:{...headers,Location:'/signin-with-chatgpt?return_to='+encodeURIComponent(path)}});
       throw error;
     }
+    if(path==='/admin/catalogue'&&request.method==='GET'){const nonce=crypto.randomUUID();return new Response(catalogueHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' blob:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});}
     if(path==='/admin/notifications'&&request.method==='GET'){const nonce=crypto.randomUUID();return new Response(notificationsHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});}
     if(path==='/admin/paiements'&&request.method==='GET'){const nonce=crypto.randomUUID();return new Response(paymentsHTML(nonce),{headers:{...headers,'Content-Type':'text/html;charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`}});}
     if(path==='/admin/puck'&&request.method==='GET')return null;
@@ -85,6 +89,9 @@ export async function handleAdmin(request, env) {
     if(!path.startsWith('/admin/api/')) return json({error:'Introuvable'},404);
     if(!env.DB || !env.BUCKET) throw new HttpError(503,'Stockage non configuré');
     const db=env.DB;
+    if(path==='/admin/api/catalogue'&&request.method==='GET'){const [creations,formats,products]=await Promise.all([readCreations(db),readFormats(db),db.prepare("SELECT id,name,price_cents FROM products WHERE archived=0 AND id<>'bonbon' AND id NOT LIKE 'bonbon-%' ORDER BY name").all()]);return json({creations,formats,products:products.results});}
+    if(path==='/admin/api/catalogue/creation'){checkOrigin(request);const data=await body(request,30000);if(request.method==='PUT')return json(await saveCreation(db,data,actor));if(request.method==='DELETE')return json(await archiveCreation(db,data,actor));throw new HttpError(405,'Méthode refusée');}
+    if(path==='/admin/api/catalogue/format'){if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await saveFormat(db,await body(request),actor));}
     if(path==='/admin/api/notifications'){
       if(request.method==='GET'){const config=await notificationStatus(env);const rows=await db.prepare('SELECT n.id,n.event,n.channel,n.state,n.error,n.created_at,num.number AS order_number FROM order_notifications n JOIN order_numbers num ON num.order_id=n.order_id ORDER BY n.created_at DESC LIMIT 100').all();return json({...config,items:rows.results});}
       if(request.method!=='PUT')throw new HttpError(405,'Méthode refusée');checkOrigin(request);return json(await saveNotificationSettings(await body(request),env,actor));

@@ -1,3 +1,4 @@
+import {cartProducts} from '../catalogue/service.mjs';
 import { normalizeCart, quoteCart } from './cart.mjs';
 export async function handleCommerce(request,env) {
   if(new URL(request.url).pathname!=='/api/panier')return null;
@@ -12,7 +13,7 @@ export async function handleCommerce(request,env) {
     const lines=normalizeCart(body.items);
     if(lines.length!==body.items.length)return json({error:'Quantités ou articles invalides'},400);
     if(!env.DB)return json({error:'Le catalogue est temporairement indisponible'},503);
-    const rows=lines.length?(await env.DB.prepare(`SELECT id,name,price_cents,stock,published FROM products WHERE id IN (${lines.map(()=>'?').join(',')})`).bind(...lines.map(line=>line.id)).all()).results:[];
+    const rows=await cartProducts(env.DB,lines);
     return json(quoteCart(lines,rows));
   }catch(error){return json({error:error instanceof SyntaxError?'Panier invalide':'Impossible de vérifier le panier'},error instanceof SyntaxError?400:503);}
 }

@@ -1,3 +1,4 @@
+import {handleCatalogue} from '../catalogue/http.mjs';
 import {dispatchNotifications} from '../commerce/notifications.mjs';
 import { handleConsumerRequests } from '../site/consumer-requests.mjs';
 import { handlePayments } from '../commerce/payments.mjs';
@@ -39,6 +40,8 @@ interface ExecutionContext {
 const worker = {
   async scheduled(_event: unknown, env: Env, ctx: ExecutionContext) {ctx.waitUntil(dispatchNotifications(env));},
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const catalogueResponse=await handleCatalogue(request,env);
+    if(catalogueResponse)return catalogueResponse;
     const consumerResponse=await handleConsumerRequests(request,env);
     if(consumerResponse)return consumerResponse;
     const paymentResponse = await handlePayments(request, env);

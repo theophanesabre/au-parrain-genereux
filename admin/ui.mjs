@@ -46,7 +46,7 @@ else{el('p','/media/'+row.id,card);el('p',Math.ceil(row.size/1024)+' Ko',card);a
 
 if(tab==='orders'){
  const items=el('ul',undefined,card);items.className='admin-order-items';items.setAttribute('aria-label','Articles commandés');
- for(const item of JSON.parse(row.items)){const line=el('li',undefined,items);const quantity=el('strong',item.quantity+(item.unit==='g'?' g':' ×'),line);quantity.className='admin-order-quantity';el('span',item.name,line);}
+ for(const item of JSON.parse(row.items)){const line=el('li',undefined,items);const quantity=el('strong',item.quantity+(item.unit==='g'?' g':' ×'),line);quantity.className='admin-order-quantity';el('span',item.name,line);for(const box of item.ballotins||[]){const detail=el('p',box.quantity+' ballotin(s) de '+box.size+' : '+box.pieces.map(p=>p.name).join(' · '),card);detail.className='admin-order-composition';}}
  el('p',row.delivery==='shipping'?'Expédition':'Retrait en boutique',card);
  const contact=el('details',undefined,card);el('summary','Coordonnées du client',contact);el('p',row.contact,contact);
  if(row.shipping_address){const shipping=JSON.parse(row.shipping_address);el('p',[shipping.name,shipping.address?.line1,shipping.address?.line2,[shipping.address?.postal_code,shipping.address?.city].filter(Boolean).join(' '),shipping.address?.country].filter(Boolean).join('\\n'),contact);}

@@ -72,7 +72,7 @@ export function CartPage(){
         {loading?<p role="status">Vérification des prix et disponibilités…</p>:null}
         {error?<p role="alert">{error} <button type="button" onClick={()=>setRetry(value=>value+1)}>Réessayer</button></p>:null}
         {items.map(line=>{const checked=quote?.items.find(item=>item.id===line.id);return <article className="apg-cart-line" key={line.id}>
-          <div><h2>{checked?.name||'Article du panier'}</h2>{checked?.price_cents!=null?<p>{money(checked.price_cents)} / pièce</p>:null}{checked&&!checked.available?<p role="alert">Cet article ou cette quantité n’est plus disponible. Réduisez la quantité ou retirez-le.</p>:null}</div>
+          <div><h2>{checked?.name||'Article du panier'}</h2>{checked?.ballotin?<p>{checked.ballotin.pieces.map(p=>p.name).join(' · ')}</p>:null}{checked?.price_cents!=null?<p>{money(checked.price_cents)} / pièce</p>:null}{checked&&!checked.available?<p role="alert">Cet article ou cette quantité n’est plus disponible. Réduisez la quantité ou retirez-le.</p>:null}</div>
           <label>Quantité (pièces)<input type="number" min="1" max={MAX_QUANTITY} step="1" defaultValue={line.quantity} key={line.quantity} onBlur={event=>{const value=event.target.valueAsNumber;if(Number.isSafeInteger(value)&&value>0&&value<=MAX_QUANTITY)change(line.id,value);else event.target.value=String(line.quantity);}} onKeyDown={event=>{if(event.key==='Enter')event.currentTarget.blur();}}/></label>
           <strong>{checked?.line_cents!=null?money(checked.line_cents):'—'}</strong><button type="button" className="apg-remove" onClick={()=>change(line.id,0)}>Retirer<span className="apg-visually-hidden"> {checked?.name||'cet article'}</span></button>
         </article>;})}
